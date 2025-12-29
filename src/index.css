@@ -1,0 +1,32 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: light --default, dark;
+}
+
+@theme {
+  --color-currency-green: #2a4a2a;
+  --color-currency-sepia: #8b7355;
+  --color-currency-gold: #c4a962;
+  --color-currency-cream: #f5f5dc;
+  --font-family-currency: "Playfair Display", serif;
+}
+
+/* Custom DaisyUI theme overrides */
+:root {
+  --p: 142 33% 23%;
+  --pf: 142 33% 18%;
+  --pc: 45 38% 90%;
+  --s: 30 25% 44%;
+  --sf: 30 25% 39%;
+  --sc: 45 38% 90%;
+  --a: 43 47% 58%;
+  --af: 43 47% 53%;
+  --ac: 0 0% 10%;
+  --n: 0 0% 10%;
+  --nf: 0 0% 5%;
+  --nc: 45 38% 90%;
+  --b1: 60 56% 91%;
+  --b2: 60 40% 85%;
+  --b3: 60 30% 80%;
+  --bc: 0 0% 15%;
+}
