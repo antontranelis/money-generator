@@ -123,8 +123,8 @@ export const LAYOUT_HDPI: { front: TemplateLayout; back: TemplateLayout } = {
     namePlate: {
       x: 3072,
       y: 3360,
-      fontSize: 120,
-      maxWidth: 1200,
+      fontSize: 144,
+      maxWidth: 1520,
       align: 'center',
     },
     contactInfo: {
