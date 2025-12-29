@@ -7,16 +7,16 @@ export function Header() {
   const trans = t(language);
 
   return (
-    <header className="navbar bg-currency-green text-currency-cream shadow-lg">
-      <div className="container mx-auto">
-        <div className="flex-1">
-          <h1 className="text-2xl font-currency font-bold">{trans.header.title}</h1>
-          <p className="text-sm opacity-80 ml-4 hidden sm:block">{trans.header.subtitle}</p>
-        </div>
-        <div className="flex-none">
-          <LanguageToggle />
-        </div>
+    <div className="navbar bg-currency-green text-currency-cream shadow-lg">
+      <div className="navbar-start">
+        <a className="btn btn-ghost text-xl font-currency font-bold">{trans.header.title}</a>
       </div>
-    </header>
+      <div className="navbar-center hidden sm:flex">
+        <span className="text-sm opacity-80">{trans.header.subtitle}</span>
+      </div>
+      <div className="navbar-end">
+        <LanguageToggle />
+      </div>
+    </div>
   );
 }
