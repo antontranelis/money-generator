@@ -2,43 +2,45 @@ import type { Language, HourValue, TemplateConfig, TemplateLayout } from '../typ
 
 type TemplateMap = Record<Language, Record<HourValue, TemplateConfig>>;
 
+const base = import.meta.env.BASE_URL;
+
 export const TEMPLATES: TemplateMap = {
   en: {
     1: {
-      front: '/templates/front_ldpi_en.png',
-      back: '/templates/back_ldpi_en.png',
+      front: `${base}templates/front_ldpi_en.png`,
+      back: `${base}templates/back_ldpi_en.png`,
       width: 1536,
       height: 1024,
     },
     5: {
-      front: '/templates/front_ldpi_en.png',
-      back: '/templates/back_ldpi_en.png',
+      front: `${base}templates/front_ldpi_en.png`,
+      back: `${base}templates/back_ldpi_en.png`,
       width: 1536,
       height: 1024,
     },
     10: {
-      front: '/templates/front_ldpi_en.png',
-      back: '/templates/back_ldpi_en.png',
+      front: `${base}templates/front_ldpi_en.png`,
+      back: `${base}templates/back_ldpi_en.png`,
       width: 1536,
       height: 1024,
     },
   },
   de: {
     1: {
-      front: '/templates/front_hdpi_de.jpg',
-      back: '/templates/back_hdpi_de.jpg',
+      front: `${base}templates/front_hdpi_de.jpg`,
+      back: `${base}templates/back_hdpi_de.jpg`,
       width: 6144,
       height: 4096,
     },
     5: {
-      front: '/templates/front_hdpi_de.jpg',
-      back: '/templates/back_hdpi_de.jpg',
+      front: `${base}templates/front_hdpi_de.jpg`,
+      back: `${base}templates/back_hdpi_de.jpg`,
       width: 6144,
       height: 4096,
     },
     10: {
-      front: '/templates/front_hdpi_de.jpg',
-      back: '/templates/back_hdpi_de.jpg',
+      front: `${base}templates/front_hdpi_de.jpg`,
+      back: `${base}templates/back_hdpi_de.jpg`,
       width: 6144,
       height: 4096,
     },
