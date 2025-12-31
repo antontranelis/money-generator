@@ -86,17 +86,6 @@ export function PortraitUpload() {
     }
   };
 
-  const handleEnhanceFallback = async () => {
-    if (!portrait.original) return;
-
-    try {
-      const enhanced = await enhance(portrait.original, 'vintage');
-      setEnhancedPortrait(enhanced);
-    } catch (err) {
-      console.error('Enhancement failed:', err);
-    }
-  };
-
   const handleApiKeySubmit = async (key: string) => {
     setApiKey(key);
     // After setting key, try to enhance
@@ -209,9 +198,9 @@ export function PortraitUpload() {
             />
           </div>
 
-          {/* AI Enhancement */}
-          <div className="flex flex-col gap-2">
-            {hasKey ? (
+          {/* AI Enhancement - only show if API key is present */}
+          {hasKey && (
+            <div className="flex flex-col gap-2">
               <button
                 className={`btn btn-secondary ${isEnhancing ? 'loading' : ''}`}
                 onClick={handleEnhance}
@@ -242,51 +231,35 @@ export function PortraitUpload() {
                   </>
                 )}
               </button>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <button
-                  className={`btn btn-secondary ${isEnhancing ? 'loading' : ''}`}
-                  onClick={handleEnhanceFallback}
-                  disabled={isEnhancing}
-                >
-                  {isEnhancing ? trans.form.portrait.enhancing : `${trans.form.portrait.enhance} (Basic)`}
-                </button>
-                <button
-                  className="btn btn-outline btn-sm"
-                  onClick={() => setShowApiKeyModal(true)}
-                >
-                  {language === 'de' ? 'API Key für bessere Ergebnisse' : 'Add API Key for better results'}
-                </button>
-              </div>
-            )}
 
-            {aiError && (
-              <div className="alert alert-warning text-sm py-2">
-                <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <span>{aiError}</span>
-              </div>
-            )}
+              {aiError && (
+                <div className="alert alert-warning text-sm py-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span>{aiError}</span>
+                </div>
+              )}
 
-            {portrait.enhanced && (
-              <div className="form-control">
-                <label className="label cursor-pointer justify-start gap-3">
-                  <input
-                    type="checkbox"
-                    className="toggle toggle-primary"
-                    checked={portrait.useEnhanced}
-                    onChange={toggleUseEnhanced}
-                  />
-                  <span className="label-text">
-                    {portrait.useEnhanced
-                      ? trans.form.portrait.useEnhanced
-                      : trans.form.portrait.useOriginal}
-                  </span>
-                </label>
-              </div>
-            )}
-          </div>
+              {portrait.enhanced && (
+                <div className="form-control">
+                  <label className="label cursor-pointer justify-start gap-3">
+                    <input
+                      type="checkbox"
+                      className="toggle toggle-primary"
+                      checked={portrait.useEnhanced}
+                      onChange={toggleUseEnhanced}
+                    />
+                    <span className="label-text">
+                      {portrait.useEnhanced
+                        ? trans.form.portrait.useEnhanced
+                        : trans.form.portrait.useOriginal}
+                    </span>
+                  </label>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

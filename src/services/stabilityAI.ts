@@ -38,14 +38,19 @@ function dataUrlToBlob(dataUrl: string): Blob {
 }
 
 export function getApiKey(): string | null {
-  // First check environment variable
-  const envKey = import.meta.env.VITE_STABILITY_API_KEY;
+  // First check environment variable (Vite or Next.js)
+  const envKey =
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_STABILITY_API_KEY) ||
+    (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_STABILITY_API_KEY);
   if (envKey && envKey !== 'your-api-key-here') {
     return envKey;
   }
 
   // Then check localStorage
-  return localStorage.getItem('stability_api_key');
+  if (typeof localStorage !== 'undefined') {
+    return localStorage.getItem('stability_api_key');
+  }
+  return null;
 }
 
 export function setApiKey(key: string): void {

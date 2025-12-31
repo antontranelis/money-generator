@@ -1,34 +1,82 @@
 {
-  "name": "money-generator",
-  "private": true,
-  "version": "0.0.1",
+  "name": "@antontranelis/money-printer",
+  "version": "1.0.2",
+  "description": "Create personalized time vouchers that look like real currency. React components for voucher generation with PDF export.",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/money-printer.git"
+  },
+  "homepage": "https://yourusername.github.io/money-printer",
+  "keywords": [
+    "voucher",
+    "gift",
+    "pdf",
+    "generator",
+    "zeitgutschein",
+    "react",
+    "time-voucher",
+    "gift-card"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "public/templates",
+    "README.md"
+  ],
+  "sideEffects": false,
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:lib": "tsc -b && vite build --config vite.lib.config.ts",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prepublishOnly": "npm run build:lib"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": false
+    },
+    "react-dom": {
+      "optional": false
+    }
   },
   "dependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "zustand": "^5.0.2",
-    "jspdf": "^2.5.2"
+    "jspdf": "^2.5.2",
+    "zustand": "^5.0.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/node": "^25.0.3",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "@vitejs/plugin-react": "^4.3.4",
+    "daisyui": "^5.0.0",
     "eslint": "^9.17.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.16",
     "globals": "^15.14.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwindcss": "^4.0.0",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.18.2",
     "vite": "^6.0.5",
-    "tailwindcss": "^4.0.0",
-    "@tailwindcss/vite": "^4.0.0",
-    "daisyui": "^5.0.0"
+    "vite-plugin-dts": "^4.5.4"
   }
 }

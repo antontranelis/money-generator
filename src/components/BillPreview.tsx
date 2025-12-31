@@ -75,10 +75,46 @@ export function BillPreview() {
 
   return (
     <div className="space-y-4">
+      {/* Controls - above preview */}
+      <div className="flex justify-between items-center">
+        <div className="tabs tabs-boxed bg-base-200">
+          <button
+            className={`tab ${currentSide === 'front' ? 'tab-active bg-primary text-primary-content font-semibold' : ''}`}
+            onClick={() => currentSide !== 'front' && handleFlip()}
+          >
+            {trans.preview.front}
+          </button>
+          <button
+            className={`tab ${currentSide === 'back' ? 'tab-active bg-primary text-primary-content font-semibold' : ''}`}
+            onClick={() => currentSide !== 'back' && handleFlip()}
+          >
+            {trans.preview.back}
+          </button>
+        </div>
+
+        <button className="btn btn-ghost btn-sm" onClick={handleFlip}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
+          </svg>
+          {trans.preview.flip}
+        </button>
+      </div>
+
       {/* Canvas Container */}
       <div
         ref={containerRef}
-        className="relative w-full overflow-hidden rounded-lg shadow-lg"
+        className="relative w-full overflow-hidden  shadow-lg"
         style={{ aspectRatio }}
       >
         {/* Front Canvas */}
@@ -104,42 +140,6 @@ export function BillPreview() {
               : 'opacity-0 scale-95 pointer-events-none'
           }`}
         />
-      </div>
-
-      {/* Controls */}
-      <div className="flex justify-between items-center">
-        <div className="tabs tabs-boxed">
-          <button
-            className={`tab ${currentSide === 'front' ? 'tab-active' : ''}`}
-            onClick={() => currentSide !== 'front' && handleFlip()}
-          >
-            {trans.preview.front}
-          </button>
-          <button
-            className={`tab ${currentSide === 'back' ? 'tab-active' : ''}`}
-            onClick={() => currentSide !== 'back' && handleFlip()}
-          >
-            {trans.preview.back}
-          </button>
-        </div>
-
-        <button className="btn btn-ghost btn-sm" onClick={handleFlip}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
-          {trans.preview.flip}
-        </button>
       </div>
     </div>
   );

@@ -2,7 +2,8 @@ import type { Language, HourValue, TemplateConfig, TemplateLayout } from '../typ
 
 type TemplateMap = Record<Language, Record<HourValue, TemplateConfig>>;
 
-const base = import.meta.env.BASE_URL;
+// Use Vite's BASE_URL if available, otherwise default to '/'
+const base = typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL || '/';
 
 export const TEMPLATES: TemplateMap = {
   en: {
@@ -27,22 +28,22 @@ export const TEMPLATES: TemplateMap = {
   },
   de: {
     1: {
-      front: `${base}templates/front_hdpi_de.jpg`,
-      back: `${base}templates/back_hdpi_de.jpg`,
+      front: `${base}templates/front_hdpi_de.webp`,
+      back: `${base}templates/back_hdpi_de.webp`,
       width: 6144,
-      height: 4096,
+      height: 3200,
     },
     5: {
-      front: `${base}templates/front_hdpi_de.jpg`,
-      back: `${base}templates/back_hdpi_de.jpg`,
+      front: `${base}templates/front_hdpi_de.webp`,
+      back: `${base}templates/back_hdpi_de.webp`,
       width: 6144,
-      height: 4096,
+      height: 3200,
     },
     10: {
-      front: `${base}templates/front_hdpi_de.jpg`,
-      back: `${base}templates/back_hdpi_de.jpg`,
+      front: `${base}templates/front_hdpi_de.webp`,
+      back: `${base}templates/back_hdpi_de.webp`,
       width: 6144,
-      height: 4096,
+      height: 3200,
     },
   },
 };
@@ -100,14 +101,14 @@ export const LAYOUT_LDPI: { front: TemplateLayout; back: TemplateLayout } = {
 export const LAYOUT_HDPI: { front: TemplateLayout; back: TemplateLayout } = {
   front: {
     portrait: {
-      x: 3072,
-      y: 1970,
-      radiusX: 945,
+      x: 3074,
+      y: 1530,
+      radiusX: 942,
       radiusY: 1020,
     },
     namePlate: {
       x: 3072,
-      y: 3390,
+      y: 2950,
       fontSize: 144,
       maxWidth: 1520,
       align: 'center',
@@ -122,21 +123,21 @@ export const LAYOUT_HDPI: { front: TemplateLayout; back: TemplateLayout } = {
     },
     namePlate: {
       x: 3072,
-      y: 3360,
+      y: 2930,
       fontSize: 144,
       maxWidth: 1520,
       align: 'center',
     },
     contactInfo: {
       x: 1520,
-      y: 2000,
+      y: 1680,
       fontSize: 160,
       lineHeight: 280,
       align: 'center',
     },
     description: {
       x: 4600,
-      y: 2000,
+      y: 1680,
       fontSize: 145,
       maxWidth: 2000,
       lineHeight: 210,

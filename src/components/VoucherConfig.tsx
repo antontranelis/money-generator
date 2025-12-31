@@ -1,23 +1,12 @@
-import { useBillStore } from '../stores/billStore';
-import { t } from '../constants/translations';
-import type { HourValue } from '../types/bill';
-
-const HOUR_OPTIONS: HourValue[] = [1, 5, 10];
-
+// Temporarily disabled - hours and description inputs
+// TODO: Re-enable when ready
 export function VoucherConfig() {
-  const language = useBillStore((state) => state.voucherConfig.language);
-  const voucherConfig = useBillStore((state) => state.voucherConfig);
-  const setHours = useBillStore((state) => state.setHours);
-  const setVoucherConfig = useBillStore((state) => state.setVoucherConfig);
-  const trans = t(language);
+  return null;
 
-  const getHourLabel = (hours: number) => {
-    return hours === 1 ? trans.form.voucher.hourLabel : trans.form.voucher.hoursLabel;
-  };
-
+  /*
   return (
     <div className="space-y-4">
-      {/* Hours Selection */}
+      {/* Hours Selection * /}
       <div className="form-control">
         <label className="label">
           <span className="label-text font-medium">{trans.form.voucher.hours}</span>
@@ -37,7 +26,7 @@ export function VoucherConfig() {
         </div>
       </div>
 
-      {/* Description */}
+      {/* Description * /}
       <div className="form-control">
         <label className="label">
           <span className="label-text font-medium">{trans.form.voucher.description}</span>
@@ -56,4 +45,5 @@ export function VoucherConfig() {
       </div>
     </div>
   );
+  */
 }
