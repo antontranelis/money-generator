@@ -56,14 +56,15 @@ export const useBillStore = create<BillState & BillActions>()(
         })),
 
       setPortrait: (original, enhanced = null) =>
-        set({
+        set((state) => ({
           portrait: {
             original,
             enhanced,
             useEnhanced: false,
-            zoom: 1,
+            // Keep current zoom if updating existing portrait, reset to 1 for new portrait
+            zoom: state.portrait.original && original ? state.portrait.zoom : 1,
           },
-        }),
+        })),
 
       setEnhancedPortrait: (enhanced) =>
         set((state) => ({
@@ -118,6 +119,7 @@ export const useBillStore = create<BillState & BillActions>()(
       partialize: (state) => ({
         personalInfo: state.personalInfo,
         voucherConfig: state.voucherConfig,
+        portrait: state.portrait,
       }),
     }
   )

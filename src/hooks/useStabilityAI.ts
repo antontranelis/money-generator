@@ -1,15 +1,16 @@
 import { useState, useCallback } from 'react';
+import { applyEngravingEffect } from '../services/imageEffects';
 import {
-  enhancePortrait,
-  enhancePortraitFallback,
+  removeBackground,
   hasApiKey,
   setApiKey as saveApiKey,
-  type EnhanceStyle,
 } from '../services/stabilityAI';
 
 interface UseStabilityAIReturn {
-  enhance: (imageDataUrl: string, style?: EnhanceStyle) => Promise<string>;
+  enhance: (imageDataUrl: string, intensity?: number) => Promise<string>;
+  removeBg: (imageDataUrl: string) => Promise<string>;
   isEnhancing: boolean;
+  isRemovingBg: boolean;
   error: string | null;
   hasKey: boolean;
   setApiKey: (key: string) => void;
@@ -18,6 +19,7 @@ interface UseStabilityAIReturn {
 
 export function useStabilityAI(): UseStabilityAIReturn {
   const [isEnhancing, setIsEnhancing] = useState(false);
+  const [isRemovingBg, setIsRemovingBg] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasKey, setHasKey] = useState(hasApiKey());
 
@@ -30,38 +32,17 @@ export function useStabilityAI(): UseStabilityAIReturn {
   }, []);
 
   const enhance = useCallback(
-    async (imageDataUrl: string, style: EnhanceStyle = 'vintage'): Promise<string> => {
+    async (imageDataUrl: string, intensity: number = 0.5): Promise<string> => {
       setIsEnhancing(true);
       setError(null);
 
       try {
-        if (hasApiKey()) {
-          // Use Stability AI
-          const result = await enhancePortrait({
-            imageDataUrl,
-            style,
-            strength: 0.35,
-          });
-          return result;
-        } else {
-          // Use fallback canvas filter
-          const result = await enhancePortraitFallback(imageDataUrl);
-          return result;
-        }
+        // Always use local engraving effect (preserves transparency, no API cost)
+        const result = await applyEngravingEffect(imageDataUrl, intensity);
+        return result;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Enhancement failed';
         setError(message);
-
-        // On API error, try fallback
-        if (message.includes('API') || message.includes('key')) {
-          try {
-            const fallbackResult = await enhancePortraitFallback(imageDataUrl);
-            return fallbackResult;
-          } catch {
-            throw err;
-          }
-        }
-
         throw err;
       } finally {
         setIsEnhancing(false);
@@ -70,9 +51,30 @@ export function useStabilityAI(): UseStabilityAIReturn {
     []
   );
 
+  const removeBg = useCallback(
+    async (imageDataUrl: string): Promise<string> => {
+      setIsRemovingBg(true);
+      setError(null);
+
+      try {
+        const result = await removeBackground(imageDataUrl);
+        return result;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Background removal failed';
+        setError(message);
+        throw err;
+      } finally {
+        setIsRemovingBg(false);
+      }
+    },
+    []
+  );
+
   return {
     enhance,
+    removeBg,
     isEnhancing,
+    isRemovingBg,
     error,
     hasKey,
     setApiKey,

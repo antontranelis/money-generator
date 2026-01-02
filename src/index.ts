@@ -31,7 +31,8 @@ export {
   setApiKey,
   hasApiKey,
   enhancePortrait,
-  enhancePortraitFallback,
+  removeBackground,
+  applyEngravingEffect,
 } from './services';
 export type { EnhanceStyle } from './services';
 

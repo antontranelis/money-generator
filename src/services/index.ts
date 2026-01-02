@@ -17,12 +17,15 @@ export {
   exportBillAsPDF,
 } from './pdfGenerator';
 
-// AI enhancement
+// AI enhancement (Stability AI)
 export {
   getApiKey,
   setApiKey,
   hasApiKey,
   enhancePortrait,
-  enhancePortraitFallback,
+  removeBackground,
 } from './stabilityAI';
 export type { EnhanceStyle } from './stabilityAI';
+
+// Local image effects
+export { applyEngravingEffect } from './imageEffects';

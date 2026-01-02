@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import { useBillStore } from '../stores/billStore';
 import { t } from '../constants/translations';
 import { useStabilityAI } from '../hooks/useStabilityAI';
@@ -8,27 +8,46 @@ export function PortraitUpload() {
   const language = useBillStore((state) => state.voucherConfig.language);
   const portrait = useBillStore((state) => state.portrait);
   const setPortrait = useBillStore((state) => state.setPortrait);
-  const setEnhancedPortrait = useBillStore((state) => state.setEnhancedPortrait);
-  const toggleUseEnhanced = useBillStore((state) => state.toggleUseEnhanced);
   const setPortraitZoom = useBillStore((state) => state.setPortraitZoom);
 
-  const { enhance, isEnhancing, error: aiError, hasKey, setApiKey } = useStabilityAI();
+  const { enhance, removeBg, isEnhancing, isRemovingBg, error: aiError, hasKey, setApiKey } = useStabilityAI();
 
   const trans = t(language);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
+  // Track original image and processed versions
+  const [rawImage, setRawImage] = useState<string | null>(null);
+  const [bgRemovedImage, setBgRemovedImage] = useState<string | null>(null); // Cached bg-removed version
+  const [bgRemoved, setBgRemoved] = useState(false);
+  const [engravingIntensity, setEngravingIntensity] = useState(0);
+
+  // Debounce refs to track pending effect applications
+  const engravingDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup debounce timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (engravingDebounceRef.current) clearTimeout(engravingDebounceRef.current);
+    };
+  }, []);
+
   const handleFile = useCallback(
-    (file: File) => {
+    async (file: File) => {
       if (!file.type.startsWith('image/')) {
         return;
       }
 
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const dataUrl = e.target?.result as string;
+        // Store raw image and set as portrait
+        setRawImage(dataUrl);
         setPortrait(dataUrl);
+        setBgRemoved(false);
+        setBgRemovedImage(null);
+        setEngravingIntensity(0);
       };
       reader.readAsDataURL(file);
     },
@@ -69,41 +88,109 @@ export function PortraitUpload() {
     }
   };
 
-  const handleEnhance = async () => {
-    if (!portrait.original) return;
+  // Apply engraving effect to an image
+  const applyEngraving = useCallback(async (sourceImage: string, intensity: number): Promise<string> => {
+    try {
+      return await enhance(sourceImage, intensity);
+    } catch (err) {
+      console.error('Enhancement failed:', err);
+      return sourceImage;
+    }
+  }, [enhance]);
 
-    // If no API key, show modal to ask for one (but will still use fallback)
-    if (!hasKey) {
+  // Remove background and cache the result
+  const applyBgRemoval = useCallback(async (sourceImage: string): Promise<string> => {
+    try {
+      const result = await removeBg(sourceImage);
+      setBgRemovedImage(result); // Cache the result
+      return result;
+    } catch (err) {
+      console.error('Background removal failed:', err);
+      return sourceImage;
+    }
+  }, [removeBg]);
+
+  const handleToggleBgRemoval = async () => {
+    if (!rawImage) return;
+
+    // If enabling and no API key, show modal
+    if (!bgRemoved && !hasKey) {
       setShowApiKeyModal(true);
       return;
     }
 
-    try {
-      const enhanced = await enhance(portrait.original, 'vintage');
-      setEnhancedPortrait(enhanced);
-    } catch (err) {
-      console.error('Enhancement failed:', err);
+    const newBgRemoved = !bgRemoved;
+    setBgRemoved(newBgRemoved);
+
+    if (newBgRemoved) {
+      // Turning ON background removal
+      const bgRemovedResult = await applyBgRemoval(rawImage);
+      if (engravingIntensity > 0) {
+        const result = await applyEngraving(bgRemovedResult, engravingIntensity);
+        setPortrait(result);
+      } else {
+        setPortrait(bgRemovedResult);
+      }
+    } else {
+      // Turning OFF background removal - use raw image
+      setBgRemovedImage(null); // Clear cache
+      if (engravingIntensity > 0) {
+        const result = await applyEngraving(rawImage, engravingIntensity);
+        setPortrait(result);
+      } else {
+        setPortrait(rawImage);
+      }
     }
+  };
+
+  const handleEngravingIntensityChange = (newIntensity: number) => {
+    setEngravingIntensity(newIntensity);
+
+    // Clear any pending debounce
+    if (engravingDebounceRef.current) {
+      clearTimeout(engravingDebounceRef.current);
+    }
+
+    if (!rawImage) return;
+
+    // Debounce the effect application
+    engravingDebounceRef.current = setTimeout(async () => {
+      const baseImage = bgRemoved && bgRemovedImage ? bgRemovedImage : rawImage;
+
+      if (newIntensity === 0) {
+        // No engraving - show base image
+        setPortrait(baseImage);
+      } else {
+        // Apply engraving with new intensity
+        const result = await applyEngraving(baseImage, newIntensity);
+        setPortrait(result);
+      }
+    }, 150);
   };
 
   const handleApiKeySubmit = async (key: string) => {
     setApiKey(key);
-    // After setting key, try to enhance
-    if (portrait.original) {
-      try {
-        const enhanced = await enhance(portrait.original, 'vintage');
-        setEnhancedPortrait(enhanced);
-      } catch (err) {
-        console.error('Enhancement failed:', err);
-      }
+
+    if (!rawImage) return;
+
+    // Apply background removal
+    setBgRemoved(true);
+    const bgRemovedResult = await applyBgRemoval(rawImage);
+    if (engravingIntensity > 0) {
+      const result = await applyEngraving(bgRemovedResult, engravingIntensity);
+      setPortrait(result);
+    } else {
+      setPortrait(bgRemovedResult);
     }
   };
 
   const handleRemove = () => {
     setPortrait(null);
+    setRawImage(null);
+    setBgRemovedImage(null);
+    setBgRemoved(false);
+    setEngravingIntensity(0);
   };
-
-  const currentPortrait = portrait.useEnhanced && portrait.enhanced ? portrait.enhanced : portrait.original;
 
   return (
     <div className="space-y-4">
@@ -111,9 +198,11 @@ export function PortraitUpload() {
       {!portrait.original ? (
         <div
           className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-            isDragOver
-              ? 'border-primary bg-primary/10'
-              : 'border-base-300 hover:border-primary hover:bg-base-200'
+            isRemovingBg
+              ? 'border-primary bg-primary/10 pointer-events-none'
+              : isDragOver
+                ? 'border-primary bg-primary/10'
+                : 'border-base-300 hover:border-primary hover:bg-base-200'
           }`}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
@@ -127,62 +216,67 @@ export function PortraitUpload() {
             className="hidden"
             onChange={handleInputChange}
           />
-          <div className="flex flex-col items-center gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-12 w-12 text-base-content/50"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-            <p className="font-medium">{trans.form.portrait.upload}</p>
-            <p className="text-sm text-base-content/60">{trans.form.portrait.dragDrop}</p>
-          </div>
+          {isRemovingBg ? (
+            <div className="flex flex-col items-center gap-2">
+              <span className="loading loading-spinner loading-lg text-primary"></span>
+              <p className="font-medium">{language === 'de' ? 'Hintergrund wird entfernt...' : 'Removing background...'}</p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-12 w-12 text-base-content/50"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+              <p className="font-medium">{trans.form.portrait.upload}</p>
+              <p className="text-sm text-base-content/60">{trans.form.portrait.dragDrop}</p>
+            </div>
+          )}
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="flex flex-col items-center space-y-4">
           {/* Preview */}
-          <div className="flex justify-center">
-            <div className="relative">
-              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-currency-gold shadow-lg">
-                <img
-                  src={currentPortrait || ''}
-                  alt="Portrait"
-                  className="w-full h-full object-cover"
-                  style={{ transform: `scale(${portrait.zoom})` }}
-                />
-              </div>
-              <button
-                className="btn btn-circle btn-xs btn-error absolute -top-1 -right-1"
-                onClick={handleRemove}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+          <div className="relative">
+            <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-currency-gold shadow-lg">
+              <img
+                src={portrait.original || ''}
+                alt="Portrait"
+                className="w-full h-full object-cover"
+                style={{ transform: `scale(${portrait.zoom})` }}
+              />
             </div>
+            <button
+              className="btn btn-circle btn-xs btn-error absolute -top-1 -right-1"
+              onClick={handleRemove}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
           </div>
 
           {/* Zoom Slider */}
-          <div className="form-control">
+          <div className="form-control w-full max-w-xs">
             <label className="label">
               <span className="label-text">{trans.form.portrait.zoom}</span>
               <span className="label-text-alt">{Math.round(portrait.zoom * 100)}%</span>
@@ -198,66 +292,59 @@ export function PortraitUpload() {
             />
           </div>
 
-          {/* AI Enhancement - only show if API key is present */}
-          {hasKey && (
-            <div className="flex flex-col gap-2">
-              <button
-                className={`btn btn-secondary ${isEnhancing ? 'loading' : ''}`}
-                onClick={handleEnhance}
-                disabled={isEnhancing}
-              >
-                {isEnhancing ? (
+          {/* Engraving Effect Slider */}
+          <div className="form-control w-full max-w-xs">
+            <label className="label">
+              <span className="label-text flex items-center gap-2">
+                {language === 'de' ? 'Gravur-Effekt' : 'Engraving effect'}
+                {isEnhancing && <span className="loading loading-spinner loading-xs"></span>}
+              </span>
+              <span className="label-text-alt">{Math.round(engravingIntensity * 100)}%</span>
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={engravingIntensity}
+              onChange={(e) => handleEngravingIntensityChange(parseFloat(e.target.value))}
+              className="range range-secondary range-sm"
+              disabled={isEnhancing}
+            />
+          </div>
+
+          {/* Background Removal Toggle */}
+          <div className="form-control">
+            <label className="label cursor-pointer justify-start gap-3">
+              <input
+                type="checkbox"
+                className={`toggle toggle-primary ${isRemovingBg ? 'opacity-50' : ''}`}
+                checked={bgRemoved}
+                onChange={handleToggleBgRemoval}
+                disabled={isRemovingBg}
+              />
+              <span className="label-text flex items-center gap-2">
+                {isRemovingBg ? (
                   <>
-                    <span className="loading loading-spinner loading-sm"></span>
-                    {trans.form.portrait.enhancing}
+                    <span className="loading loading-spinner loading-xs"></span>
+                    {language === 'de' ? 'Hintergrund wird entfernt...' : 'Removing background...'}
                   </>
                 ) : (
-                  <>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 mr-1"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                      />
-                    </svg>
-                    {trans.form.portrait.enhance}
-                  </>
+                  language === 'de' ? 'Hintergrund entfernen' : 'Remove background'
                 )}
-              </button>
+                {!hasKey && (
+                  <span className="badge badge-sm badge-outline">API</span>
+                )}
+              </span>
+            </label>
+          </div>
 
-              {aiError && (
-                <div className="alert alert-warning text-sm py-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <span>{aiError}</span>
-                </div>
-              )}
-
-              {portrait.enhanced && (
-                <div className="form-control">
-                  <label className="label cursor-pointer justify-start gap-3">
-                    <input
-                      type="checkbox"
-                      className="toggle toggle-primary"
-                      checked={portrait.useEnhanced}
-                      onChange={toggleUseEnhanced}
-                    />
-                    <span className="label-text">
-                      {portrait.useEnhanced
-                        ? trans.form.portrait.useEnhanced
-                        : trans.form.portrait.useOriginal}
-                    </span>
-                  </label>
-                </div>
-              )}
+          {aiError && (
+            <div className="alert alert-warning text-sm py-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span>{aiError}</span>
             </div>
           )}
         </div>
