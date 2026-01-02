@@ -9,6 +9,9 @@ export function PortraitUpload() {
   const portrait = useBillStore((state) => state.portrait);
   const setPortrait = useBillStore((state) => state.setPortrait);
   const setPortraitZoom = useBillStore((state) => state.setPortraitZoom);
+  const setPortraitRawImage = useBillStore((state) => state.setPortraitRawImage);
+  const setPortraitBgRemoved = useBillStore((state) => state.setPortraitBgRemoved);
+  const setPortraitEngravingIntensity = useBillStore((state) => state.setPortraitEngravingIntensity);
 
   const { enhance, removeBg, isEnhancing, isRemovingBg, error: aiError, hasKey, setApiKey } = useStabilityAI();
 
@@ -17,14 +20,14 @@ export function PortraitUpload() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
 
-  // Track original image and processed versions
-  const [rawImage, setRawImage] = useState<string | null>(null);
-  const [bgRemovedImage, setBgRemovedImage] = useState<string | null>(null); // Cached bg-removed version
-  const [bgRemoved, setBgRemoved] = useState(false);
-  const [engravingIntensity, setEngravingIntensity] = useState(0);
-
   // Debounce refs to track pending effect applications
   const engravingDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Use values from store
+  const rawImage = portrait.rawImage;
+  const bgRemovedImage = portrait.bgRemovedImage;
+  const bgRemoved = portrait.bgRemoved;
+  const engravingIntensity = portrait.engravingIntensity;
 
   // Cleanup debounce timeouts on unmount
   useEffect(() => {
@@ -43,15 +46,14 @@ export function PortraitUpload() {
       reader.onload = async (e) => {
         const dataUrl = e.target?.result as string;
         // Store raw image and set as portrait
-        setRawImage(dataUrl);
+        setPortraitRawImage(dataUrl);
         setPortrait(dataUrl);
-        setBgRemoved(false);
-        setBgRemovedImage(null);
-        setEngravingIntensity(0);
+        setPortraitBgRemoved(false, null);
+        setPortraitEngravingIntensity(0);
       };
       reader.readAsDataURL(file);
     },
-    [setPortrait]
+    [setPortrait, setPortraitRawImage, setPortraitBgRemoved, setPortraitEngravingIntensity]
   );
 
   const handleDrop = useCallback(
@@ -102,13 +104,13 @@ export function PortraitUpload() {
   const applyBgRemoval = useCallback(async (sourceImage: string): Promise<string> => {
     try {
       const result = await removeBg(sourceImage);
-      setBgRemovedImage(result); // Cache the result
+      setPortraitBgRemoved(true, result); // Cache the result in store
       return result;
     } catch (err) {
       console.error('Background removal failed:', err);
       return sourceImage;
     }
-  }, [removeBg]);
+  }, [removeBg, setPortraitBgRemoved]);
 
   const handleToggleBgRemoval = async () => {
     if (!rawImage) return;
@@ -120,7 +122,6 @@ export function PortraitUpload() {
     }
 
     const newBgRemoved = !bgRemoved;
-    setBgRemoved(newBgRemoved);
 
     if (newBgRemoved) {
       // Turning ON background removal
@@ -133,7 +134,7 @@ export function PortraitUpload() {
       }
     } else {
       // Turning OFF background removal - use raw image
-      setBgRemovedImage(null); // Clear cache
+      setPortraitBgRemoved(false, null);
       if (engravingIntensity > 0) {
         const result = await applyEngraving(rawImage, engravingIntensity);
         setPortrait(result);
@@ -144,7 +145,7 @@ export function PortraitUpload() {
   };
 
   const handleEngravingIntensityChange = (newIntensity: number) => {
-    setEngravingIntensity(newIntensity);
+    setPortraitEngravingIntensity(newIntensity);
 
     // Clear any pending debounce
     if (engravingDebounceRef.current) {
@@ -174,7 +175,6 @@ export function PortraitUpload() {
     if (!rawImage) return;
 
     // Apply background removal
-    setBgRemoved(true);
     const bgRemovedResult = await applyBgRemoval(rawImage);
     if (engravingIntensity > 0) {
       const result = await applyEngraving(bgRemovedResult, engravingIntensity);
@@ -186,10 +186,9 @@ export function PortraitUpload() {
 
   const handleRemove = () => {
     setPortrait(null);
-    setRawImage(null);
-    setBgRemovedImage(null);
-    setBgRemoved(false);
-    setEngravingIntensity(0);
+    setPortraitRawImage(null);
+    setPortraitBgRemoved(false, null);
+    setPortraitEngravingIntensity(0);
   };
 
   return (
@@ -309,7 +308,7 @@ export function PortraitUpload() {
               value={engravingIntensity}
               onChange={(e) => handleEngravingIntensityChange(parseFloat(e.target.value))}
               className="range range-secondary range-sm"
-              disabled={isEnhancing}
+              disabled={isEnhancing || !rawImage}
             />
           </div>
 
@@ -321,7 +320,7 @@ export function PortraitUpload() {
                 className={`toggle toggle-primary ${isRemovingBg ? 'opacity-50' : ''}`}
                 checked={bgRemoved}
                 onChange={handleToggleBgRemoval}
-                disabled={isRemovingBg}
+                disabled={isRemovingBg || !rawImage}
               />
               <span className="label-text flex items-center gap-2">
                 {isRemovingBg ? (

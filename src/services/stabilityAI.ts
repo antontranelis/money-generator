@@ -3,6 +3,32 @@ const STABILITY_REMOVE_BG_URL = 'https://api.stability.ai/v2beta/stable-image/ed
 
 const STORAGE_KEY_STABILITY = 'stability_api_key';
 
+// Global configuration for custom API endpoints
+let customRemoveBgEndpoint: string | null = null;
+
+/**
+ * Configure a custom endpoint for background removal.
+ * Use this to proxy requests through your own server to protect API keys.
+ * The endpoint should accept POST with { imageDataUrl: string } and return { imageDataUrl: string }
+ */
+export function setRemoveBackgroundEndpoint(endpoint: string | null): void {
+  customRemoveBgEndpoint = endpoint;
+}
+
+/**
+ * Get the current custom endpoint for background removal
+ */
+export function getRemoveBackgroundEndpoint(): string | null {
+  return customRemoveBgEndpoint;
+}
+
+/**
+ * Check if a custom endpoint is configured (meaning no local API key is needed)
+ */
+export function hasCustomEndpoint(): boolean {
+  return customRemoveBgEndpoint !== null;
+}
+
 export type EnhanceStyle = 'vintage' | 'engraved' | 'currency';
 
 interface EnhanceOptions {
@@ -133,6 +159,10 @@ export function setApiKey(key: string): void {
 }
 
 export function hasApiKey(): boolean {
+  // If a custom endpoint is configured, no local API key is needed
+  if (customRemoveBgEndpoint) {
+    return true;
+  }
   return getApiKey() !== null;
 }
 
@@ -199,8 +229,28 @@ export async function enhancePortrait(options: EnhanceOptions): Promise<string> 
   return `data:image/png;base64,${data.artifacts[0].base64}`;
 }
 
-// Remove background using Stability AI API
+// Remove background using custom endpoint or Stability AI API directly
 export async function removeBackground(imageDataUrl: string): Promise<string> {
+  // If a custom endpoint is configured, use it (server-side proxy)
+  if (customRemoveBgEndpoint) {
+    const response = await fetch(customRemoveBgEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ imageDataUrl }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.imageDataUrl;
+  }
+
+  // Otherwise, use direct API call (requires API key in browser)
   const apiKey = getApiKey();
   if (!apiKey) {
     throw new Error('No Stability AI API key configured');

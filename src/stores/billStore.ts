@@ -9,6 +9,9 @@ interface BillActions {
   setEnhancedPortrait: (enhanced: string | null) => void;
   toggleUseEnhanced: () => void;
   setPortraitZoom: (zoom: number) => void;
+  setPortraitRawImage: (rawImage: string | null) => void;
+  setPortraitBgRemoved: (bgRemoved: boolean, bgRemovedImage?: string | null) => void;
+  setPortraitEngravingIntensity: (intensity: number) => void;
   setCurrentSide: (side: BillSide) => void;
   flipSide: () => void;
   setIsEnhancing: (value: boolean) => void;
@@ -34,6 +37,10 @@ const initialState: BillState = {
     enhanced: null,
     useEnhanced: false,
     zoom: 1,
+    rawImage: null,
+    bgRemovedImage: null,
+    bgRemoved: false,
+    engravingIntensity: 0,
   },
   currentSide: 'front',
   isEnhancing: false,
@@ -58,6 +65,7 @@ export const useBillStore = create<BillState & BillActions>()(
       setPortrait: (original, enhanced = null) =>
         set((state) => ({
           portrait: {
+            ...state.portrait,
             original,
             enhanced,
             useEnhanced: false,
@@ -88,6 +96,31 @@ export const useBillStore = create<BillState & BillActions>()(
           portrait: {
             ...state.portrait,
             zoom,
+          },
+        })),
+
+      setPortraitRawImage: (rawImage) =>
+        set((state) => ({
+          portrait: {
+            ...state.portrait,
+            rawImage,
+          },
+        })),
+
+      setPortraitBgRemoved: (bgRemoved, bgRemovedImage) =>
+        set((state) => ({
+          portrait: {
+            ...state.portrait,
+            bgRemoved,
+            bgRemovedImage: bgRemovedImage !== undefined ? bgRemovedImage : state.portrait.bgRemovedImage,
+          },
+        })),
+
+      setPortraitEngravingIntensity: (engravingIntensity) =>
+        set((state) => ({
+          portrait: {
+            ...state.portrait,
+            engravingIntensity,
           },
         })),
 

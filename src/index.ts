@@ -32,6 +32,9 @@ export {
   hasApiKey,
   enhancePortrait,
   removeBackground,
+  setRemoveBackgroundEndpoint,
+  getRemoveBackgroundEndpoint,
+  hasCustomEndpoint,
   applyEngravingEffect,
 } from './services';
 export type { EnhanceStyle } from './services';

@@ -24,6 +24,9 @@ export {
   hasApiKey,
   enhancePortrait,
   removeBackground,
+  setRemoveBackgroundEndpoint,
+  getRemoveBackgroundEndpoint,
+  hasCustomEndpoint,
 } from './stabilityAI';
 export type { EnhanceStyle } from './stabilityAI';
 

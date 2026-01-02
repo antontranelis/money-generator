@@ -19,6 +19,14 @@ export interface PortraitState {
   enhanced: string | null;
   useEnhanced: boolean;
   zoom: number;
+  // Raw image before effects (for reapplying effects after reload)
+  rawImage: string | null;
+  // Background-removed version cache
+  bgRemovedImage: string | null;
+  // Whether background removal is active
+  bgRemoved: boolean;
+  // Current engraving intensity (0-1)
+  engravingIntensity: number;
 }
 
 export interface BillState {
