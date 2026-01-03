@@ -1,49 +1,46 @@
-// Temporarily disabled - hours and description inputs
-// TODO: Re-enable when ready
-export function VoucherConfig() {
-  return null;
+import { useBillStore } from '../stores/billStore';
+import { t } from '../constants/translations';
 
-  /*
+export function VoucherConfig() {
+  const language = useBillStore((state) => state.voucherConfig.language);
+  const templateHue = useBillStore((state) => state.voucherConfig.templateHue);
+  const setTemplateHue = useBillStore((state) => state.setTemplateHue);
+  const trans = t(language);
+
   return (
     <div className="space-y-4">
-      {/* Hours Selection * /}
+      {/* Bill Color Slider */}
       <div className="form-control">
         <label className="label">
-          <span className="label-text font-medium">{trans.form.voucher.hours}</span>
+          <span className="label-text font-medium">{trans.form.billColor.label}</span>
+          <span className="label-text-alt">{templateHue}°</span>
         </label>
-        <div className="join w-full">
-          {HOUR_OPTIONS.map((hours) => (
-            <button
-              key={hours}
-              className={`join-item btn flex-1 ${
-                voucherConfig.hours === hours ? 'btn-primary' : 'btn-outline'
-              }`}
-              onClick={() => setHours(hours)}
-            >
-              {hours} {getHourLabel(hours)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Description * /}
-      <div className="form-control">
-        <label className="label">
-          <span className="label-text font-medium">{trans.form.voucher.description}</span>
-        </label>
-        <textarea
-          className="textarea textarea-bordered h-24 resize-none w-full"
-          placeholder={trans.form.voucher.descriptionPlaceholder}
-          value={voucherConfig.description}
-          onChange={(e) => setVoucherConfig({ description: e.target.value })}
-          maxLength={200}
+        <input
+          type="range"
+          min="0"
+          max="360"
+          value={templateHue}
+          onChange={(e) => setTemplateHue(Number(e.target.value))}
+          className="range range-primary"
+          style={{
+            background: `linear-gradient(to right,
+              hsl(0, 70%, 50%),
+              hsl(60, 70%, 50%),
+              hsl(120, 70%, 50%),
+              hsl(180, 70%, 50%),
+              hsl(240, 70%, 50%),
+              hsl(300, 70%, 50%),
+              hsl(360, 70%, 50%))`,
+          }}
         />
-        <label className="label">
-          <span className="label-text-alt"></span>
-          <span className="label-text-alt">{voucherConfig.description.length}/200</span>
-        </label>
+        <div className="flex justify-between text-xs px-1 mt-1 opacity-60">
+          <span>0°</span>
+          <span>90°</span>
+          <span>180°</span>
+          <span>270°</span>
+          <span>360°</span>
+        </div>
       </div>
     </div>
   );
-  */
 }
