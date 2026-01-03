@@ -397,9 +397,9 @@ function getWorker(): Worker {
   return worker;
 }
 
-// Convert data URL to blob URL for worker
-async function dataUrlToBlobUrl(dataUrl: string): Promise<string> {
-  const response = await fetch(dataUrl);
+// Convert any URL (data URL, relative URL, absolute URL) to blob URL for worker
+async function toBlobUrl(url: string): Promise<string> {
+  const response = await fetch(url);
   const blob = await response.blob();
   return URL.createObjectURL(blob);
 }
@@ -432,10 +432,15 @@ export async function generateBillPDF(options: PDFGeneratorOptions): Promise<Blo
     description,
   } = options;
 
-  // Convert portrait data URL to blob URL if needed
-  let portraitUrl: string | null = null;
+  // Convert all URLs to blob URLs for worker (worker can't resolve relative URLs)
+  const [frontBlobUrl, backBlobUrl] = await Promise.all([
+    toBlobUrl(frontTemplateSrc),
+    toBlobUrl(backTemplateSrc),
+  ]);
+
+  let portraitBlobUrl: string | null = null;
   if (portrait) {
-    portraitUrl = await dataUrlToBlobUrl(portrait);
+    portraitBlobUrl = await toBlobUrl(portrait);
   }
 
   return new Promise((resolve, reject) => {
@@ -446,7 +451,9 @@ export async function generateBillPDF(options: PDFGeneratorOptions): Promise<Blo
       w.removeEventListener('error', handleError);
 
       // Clean up blob URLs
-      if (portraitUrl) URL.revokeObjectURL(portraitUrl);
+      URL.revokeObjectURL(frontBlobUrl);
+      URL.revokeObjectURL(backBlobUrl);
+      if (portraitBlobUrl) URL.revokeObjectURL(portraitBlobUrl);
 
       if (e.data.type === 'success') {
         try {
@@ -494,7 +501,9 @@ export async function generateBillPDF(options: PDFGeneratorOptions): Promise<Blo
       w.removeEventListener('message', handleMessage);
       w.removeEventListener('error', handleError);
 
-      if (portraitUrl) URL.revokeObjectURL(portraitUrl);
+      URL.revokeObjectURL(frontBlobUrl);
+      URL.revokeObjectURL(backBlobUrl);
+      if (portraitBlobUrl) URL.revokeObjectURL(portraitBlobUrl);
 
       reject(new Error(e.message));
     };
@@ -504,9 +513,9 @@ export async function generateBillPDF(options: PDFGeneratorOptions): Promise<Blo
 
     w.postMessage({
       type: 'generate',
-      frontTemplateUrl: frontTemplateSrc,
-      backTemplateUrl: backTemplateSrc,
-      portraitUrl,
+      frontTemplateUrl: frontBlobUrl,
+      backTemplateUrl: backBlobUrl,
+      portraitUrl: portraitBlobUrl,
       templateWidth,
       templateHeight,
       templateHue,
