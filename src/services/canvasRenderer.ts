@@ -260,22 +260,26 @@ export async function renderFrontSide(
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  canvas.width = width;
-  canvas.height = height;
+  // Double buffering: render to off-screen canvas first to prevent white flash
+  const offscreen = document.createElement('canvas');
+  offscreen.width = width;
+  offscreen.height = height;
+  const offCtx = offscreen.getContext('2d');
+  if (!offCtx) return;
 
-  // Clear canvas
-  ctx.clearRect(0, 0, width, height);
+  // Clear off-screen canvas
+  offCtx.clearRect(0, 0, width, height);
 
   // Draw template (with optional hue shift)
   const template = await getHueShiftedTemplate(templateSrc, templateHue, width, height);
-  drawTemplate(ctx, template, width, height);
+  drawTemplate(offCtx, template, width, height);
 
   // Draw portrait if available
   if (portraitSrc) {
     try {
       const portrait = await loadImage(portraitSrc);
       drawOvalPortrait(
-        ctx,
+        offCtx,
         portrait,
         layout.portrait.x,
         layout.portrait.y,
@@ -292,8 +296,13 @@ export async function renderFrontSide(
 
   // Draw name
   if (name) {
-    drawText(ctx, name, layout.namePlate);
+    drawText(offCtx, name, layout.namePlate);
   }
+
+  // Copy finished image to visible canvas in one operation (no flash)
+  canvas.width = width;
+  canvas.height = height;
+  ctx.drawImage(offscreen, 0, 0);
 }
 
 export async function renderBackSide(
@@ -311,28 +320,37 @@ export async function renderBackSide(
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  canvas.width = width;
-  canvas.height = height;
+  // Double buffering: render to off-screen canvas first to prevent white flash
+  const offscreen = document.createElement('canvas');
+  offscreen.width = width;
+  offscreen.height = height;
+  const offCtx = offscreen.getContext('2d');
+  if (!offCtx) return;
 
-  // Clear canvas
-  ctx.clearRect(0, 0, width, height);
+  // Clear off-screen canvas
+  offCtx.clearRect(0, 0, width, height);
 
   // Draw template (with optional hue shift)
   const template = await getHueShiftedTemplate(templateSrc, templateHue, width, height);
-  drawTemplate(ctx, template, width, height);
+  drawTemplate(offCtx, template, width, height);
 
   // Draw contact info
   if (layout.contactInfo && (name || email || phone)) {
-    drawContactInfo(ctx, name, email, phone, layout.contactInfo);
+    drawContactInfo(offCtx, name, email, phone, layout.contactInfo);
   }
 
   // Draw description
   if (layout.description && description) {
-    drawMultilineText(ctx, description, layout.description);
+    drawMultilineText(offCtx, description, layout.description);
   }
 
   // Draw name at bottom
   if (name) {
-    drawText(ctx, name, layout.namePlate);
+    drawText(offCtx, name, layout.namePlate);
   }
+
+  // Copy finished image to visible canvas in one operation (no flash)
+  canvas.width = width;
+  canvas.height = height;
+  ctx.drawImage(offscreen, 0, 0);
 }
