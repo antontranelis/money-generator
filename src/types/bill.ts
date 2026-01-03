@@ -70,9 +70,16 @@ export interface TextConfig extends CanvasPosition {
   align?: CanvasTextAlign;
 }
 
+export interface SignatureConfig extends CanvasPosition {
+  width: number;
+  height: number;
+  labelFontSize: number;
+}
+
 export interface TemplateLayout {
   portrait: PortraitConfig;
   namePlate: TextConfig;
   contactInfo?: TextConfig;
   description?: TextConfig;
+  signature?: SignatureConfig;
 }

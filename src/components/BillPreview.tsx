@@ -81,9 +81,10 @@ export function BillPreview() {
       layout.back,
       template.width,
       template.height,
-      debouncedHue
+      debouncedHue,
+      language
     );
-  }, [template, personalInfo, displayDescription, layout, debouncedHue]);
+  }, [template, personalInfo, displayDescription, layout, debouncedHue, language]);
 
   const handleFlip = () => {
     setIsFlipping(true);

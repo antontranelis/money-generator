@@ -132,13 +132,18 @@ export async function compositeWithBackground(
 }
 
 /**
- * Apply engraving/sepia effect to an image
+ * Apply engraving/tinted effect to an image
  * Preserves transparency for use with background-removed images
  * Optimized with: image caching, Uint32Array for fast pixel ops, reusable canvas
  * @param imageDataUrl - Base64 data URL of the image
  * @param intensity - Effect intensity from 0 (original) to 1 (full effect)
+ * @param tintHue - Optional hue in degrees (0-360) to tint the effect. Default ~40 (sepia/brown)
  */
-export async function applyEngravingEffect(imageDataUrl: string, intensity: number = 0.5): Promise<string> {
+export async function applyEngravingEffect(
+  imageDataUrl: string,
+  intensity: number = 0.5,
+  tintHue: number = 40
+): Promise<string> {
   const img = await loadImageCached(imageDataUrl);
 
   // Use reusable canvas
@@ -159,7 +164,10 @@ export async function applyEngravingEffect(imageDataUrl: string, intensity: numb
   const contrast = 1 + intensity * 0.8; // 1.0 at 0, 1.8 at 1
   const invIntensity = 1 - intensity;
 
-  // Apply vintage/sepia engraving effect pixel by pixel
+  // Normalize tint hue to 0-1 range
+  const tintH = (tintHue % 360) / 360;
+
+  // Apply vintage/tinted engraving effect pixel by pixel
   for (let i = 0; i < pixels.length; i++) {
     const pixel = pixels[i];
 
@@ -180,18 +188,16 @@ export async function applyEngravingEffect(imageDataUrl: string, intensity: numb
     if (adjusted < 0) adjusted = 0;
     else if (adjusted > 255) adjusted = 255;
 
-    // Apply sepia/vintage currency tone
-    let sepiaR = adjusted * 0.9 + 25;
-    let sepiaG = adjusted * 0.78 + 15;
-    let sepiaB = adjusted * 0.55 + 5;
-    if (sepiaR > 255) sepiaR = 255;
-    if (sepiaG > 255) sepiaG = 255;
-    if (sepiaB > 255) sepiaB = 255;
+    // Convert grayscale to tinted color using HSL
+    // Use the tint hue with very low saturation for subtle vintage currency look
+    const l = adjusted / 255;
+    const s = 0.12; // Very low saturation for subtle, desaturated tint
+    const [tintR, tintG, tintB] = hslToRgb(tintH, s, l);
 
     // Blend with original based on intensity
-    const newR = (r * invIntensity + sepiaR * intensity) | 0;
-    const newG = (g * invIntensity + sepiaG * intensity) | 0;
-    const newB = (b * invIntensity + sepiaB * intensity) | 0;
+    const newR = (r * invIntensity + tintR * intensity) | 0;
+    const newG = (g * invIntensity + tintG * intensity) | 0;
+    const newB = (b * invIntensity + tintB * intensity) | 0;
 
     // Pack back into 32-bit value (little-endian: ABGR)
     pixels[i] = (a << 24) | (newB << 16) | (newG << 8) | newR;

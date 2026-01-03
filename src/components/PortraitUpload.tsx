@@ -54,6 +54,10 @@ export function PortraitUpload() {
     };
   }, []);
 
+  // Track templateHue for re-applying sepia effect
+  const templateHue = useBillStore((state) => state.voucherConfig.templateHue);
+  const templateHueRef = useRef(templateHue);
+
   const handleFile = useCallback(
     async (file: File) => {
       if (!file.type.startsWith('image/')) {
@@ -110,10 +114,10 @@ export function PortraitUpload() {
     }
   };
 
-  // Apply engraving effect to an image
-  const applyEngraving = useCallback(async (sourceImage: string, intensity: number): Promise<string> => {
+  // Apply engraving effect to an image (tint matches template hue)
+  const applyEngraving = useCallback(async (sourceImage: string, intensity: number, tintHue: number): Promise<string> => {
     try {
-      return await enhance(sourceImage, intensity);
+      return await enhance(sourceImage, intensity, tintHue);
     } catch (err) {
       console.error('Enhancement failed:', err);
       return sourceImage;
@@ -134,26 +138,46 @@ export function PortraitUpload() {
 
   // Apply all effects in correct order: composite -> sepia
   const applyAllEffects = useCallback(async () => {
-    const state = useBillStore.getState().portrait;
-    if (!state.rawImage) return;
+    const state = useBillStore.getState();
+    const portraitState = state.portrait;
+    const currentHue = state.voucherConfig.templateHue;
+    if (!portraitState.rawImage) return;
 
     let result: string;
 
-    if (state.bgRemoved && state.bgRemovedImage) {
+    if (portraitState.bgRemoved && portraitState.bgRemovedImage) {
       // Background was removed - apply composite with opacity and blur
-      result = await compositeWithBackground(state.bgRemovedImage, state.rawImage, state.bgOpacity, state.bgBlur);
+      result = await compositeWithBackground(portraitState.bgRemovedImage, portraitState.rawImage, portraitState.bgOpacity, portraitState.bgBlur);
     } else {
       // No background removal - use raw image
-      result = state.rawImage;
+      result = portraitState.rawImage;
     }
 
-    // Apply sepia effect if intensity > 0
-    if (state.engravingIntensity > 0) {
-      result = await applyEngraving(result, state.engravingIntensity);
+    // Apply sepia effect if intensity > 0 (tint matches template hue)
+    if (portraitState.engravingIntensity > 0) {
+      result = await applyEngraving(result, portraitState.engravingIntensity, currentHue);
     }
 
     setPortrait(result);
   }, [applyEngraving, setPortrait]);
+
+  // Re-apply sepia effect when templateHue changes (if sepia is active)
+  useEffect(() => {
+    // Skip initial render and only react to actual changes
+    if (templateHueRef.current === templateHue) return;
+    templateHueRef.current = templateHue;
+
+    // Only re-apply if sepia effect is active
+    const state = useBillStore.getState().portrait;
+    if (state.engravingIntensity > 0 && state.rawImage) {
+      // Clear any pending debounce
+      if (engravingDebounceRef.current) {
+        clearTimeout(engravingDebounceRef.current);
+      }
+      // Debounce the effect application
+      engravingDebounceRef.current = setTimeout(applyAllEffects, 150);
+    }
+  }, [templateHue, applyAllEffects]);
 
   const handleToggleBgRemoval = async () => {
     if (!rawImage) return;
@@ -170,23 +194,27 @@ export function PortraitUpload() {
       // Turning ON background removal
       const bgRemovedResult = await applyBgRemoval(rawImage);
       // Get current state (may have changed during async operation)
-      const state = useBillStore.getState().portrait;
+      const state = useBillStore.getState();
+      const portraitState = state.portrait;
+      const currentHue = state.voucherConfig.templateHue;
 
       // Composite with background at current opacity (starts at 0 = no background)
-      let result = await compositeWithBackground(bgRemovedResult, rawImage, state.bgOpacity, state.bgBlur);
+      let result = await compositeWithBackground(bgRemovedResult, rawImage, portraitState.bgOpacity, portraitState.bgBlur);
 
       // Apply sepia if intensity > 0
-      if (state.engravingIntensity > 0) {
-        result = await applyEngraving(result, state.engravingIntensity);
+      if (portraitState.engravingIntensity > 0) {
+        result = await applyEngraving(result, portraitState.engravingIntensity, currentHue);
       }
       setPortrait(result);
     } else {
       // Turning OFF background removal - use raw image
       setPortraitBgRemoved(false, null);
-      // Get current intensity from store (may have changed during async operation)
-      const currentIntensity = useBillStore.getState().portrait.engravingIntensity;
+      // Get current state from store (may have changed during async operation)
+      const state = useBillStore.getState();
+      const currentIntensity = state.portrait.engravingIntensity;
+      const currentHue = state.voucherConfig.templateHue;
       if (currentIntensity > 0) {
-        const result = await applyEngraving(rawImage, currentIntensity);
+        const result = await applyEngraving(rawImage, currentIntensity, currentHue);
         setPortrait(result);
       } else {
         setPortrait(rawImage);
@@ -216,14 +244,16 @@ export function PortraitUpload() {
     // Apply background removal
     const bgRemovedResult = await applyBgRemoval(rawImage);
     // Get current state
-    const state = useBillStore.getState().portrait;
+    const state = useBillStore.getState();
+    const portraitState = state.portrait;
+    const currentHue = state.voucherConfig.templateHue;
 
     // Composite with background at current opacity (starts at 0 = no background)
-    let result = await compositeWithBackground(bgRemovedResult, rawImage, state.bgOpacity, state.bgBlur);
+    let result = await compositeWithBackground(bgRemovedResult, rawImage, portraitState.bgOpacity, portraitState.bgBlur);
 
     // Apply sepia if intensity > 0
-    if (state.engravingIntensity > 0) {
-      result = await applyEngraving(result, state.engravingIntensity);
+    if (portraitState.engravingIntensity > 0) {
+      result = await applyEngraving(result, portraitState.engravingIntensity, currentHue);
     }
     setPortrait(result);
   };
@@ -461,11 +491,11 @@ export function PortraitUpload() {
               />
             </div>
 
-            {/* Engraving Effect Slider */}
+            {/* Color Adjustment Slider */}
             <div className="form-control w-full">
               <label className="label">
                 <span className="label-text flex items-center gap-2">
-                  {language === 'de' ? 'Sepia-Effekt' : 'Sepia effect'}
+                  {language === 'de' ? 'Farbanpassung' : 'Color adjustment'}
                   {isEnhancing && <span className="loading loading-spinner loading-xs"></span>}
                 </span>
                 <span className="label-text-alt">{Math.round(engravingIntensity * 100)}%</span>

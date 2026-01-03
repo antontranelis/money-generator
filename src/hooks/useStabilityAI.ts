@@ -7,7 +7,7 @@ import {
 } from '../services/stabilityAI';
 
 interface UseStabilityAIReturn {
-  enhance: (imageDataUrl: string, intensity?: number) => Promise<string>;
+  enhance: (imageDataUrl: string, intensity?: number, tintHue?: number) => Promise<string>;
   removeBg: (imageDataUrl: string) => Promise<string>;
   isEnhancing: boolean;
   isRemovingBg: boolean;
@@ -37,13 +37,13 @@ export function useStabilityAI(): UseStabilityAIReturn {
   }, []);
 
   const enhance = useCallback(
-    async (imageDataUrl: string, intensity: number = 0.5): Promise<string> => {
+    async (imageDataUrl: string, intensity: number = 0.5, tintHue: number = 40): Promise<string> => {
       setIsEnhancing(true);
       setError(null);
 
       try {
         // Always use local engraving effect (preserves transparency, no API cost)
-        const result = await applyEngravingEffect(imageDataUrl, intensity);
+        const result = await applyEngravingEffect(imageDataUrl, intensity, tintHue);
         return result;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Enhancement failed';

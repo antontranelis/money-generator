@@ -53,6 +53,7 @@ export function ExportButton() {
         phone: personalInfo.phone,
         description: displayDescription,
         filename,
+        language,
       });
     } catch (err) {
       console.error('PDF export failed:', err);

@@ -10,5 +10,6 @@ export type {
   CanvasPosition,
   PortraitConfig,
   TextConfig,
+  SignatureConfig,
   TemplateLayout,
 } from './bill';

@@ -94,10 +94,17 @@ export const LAYOUT_LDPI: { front: TemplateLayout; back: TemplateLayout } = {
       lineHeight: 42,
       align: 'center',
     },
+    signature: {
+      x: 768,
+      y: 920,
+      width: 300,
+      height: 60,
+      labelFontSize: 16,
+    },
   },
 };
 
-// Layout coordinates for high-DPI German templates (6144x4096)
+// Layout coordinates for high-DPI German templates (6144x3200)
 export const LAYOUT_HDPI: { front: TemplateLayout; back: TemplateLayout } = {
   front: {
     portrait: {
@@ -124,24 +131,31 @@ export const LAYOUT_HDPI: { front: TemplateLayout; back: TemplateLayout } = {
     namePlate: {
       x: 3072,
       y: 2930,
-      fontSize: 144,
+      fontSize: 145,
       maxWidth: 1520,
       align: 'center',
     },
     contactInfo: {
       x: 1520,
-      y: 1680,
+      y: 1580,
       fontSize: 160,
       lineHeight: 280,
       align: 'center',
     },
     description: {
       x: 4600,
-      y: 1680,
+      y: 1580,
       fontSize: 145,
       maxWidth: 2000,
       lineHeight: 210,
       align: 'center',
+    },
+    signature: {
+      x: 3080,
+      y: 2450,
+      width: 1600,
+      height: 240,
+      labelFontSize: 145,
     },
   },
 };
@@ -192,6 +206,13 @@ export function getPreviewLayout(language: Language): { front: TemplateLayout; b
       maxWidth: l.description.maxWidth ? l.description.maxWidth * scale : undefined,
       lineHeight: l.description.lineHeight ? l.description.lineHeight * scale : undefined,
       align: l.description.align,
+    } : undefined,
+    signature: l.signature ? {
+      x: l.signature.x * scale,
+      y: l.signature.y * scale,
+      width: l.signature.width * scale,
+      height: l.signature.height * scale,
+      labelFontSize: l.signature.labelFontSize * scale,
     } : undefined,
   });
 

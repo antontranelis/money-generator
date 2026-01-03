@@ -17,6 +17,7 @@ interface PDFGeneratorOptions {
   phone: string;
   description: string;
   filename: string;
+  language?: 'de' | 'en';
 }
 
 export interface WorkerResponse {
@@ -246,6 +247,7 @@ self.onmessage = async (e) => {
     email,
     phone,
     description,
+    language,
   } = e.data;
 
   try {
@@ -356,6 +358,27 @@ self.onmessage = async (e) => {
       );
     }
 
+    // Draw signature field on back
+    if (layout.back.signature) {
+      const sig = layout.back.signature;
+      const signatureLabel = language === 'de' ? 'Unterschrift' : 'Signature';
+
+      // Draw signature line at (x, y)
+      backCtx.strokeStyle = '#2a3a2a';
+      backCtx.lineWidth = Math.max(2, sig.labelFontSize / 16);
+      backCtx.beginPath();
+      backCtx.moveTo(sig.x - sig.width / 2, sig.y);
+      backCtx.lineTo(sig.x + sig.width / 2, sig.y);
+      backCtx.stroke();
+
+      // Draw label below line
+      backCtx.font = \`\${sig.labelFontSize}px "Times New Roman", serif\`;
+      backCtx.textAlign = 'center';
+      backCtx.textBaseline = 'top';
+      backCtx.fillStyle = '#2a3a2a';
+      backCtx.fillText(signatureLabel, sig.x, sig.y + sig.labelFontSize * 0.3);
+    }
+
     // Convert canvases to blobs and then to ArrayBuffer for transfer
     const [frontBlob, backBlob] = await Promise.all([
       frontCanvas.convertToBlob({ type: 'image/jpeg', quality: 0.95 }),
@@ -430,6 +453,7 @@ export async function generateBillPDF(options: PDFGeneratorOptions): Promise<Blo
     email,
     phone,
     description,
+    language = 'de',
   } = options;
 
   // Convert all URLs to blob URLs for worker (worker can't resolve relative URLs)
@@ -531,12 +555,14 @@ export async function generateBillPDF(options: PDFGeneratorOptions): Promise<Blo
           namePlate: layout.back.namePlate,
           contactInfo: layout.back.contactInfo,
           description: layout.back.description,
+          signature: layout.back.signature,
         },
       },
       name,
       email,
       phone,
       description,
+      language,
     });
   });
 }

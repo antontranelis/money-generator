@@ -13,7 +13,6 @@ export function VoucherConfig() {
       <div className="form-control">
         <label className="label">
           <span className="label-text font-medium">{trans.form.billColor.label}</span>
-          <span className="label-text-alt">{templateHue}°</span>
         </label>
         <input
           type="range"
@@ -33,13 +32,6 @@ export function VoucherConfig() {
               hsl(360, 70%, 50%))`,
           }}
         />
-        <div className="flex justify-between text-xs px-1 mt-1 opacity-60">
-          <span>0°</span>
-          <span>90°</span>
-          <span>180°</span>
-          <span>270°</span>
-          <span>360°</span>
-        </div>
       </div>
     </div>
   );

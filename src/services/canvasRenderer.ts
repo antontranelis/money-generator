@@ -1,4 +1,4 @@
-import type { TemplateLayout, TextConfig } from '../types/bill';
+import type { TemplateLayout, TextConfig, SignatureConfig } from '../types/bill';
 import { applyHueShift } from './imageEffects';
 
 // Image cache to avoid reloading
@@ -244,6 +244,32 @@ export function drawContactInfo(
   ctx.restore();
 }
 
+export function drawSignature(
+  ctx: CanvasRenderingContext2D,
+  config: SignatureConfig,
+  label: string,
+  color: string = '#2a3a2a'
+): void {
+  ctx.save();
+
+  // Draw signature line at (x, y)
+  ctx.strokeStyle = color;
+  ctx.lineWidth = Math.max(2, config.labelFontSize / 16);
+  ctx.beginPath();
+  ctx.moveTo(config.x - config.width / 2, config.y);
+  ctx.lineTo(config.x + config.width / 2, config.y);
+  ctx.stroke();
+
+  // Draw label below line
+  ctx.font = `${config.labelFontSize}px "Times New Roman", serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = color;
+  ctx.fillText(label, config.x, config.y + config.labelFontSize * 0.3);
+
+  ctx.restore();
+}
+
 export async function renderFrontSide(
   canvas: HTMLCanvasElement,
   templateSrc: string,
@@ -315,7 +341,8 @@ export async function renderBackSide(
   layout: TemplateLayout,
   width: number,
   height: number,
-  templateHue: number = 0
+  templateHue: number = 0,
+  language: 'de' | 'en' = 'de'
 ): Promise<void> {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -347,6 +374,12 @@ export async function renderBackSide(
   // Draw name at bottom
   if (name) {
     drawText(offCtx, name, layout.namePlate);
+  }
+
+  // Draw signature field
+  if (layout.signature) {
+    const signatureLabel = language === 'de' ? 'Unterschrift' : 'Signature';
+    drawSignature(offCtx, layout.signature, signatureLabel);
   }
 
   // Copy finished image to visible canvas in one operation (no flash)
