@@ -3,13 +3,14 @@ import { useBillStore } from '../stores/billStore';
 import { t } from '../constants/translations';
 import { useStabilityAI } from '../hooks/useStabilityAI';
 import { ApiKeyModal } from './ApiKeyModal';
-import { resizeImage, compositeWithBackground } from '../services/imageEffects';
+import { resizeImage, compositeWithBackground, clearImageCache } from '../services/imageEffects';
 
 export function PortraitUpload() {
   const language = useBillStore((state) => state.voucherConfig.language);
   const portrait = useBillStore((state) => state.portrait);
   const setPortrait = useBillStore((state) => state.setPortrait);
   const setPortraitZoom = useBillStore((state) => state.setPortraitZoom);
+  const setPortraitPan = useBillStore((state) => state.setPortraitPan);
   const setPortraitRawImage = useBillStore((state) => state.setPortraitRawImage);
   const setPortraitBgRemoved = useBillStore((state) => state.setPortraitBgRemoved);
   const setPortraitBgOpacity = useBillStore((state) => state.setPortraitBgOpacity);
@@ -20,8 +21,11 @@ export function PortraitUpload() {
 
   const trans = t(language);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const portraitRef = useRef<HTMLDivElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
 
   // Debounce refs to track pending effect applications
   const engravingDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -165,14 +169,17 @@ export function PortraitUpload() {
     if (newBgRemoved) {
       // Turning ON background removal
       const bgRemovedResult = await applyBgRemoval(rawImage);
-      // Get current intensity from store (may have changed during async operation)
-      const currentIntensity = useBillStore.getState().portrait.engravingIntensity;
-      if (currentIntensity > 0) {
-        const result = await applyEngraving(bgRemovedResult, currentIntensity);
-        setPortrait(result);
-      } else {
-        setPortrait(bgRemovedResult);
+      // Get current state (may have changed during async operation)
+      const state = useBillStore.getState().portrait;
+
+      // Composite with background at current opacity (starts at 0 = no background)
+      let result = await compositeWithBackground(bgRemovedResult, rawImage, state.bgOpacity, state.bgBlur);
+
+      // Apply sepia if intensity > 0
+      if (state.engravingIntensity > 0) {
+        result = await applyEngraving(result, state.engravingIntensity);
       }
+      setPortrait(result);
     } else {
       // Turning OFF background removal - use raw image
       setPortraitBgRemoved(false, null);
@@ -208,12 +215,17 @@ export function PortraitUpload() {
 
     // Apply background removal
     const bgRemovedResult = await applyBgRemoval(rawImage);
-    if (engravingIntensity > 0) {
-      const result = await applyEngraving(bgRemovedResult, engravingIntensity);
-      setPortrait(result);
-    } else {
-      setPortrait(bgRemovedResult);
+    // Get current state
+    const state = useBillStore.getState().portrait;
+
+    // Composite with background at current opacity (starts at 0 = no background)
+    let result = await compositeWithBackground(bgRemovedResult, rawImage, state.bgOpacity, state.bgBlur);
+
+    // Apply sepia if intensity > 0
+    if (state.engravingIntensity > 0) {
+      result = await applyEngraving(result, state.engravingIntensity);
     }
+    setPortrait(result);
   };
 
   // Handle background opacity change
@@ -253,6 +265,76 @@ export function PortraitUpload() {
     setPortraitBgOpacity(0);
     setPortraitBgBlur(0);
     setPortraitEngravingIntensity(0);
+    // Clear cached images to free memory
+    clearImageCache();
+  };
+
+  // Pan handlers for dragging the portrait when zoomed
+  const handlePanStart = (clientX: number, clientY: number) => {
+    if (portrait.zoom <= 1) return; // Only allow panning when zoomed in
+    setIsPanning(true);
+    panStartRef.current = {
+      x: clientX,
+      y: clientY,
+      panX: portrait.panX,
+      panY: portrait.panY,
+    };
+  };
+
+  const handlePanMove = (clientX: number, clientY: number) => {
+    if (!isPanning || !panStartRef.current || !portraitRef.current) return;
+
+    const rect = portraitRef.current.getBoundingClientRect();
+    const sensitivity = 2 / Math.max(rect.width, rect.height); // Normalize by element size
+
+    const deltaX = (clientX - panStartRef.current.x) * sensitivity;
+    const deltaY = (clientY - panStartRef.current.y) * sensitivity;
+
+    // Calculate new pan values (clamped to -1 to 1)
+    const newPanX = Math.max(-1, Math.min(1, panStartRef.current.panX + deltaX));
+    const newPanY = Math.max(-1, Math.min(1, panStartRef.current.panY + deltaY));
+
+    setPortraitPan(newPanX, newPanY);
+  };
+
+  const handlePanEnd = () => {
+    setIsPanning(false);
+    panStartRef.current = null;
+  };
+
+  // Mouse event handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handlePanStart(e.clientX, e.clientY);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    handlePanMove(e.clientX, e.clientY);
+  };
+
+  const handleMouseUp = () => {
+    handlePanEnd();
+  };
+
+  const handleMouseLeave = () => {
+    handlePanEnd();
+  };
+
+  // Touch event handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      handlePanStart(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      handlePanMove(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    handlePanEnd();
   };
 
   return (
@@ -309,12 +391,27 @@ export function PortraitUpload() {
         <div className="flex flex-col items-center space-y-4">
           {/* Preview */}
           <div className="relative">
-            <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-currency-gold shadow-lg">
+            <div
+              ref={portraitRef}
+              className={`w-32 h-32 rounded-full overflow-hidden border-4 border-currency-gold shadow-lg ${
+                portrait.zoom > 1 ? 'cursor-grab' : ''
+              } ${isPanning ? 'cursor-grabbing' : ''}`}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseLeave}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
               <img
                 src={portrait.original || ''}
                 alt="Portrait"
-                className="w-full h-full object-cover"
-                style={{ transform: `scale(${portrait.zoom})` }}
+                className="w-full h-full object-cover pointer-events-none select-none"
+                style={{
+                  transform: `scale(${portrait.zoom}) translate(${portrait.panX * 50 * (portrait.zoom - 1)}%, ${portrait.panY * 50 * (portrait.zoom - 1)}%)`,
+                }}
+                draggable={false}
               />
             </div>
             <button
@@ -352,7 +449,14 @@ export function PortraitUpload() {
                 max="2"
                 step="0.05"
                 value={portrait.zoom}
-                onChange={(e) => setPortraitZoom(parseFloat(e.target.value))}
+                onChange={(e) => {
+                  const newZoom = parseFloat(e.target.value);
+                  setPortraitZoom(newZoom);
+                  // Reset pan when zooming out to 1 or less
+                  if (newZoom <= 1 && (portrait.panX !== 0 || portrait.panY !== 0)) {
+                    setPortraitPan(0, 0);
+                  }
+                }}
                 className="range range-primary range-sm"
               />
             </div>

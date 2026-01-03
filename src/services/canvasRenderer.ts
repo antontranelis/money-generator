@@ -36,7 +36,9 @@ export function drawOvalPortrait(
   centerY: number,
   radiusX: number,
   radiusY: number,
-  zoom: number = 1
+  zoom: number = 1,
+  panX: number = 0,
+  panY: number = 0
 ): void {
   ctx.save();
 
@@ -69,9 +71,13 @@ export function drawOvalPortrait(
   drawWidth *= zoom;
   drawHeight *= zoom;
 
-  // Center the image within the ellipse
-  const drawX = centerX - drawWidth / 2;
-  const drawY = centerY - drawHeight / 2;
+  // Calculate max pan distance (how far the image extends beyond the ellipse)
+  const maxPanX = Math.max(0, (drawWidth - ellipseWidth) / 2);
+  const maxPanY = Math.max(0, (drawHeight - ellipseHeight) / 2);
+
+  // Center the image within the ellipse, with pan offset
+  const drawX = centerX - drawWidth / 2 + panX * maxPanX;
+  const drawY = centerY - drawHeight / 2 + panY * maxPanY;
 
   ctx.drawImage(portrait, drawX, drawY, drawWidth, drawHeight);
   ctx.restore();
@@ -185,7 +191,9 @@ export async function renderFrontSide(
   layout: TemplateLayout,
   width: number,
   height: number,
-  portraitZoom: number = 1
+  portraitZoom: number = 1,
+  portraitPanX: number = 0,
+  portraitPanY: number = 0
 ): Promise<void> {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -211,7 +219,9 @@ export async function renderFrontSide(
         layout.portrait.y,
         layout.portrait.radiusX,
         layout.portrait.radiusY,
-        portraitZoom
+        portraitZoom,
+        portraitPanX,
+        portraitPanY
       );
     } catch (e) {
       console.error('Failed to load portrait:', e);

@@ -9,6 +9,7 @@ interface BillActions {
   setEnhancedPortrait: (enhanced: string | null) => void;
   toggleUseEnhanced: () => void;
   setPortraitZoom: (zoom: number) => void;
+  setPortraitPan: (panX: number, panY: number) => void;
   setPortraitRawImage: (rawImage: string | null) => void;
   setPortraitBgRemoved: (bgRemoved: boolean, bgRemovedImage?: string | null) => void;
   setPortraitBgOpacity: (opacity: number) => void;
@@ -39,6 +40,8 @@ const initialState: BillState = {
     enhanced: null,
     useEnhanced: false,
     zoom: 1,
+    panX: 0,
+    panY: 0,
     rawImage: null,
     bgRemovedImage: null,
     bgRemoved: false,
@@ -73,8 +76,10 @@ export const useBillStore = create<BillState & BillActions>()(
             original,
             enhanced,
             useEnhanced: false,
-            // Keep current zoom if updating existing portrait, reset to 1 for new portrait
+            // Keep current zoom/pan if updating existing portrait, reset for new portrait
             zoom: state.portrait.original && original ? state.portrait.zoom : 1,
+            panX: state.portrait.original && original ? state.portrait.panX : 0,
+            panY: state.portrait.original && original ? state.portrait.panY : 0,
           },
         })),
 
@@ -100,6 +105,15 @@ export const useBillStore = create<BillState & BillActions>()(
           portrait: {
             ...state.portrait,
             zoom,
+          },
+        })),
+
+      setPortraitPan: (panX, panY) =>
+        set((state) => ({
+          portrait: {
+            ...state.portrait,
+            panX,
+            panY,
           },
         })),
 
@@ -178,6 +192,8 @@ export const useBillStore = create<BillState & BillActions>()(
           enhanced: null, // Don't persist - too large
           useEnhanced: state.portrait.useEnhanced,
           zoom: state.portrait.zoom,
+          panX: state.portrait.panX,
+          panY: state.portrait.panY,
           rawImage: null, // Don't persist - too large
           bgRemovedImage: null, // Don't persist - too large
           bgRemoved: false, // Reset to false since we don't persist the image

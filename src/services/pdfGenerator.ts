@@ -10,6 +10,8 @@ interface PDFGeneratorOptions {
   layout: { front: TemplateLayout; back: TemplateLayout };
   portrait: string | null;
   portraitZoom?: number;
+  portraitPanX?: number;
+  portraitPanY?: number;
   name: string;
   email: string;
   phone: string;
@@ -26,6 +28,8 @@ export async function generateBillPDF(options: PDFGeneratorOptions): Promise<Blo
     layout,
     portrait,
     portraitZoom = 1,
+    portraitPanX = 0,
+    portraitPanY = 0,
     name,
     email,
     phone,
@@ -38,7 +42,7 @@ export async function generateBillPDF(options: PDFGeneratorOptions): Promise<Blo
 
   // Render both sides
   await Promise.all([
-    renderFrontSide(frontCanvas, frontTemplateSrc, portrait, name, layout.front, templateWidth, templateHeight, portraitZoom),
+    renderFrontSide(frontCanvas, frontTemplateSrc, portrait, name, layout.front, templateWidth, templateHeight, portraitZoom, portraitPanX, portraitPanY),
     renderBackSide(backCanvas, backTemplateSrc, name, email, phone, description, layout.back, templateWidth, templateHeight),
   ]);
 

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { useBillStore } from '../stores/billStore';
 import { t, formatDescription } from '../constants/translations';
 import { getTemplate, getLayout } from '../constants/templates';
@@ -12,6 +12,7 @@ export function BillPreview() {
   const portrait = useBillStore((state) => state.portrait);
   const currentSide = useBillStore((state) => state.currentSide);
   const flipSide = useBillStore((state) => state.flipSide);
+  const setPortraitPan = useBillStore((state) => state.setPortraitPan);
 
   const trans = t(language);
 
@@ -20,6 +21,8 @@ export function BillPreview() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [isFlipping, setIsFlipping] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
 
   const template = getTemplate(language, hours);
   const layout = getLayout(language);
@@ -41,9 +44,11 @@ export function BillPreview() {
       layout.front,
       template.width,
       template.height,
-      portrait.zoom
+      portrait.zoom,
+      portrait.panX,
+      portrait.panY
     );
-  }, [template, currentPortrait, personalInfo.name, layout, portrait.zoom]);
+  }, [template, currentPortrait, personalInfo.name, layout, portrait.zoom, portrait.panX, portrait.panY]);
 
   // Render back side
   useEffect(() => {
@@ -69,6 +74,95 @@ export function BillPreview() {
       setIsFlipping(false);
     }, 150);
   };
+
+  // Check if click is within portrait area (ellipse hit test)
+  const isInPortraitArea = useCallback((clientX: number, clientY: number): boolean => {
+    if (!containerRef.current || currentSide !== 'front' || !portrait.original) return false;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const scaleX = rect.width / template.width;
+    const scaleY = rect.height / template.height;
+
+    // Convert click to template coordinates
+    const templateX = (clientX - rect.left) / scaleX;
+    const templateY = (clientY - rect.top) / scaleY;
+
+    // Check if point is inside portrait ellipse
+    const { x: cx, y: cy, radiusX, radiusY } = layout.front.portrait;
+    const dx = (templateX - cx) / radiusX;
+    const dy = (templateY - cy) / radiusY;
+
+    return (dx * dx + dy * dy) <= 1;
+  }, [currentSide, portrait.original, template.width, template.height, layout.front.portrait]);
+
+  // Pan handlers
+  const handlePanStart = useCallback((clientX: number, clientY: number) => {
+    if (portrait.zoom <= 1 || !isInPortraitArea(clientX, clientY)) return;
+
+    setIsPanning(true);
+    panStartRef.current = {
+      x: clientX,
+      y: clientY,
+      panX: portrait.panX,
+      panY: portrait.panY,
+    };
+  }, [portrait.zoom, portrait.panX, portrait.panY, isInPortraitArea]);
+
+  const handlePanMove = useCallback((clientX: number, clientY: number) => {
+    if (!isPanning || !panStartRef.current || !containerRef.current) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const sensitivity = 3 / Math.max(rect.width, rect.height);
+
+    const deltaX = (clientX - panStartRef.current.x) * sensitivity;
+    const deltaY = (clientY - panStartRef.current.y) * sensitivity;
+
+    const newPanX = Math.max(-1, Math.min(1, panStartRef.current.panX + deltaX));
+    const newPanY = Math.max(-1, Math.min(1, panStartRef.current.panY + deltaY));
+
+    setPortraitPan(newPanX, newPanY);
+  }, [isPanning, setPortraitPan]);
+
+  const handlePanEnd = useCallback(() => {
+    setIsPanning(false);
+    panStartRef.current = null;
+  }, []);
+
+  // Mouse handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (portrait.zoom > 1 && isInPortraitArea(e.clientX, e.clientY)) {
+      e.preventDefault();
+      handlePanStart(e.clientX, e.clientY);
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    handlePanMove(e.clientX, e.clientY);
+  };
+
+  const handleMouseUp = () => handlePanEnd();
+  const handleMouseLeave = () => handlePanEnd();
+
+  // Touch handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      if (portrait.zoom > 1 && isInPortraitArea(touch.clientX, touch.clientY)) {
+        handlePanStart(touch.clientX, touch.clientY);
+      }
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      handlePanMove(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchEnd = () => handlePanEnd();
+
+  // Determine cursor style
+  const canPan = currentSide === 'front' && portrait.original && portrait.zoom > 1;
 
   // Calculate aspect ratio for responsive sizing
   const aspectRatio = template.width / template.height;
@@ -114,8 +208,15 @@ export function BillPreview() {
       {/* Canvas Container */}
       <div
         ref={containerRef}
-        className="relative w-full overflow-hidden  shadow-lg"
+        className={`relative w-full overflow-hidden shadow-lg ${canPan ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
         style={{ aspectRatio }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         {/* Front Canvas */}
         <canvas

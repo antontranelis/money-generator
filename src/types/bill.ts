@@ -19,6 +19,9 @@ export interface PortraitState {
   enhanced: string | null;
   useEnhanced: boolean;
   zoom: number;
+  // Pan offset for positioning zoomed image (-1 to 1, 0 = centered)
+  panX: number;
+  panY: number;
   // Raw image before effects (for reapplying effects after reload)
   rawImage: string | null;
   // Background-removed version cache

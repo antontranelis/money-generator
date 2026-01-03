@@ -44,6 +44,8 @@ export function ExportButton() {
         layout,
         portrait: currentPortrait,
         portraitZoom: portrait.zoom,
+        portraitPanX: portrait.panX,
+        portraitPanY: portrait.panY,
         name: personalInfo.name,
         email: personalInfo.email,
         phone: personalInfo.phone,
