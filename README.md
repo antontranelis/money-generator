@@ -1,133 +1,163 @@
-# Money Generator
+# Money Printer
 
 Create personalized time vouchers that look like real currency. Design your own "Zeitgutscheine" (time vouchers) with custom portraits, names, and descriptions - perfect as unique gifts.
 
-![Money Generator Preview](docs/preview.png)
+**[Live Demo](https://antontranelis.github.io/money-printer/)**
 
 ## Features
 
-- **Custom Portrait**: Upload your photo and optionally enhance it with AI for a vintage currency look
+- **Custom Portrait**: Upload your photo with zoom and pan controls
+- **Background Removal**: AI-powered background removal with adjustable opacity and blur
+- **Sepia Effect**: Local vintage currency engraving effect (no API required)
 - **Personalization**: Add your name, email, and phone number
 - **Multiple Denominations**: Choose between 1, 5, or 10 hour vouchers
 - **Bilingual**: Full support for German and English
 - **High-Quality Export**: Download as print-ready PDF (A4 landscape)
-- **Portrait Zoom**: Adjust the portrait size with an intuitive zoom slider
+- **Responsive**: Works on desktop and mobile with touch support
 
-## Demo
+## Installation
 
-Try it live: [Money Generator Demo](https://yourusername.github.io/money-generator/)
+```bash
+npm install @antontranelis/money-printer
+```
+
+## Usage
+
+### As a React Component
+
+```tsx
+import { MoneyPrinter } from '@antontranelis/money-printer';
+
+function App() {
+  return <MoneyPrinter />;
+}
+```
+
+### Individual Components
+
+```tsx
+import {
+  BillForm,
+  BillPreview,
+  ExportButton,
+  PortraitUpload,
+  useBillStore
+} from '@antontranelis/money-printer';
+
+function CustomEditor() {
+  const portrait = useBillStore((state) => state.portrait);
+
+  return (
+    <div>
+      <PortraitUpload />
+      <BillPreview />
+      <ExportButton />
+    </div>
+  );
+}
+```
+
+### Services
+
+```tsx
+import {
+  // PDF Generation
+  generateBillPDF,
+  exportBillAsPDF,
+
+  // Canvas Rendering
+  renderFrontSide,
+  renderBackSide,
+
+  // Image Effects (local, no API)
+  applyEngravingEffect,
+  resizeImage,
+  compositeWithBackground,
+  clearImageCache,
+
+  // AI Enhancement (requires API key)
+  removeBackground,
+  setApiKey,
+  hasApiKey,
+} from '@antontranelis/money-printer';
+```
+
+## Portrait Controls
+
+### Zoom & Pan
+
+- **Zoom Slider**: Adjust portrait size from 50% to 200%
+- **Pan/Drag**: When zoomed in, drag the portrait to reposition (mouse & touch supported)
+- Works in both the avatar preview and the bill preview canvas
+
+### Background Removal
+
+1. Toggle "Remove background" (requires Stability AI API key)
+2. Adjust **Background Opacity** (0-100%) to blend original background
+3. Adjust **Blur** (0-100%) for depth-of-field effect
+
+### Sepia Effect
+
+- Local processing, no API required
+- Adjustable intensity (0-100%)
+- Applies vintage currency engraving look
+
+## AI Features (Optional)
+
+Background removal uses Stability AI. To enable:
+
+1. Get an API key from [Stability AI](https://stability.ai/)
+2. Click "Remove background" toggle in the app
+3. Enter your API key when prompted
+
+The sepia/engraving effect runs locally and doesn't require an API key.
 
 ## Tech Stack
 
-- **React 19** - UI Framework
+- **React 18/19** - UI Framework
 - **TypeScript** - Type Safety
 - **Zustand** - State Management
 - **jsPDF** - PDF Generation
-- **Tailwind CSS + DaisyUI** - Styling
-- **Vite** - Build Tool
+- **Canvas API** - Image Processing
 
-## Getting Started
+## Templates
 
-### Prerequisites
+The package includes two template sets:
 
-- Node.js 18+
-- npm or yarn
+- **German (DE)**: High-DPI templates (6144x3200px)
+- **English (EN)**: Standard-DPI templates (1536x1024px)
 
-### Installation
+Templates are bundled in `public/templates/`.
+
+## Development
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/money-generator.git
-cd money-generator
+git clone https://github.com/antontranelis/money-printer.git
+cd money-printer
 
 # Install dependencies
 npm install
 
 # Start development server
 npm run dev
-```
 
-### Build
+# Build library
+npm run build:lib
 
-```bash
-# Build for production
+# Build standalone app
 npm run build
-
-# Preview production build
-npm run preview
 ```
 
-## Usage
+## Performance Optimizations
 
-1. **Upload a Portrait**: Click the upload area or drag & drop an image
-2. **Adjust Zoom**: Use the slider to zoom in/out on your portrait
-3. **Enter Details**: Fill in your name and contact information
-4. **Choose Hours**: Select 1, 5, or 10 hours for your voucher
-5. **Add Description**: Optionally add a custom description
-6. **Download PDF**: Click the download button to get your print-ready voucher
+The image processing is optimized for smooth performance:
 
-## AI Portrait Enhancement (Optional)
-
-The app includes optional AI-powered portrait enhancement using Stability AI. This transforms your photo into a vintage currency engraving style.
-
-To enable:
-1. Get an API key from [Stability AI](https://stability.ai/)
-2. Click "Add API Key for better results" in the app
-3. Or set the environment variable: `VITE_STABILITY_API_KEY=your-key`
-
-Without an API key, a basic canvas-based enhancement is available.
-
-## Customization
-
-### Templates
-
-Templates are located in `public/templates/`. The app supports two template sets:
-
-- **German (DE)**: High-DPI templates (6144x4096px)
-- **English (EN)**: Standard-DPI templates (1536x1024px)
-
-To customize, replace the template images and update the layout coordinates in `src/constants/templates.ts`.
-
-### Translations
-
-All text is internationalized. Add or modify translations in `src/constants/translations.ts`.
-
-## Project Structure
-
-```
-src/
-├── components/          # React components
-│   ├── BillForm.tsx     # Main form container
-│   ├── BillPreview.tsx  # Canvas preview
-│   ├── ExportButton.tsx # PDF download
-│   ├── PortraitUpload.tsx
-│   └── ...
-├── services/            # Core services
-│   ├── pdfGenerator.ts  # PDF creation
-│   ├── canvasRenderer.ts # Canvas drawing
-│   └── stabilityAI.ts   # AI enhancement
-├── stores/              # Zustand stores
-│   └── billStore.ts     # App state
-├── types/               # TypeScript types
-├── constants/           # Templates & translations
-└── hooks/               # Custom React hooks
-```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+- **Image Caching**: Avoids reloading the same data URLs
+- **Uint32Array**: Fast pixel manipulation for sepia effect
+- **Reusable Canvas**: Reduces garbage collection pressure
+- **Debounced Updates**: Slider changes are debounced to prevent lag
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- Inspired by the concept of "Zeitgutscheine" (time vouchers) as meaningful gifts
-- Built with modern React patterns and best practices
+MIT License - see [LICENSE](LICENSE) for details.

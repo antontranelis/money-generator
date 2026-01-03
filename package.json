@@ -6,9 +6,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/money-printer.git"
+    "url": "https://github.com/antontranelis/money-printer.git"
   },
-  "homepage": "https://yourusername.github.io/money-printer",
+  "homepage": "https://antontranelis.github.io/money-printer",
   "keywords": [
     "voucher",
     "gift",
