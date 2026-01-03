@@ -25,6 +25,10 @@ export interface PortraitState {
   bgRemovedImage: string | null;
   // Whether background removal is active
   bgRemoved: boolean;
+  // Background opacity (0 = transparent, 1 = full original background)
+  bgOpacity: number;
+  // Background blur (0 = no blur, 1 = max blur)
+  bgBlur: number;
   // Current engraving intensity (0-1)
   engravingIntensity: number;
 }

@@ -3,6 +3,7 @@ import { useBillStore } from '../stores/billStore';
 import { t } from '../constants/translations';
 import { useStabilityAI } from '../hooks/useStabilityAI';
 import { ApiKeyModal } from './ApiKeyModal';
+import { resizeImage, compositeWithBackground } from '../services/imageEffects';
 
 export function PortraitUpload() {
   const language = useBillStore((state) => state.voucherConfig.language);
@@ -11,6 +12,8 @@ export function PortraitUpload() {
   const setPortraitZoom = useBillStore((state) => state.setPortraitZoom);
   const setPortraitRawImage = useBillStore((state) => state.setPortraitRawImage);
   const setPortraitBgRemoved = useBillStore((state) => state.setPortraitBgRemoved);
+  const setPortraitBgOpacity = useBillStore((state) => state.setPortraitBgOpacity);
+  const setPortraitBgBlur = useBillStore((state) => state.setPortraitBgBlur);
   const setPortraitEngravingIntensity = useBillStore((state) => state.setPortraitEngravingIntensity);
 
   const { enhance, removeBg, isEnhancing, isRemovingBg, error: aiError, hasKey, setApiKey } = useStabilityAI();
@@ -22,17 +25,28 @@ export function PortraitUpload() {
 
   // Debounce refs to track pending effect applications
   const engravingDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bgOpacityDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Use values from store
   const rawImage = portrait.rawImage;
   const bgRemovedImage = portrait.bgRemovedImage;
   const bgRemoved = portrait.bgRemoved;
+  const bgOpacity = portrait.bgOpacity;
+  const bgBlur = portrait.bgBlur;
   const engravingIntensity = portrait.engravingIntensity;
+
+  // Initialize rawImage from original if not set (migration from old store format)
+  useEffect(() => {
+    if (portrait.original && !portrait.rawImage) {
+      setPortraitRawImage(portrait.original);
+    }
+  }, [portrait.original, portrait.rawImage, setPortraitRawImage]);
 
   // Cleanup debounce timeouts on unmount
   useEffect(() => {
     return () => {
       if (engravingDebounceRef.current) clearTimeout(engravingDebounceRef.current);
+      if (bgOpacityDebounceRef.current) clearTimeout(bgOpacityDebounceRef.current);
     };
   }, []);
 
@@ -45,9 +59,11 @@ export function PortraitUpload() {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const dataUrl = e.target?.result as string;
+        // Resize image for better performance (max 1600px)
+        const resizedImage = await resizeImage(dataUrl);
         // Store raw image and set as portrait
-        setPortraitRawImage(dataUrl);
-        setPortrait(dataUrl);
+        setPortraitRawImage(resizedImage);
+        setPortrait(resizedImage);
         setPortraitBgRemoved(false, null);
         setPortraitEngravingIntensity(0);
       };
@@ -104,13 +120,36 @@ export function PortraitUpload() {
   const applyBgRemoval = useCallback(async (sourceImage: string): Promise<string> => {
     try {
       const result = await removeBg(sourceImage);
-      setPortraitBgRemoved(true, result); // Cache the result in store
+      setPortraitBgRemoved(true, result);
       return result;
     } catch (err) {
       console.error('Background removal failed:', err);
       return sourceImage;
     }
   }, [removeBg, setPortraitBgRemoved]);
+
+  // Apply all effects in correct order: composite -> sepia
+  const applyAllEffects = useCallback(async () => {
+    const state = useBillStore.getState().portrait;
+    if (!state.rawImage) return;
+
+    let result: string;
+
+    if (state.bgRemoved && state.bgRemovedImage) {
+      // Background was removed - apply composite with opacity and blur
+      result = await compositeWithBackground(state.bgRemovedImage, state.rawImage, state.bgOpacity, state.bgBlur);
+    } else {
+      // No background removal - use raw image
+      result = state.rawImage;
+    }
+
+    // Apply sepia effect if intensity > 0
+    if (state.engravingIntensity > 0) {
+      result = await applyEngraving(result, state.engravingIntensity);
+    }
+
+    setPortrait(result);
+  }, [applyEngraving, setPortrait]);
 
   const handleToggleBgRemoval = async () => {
     if (!rawImage) return;
@@ -126,8 +165,10 @@ export function PortraitUpload() {
     if (newBgRemoved) {
       // Turning ON background removal
       const bgRemovedResult = await applyBgRemoval(rawImage);
-      if (engravingIntensity > 0) {
-        const result = await applyEngraving(bgRemovedResult, engravingIntensity);
+      // Get current intensity from store (may have changed during async operation)
+      const currentIntensity = useBillStore.getState().portrait.engravingIntensity;
+      if (currentIntensity > 0) {
+        const result = await applyEngraving(bgRemovedResult, currentIntensity);
         setPortrait(result);
       } else {
         setPortrait(bgRemovedResult);
@@ -135,8 +176,10 @@ export function PortraitUpload() {
     } else {
       // Turning OFF background removal - use raw image
       setPortraitBgRemoved(false, null);
-      if (engravingIntensity > 0) {
-        const result = await applyEngraving(rawImage, engravingIntensity);
+      // Get current intensity from store (may have changed during async operation)
+      const currentIntensity = useBillStore.getState().portrait.engravingIntensity;
+      if (currentIntensity > 0) {
+        const result = await applyEngraving(rawImage, currentIntensity);
         setPortrait(result);
       } else {
         setPortrait(rawImage);
@@ -155,18 +198,7 @@ export function PortraitUpload() {
     if (!rawImage) return;
 
     // Debounce the effect application
-    engravingDebounceRef.current = setTimeout(async () => {
-      const baseImage = bgRemoved && bgRemovedImage ? bgRemovedImage : rawImage;
-
-      if (newIntensity === 0) {
-        // No engraving - show base image
-        setPortrait(baseImage);
-      } else {
-        // Apply engraving with new intensity
-        const result = await applyEngraving(baseImage, newIntensity);
-        setPortrait(result);
-      }
-    }, 150);
+    engravingDebounceRef.current = setTimeout(applyAllEffects, 150);
   };
 
   const handleApiKeySubmit = async (key: string) => {
@@ -184,10 +216,42 @@ export function PortraitUpload() {
     }
   };
 
+  // Handle background opacity change
+  const handleBgOpacityChange = (newOpacity: number) => {
+    setPortraitBgOpacity(newOpacity);
+
+    // Clear any pending debounce
+    if (bgOpacityDebounceRef.current) {
+      clearTimeout(bgOpacityDebounceRef.current);
+    }
+
+    if (!rawImage || !bgRemovedImage) return;
+
+    // Debounce the composite application
+    bgOpacityDebounceRef.current = setTimeout(applyAllEffects, 150);
+  };
+
+  // Handle background blur change
+  const handleBgBlurChange = (newBlur: number) => {
+    setPortraitBgBlur(newBlur);
+
+    // Clear any pending debounce
+    if (bgOpacityDebounceRef.current) {
+      clearTimeout(bgOpacityDebounceRef.current);
+    }
+
+    if (!rawImage || !bgRemovedImage) return;
+
+    // Debounce the composite application
+    bgOpacityDebounceRef.current = setTimeout(applyAllEffects, 150);
+  };
+
   const handleRemove = () => {
     setPortrait(null);
     setPortraitRawImage(null);
     setPortraitBgRemoved(false, null);
+    setPortraitBgOpacity(0);
+    setPortraitBgBlur(0);
     setPortraitEngravingIntensity(0);
   };
 
@@ -274,69 +338,113 @@ export function PortraitUpload() {
             </button>
           </div>
 
-          {/* Zoom Slider */}
-          <div className="form-control w-full max-w-xs">
-            <label className="label">
-              <span className="label-text">{trans.form.portrait.zoom}</span>
-              <span className="label-text-alt">{Math.round(portrait.zoom * 100)}%</span>
-            </label>
-            <input
-              type="range"
-              min="0.5"
-              max="2"
-              step="0.05"
-              value={portrait.zoom}
-              onChange={(e) => setPortraitZoom(parseFloat(e.target.value))}
-              className="range range-primary range-sm"
-            />
-          </div>
-
-          {/* Engraving Effect Slider */}
-          <div className="form-control w-full max-w-xs">
-            <label className="label">
-              <span className="label-text flex items-center gap-2">
-                {language === 'de' ? 'Gravur-Effekt' : 'Engraving effect'}
-                {isEnhancing && <span className="loading loading-spinner loading-xs"></span>}
-              </span>
-              <span className="label-text-alt">{Math.round(engravingIntensity * 100)}%</span>
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={engravingIntensity}
-              onChange={(e) => handleEngravingIntensityChange(parseFloat(e.target.value))}
-              className="range range-secondary range-sm"
-              disabled={isEnhancing || !rawImage}
-            />
-          </div>
-
-          {/* Background Removal Toggle */}
-          <div className="form-control">
-            <label className="label cursor-pointer justify-start gap-3">
+          {/* Zoom and Sepia Sliders */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+            {/* Zoom Slider */}
+            <div className="form-control w-full">
+              <label className="label">
+                <span className="label-text">{trans.form.portrait.zoom}</span>
+                <span className="label-text-alt">{Math.round(portrait.zoom * 100)}%</span>
+              </label>
               <input
-                type="checkbox"
-                className={`toggle toggle-primary ${isRemovingBg ? 'opacity-50' : ''}`}
-                checked={bgRemoved}
-                onChange={handleToggleBgRemoval}
-                disabled={isRemovingBg || !rawImage}
+                type="range"
+                min="0.5"
+                max="2"
+                step="0.05"
+                value={portrait.zoom}
+                onChange={(e) => setPortraitZoom(parseFloat(e.target.value))}
+                className="range range-primary range-sm"
               />
-              <span className="label-text flex items-center gap-2">
-                {isRemovingBg ? (
-                  <>
-                    <span className="loading loading-spinner loading-xs"></span>
-                    {language === 'de' ? 'Hintergrund wird entfernt...' : 'Removing background...'}
-                  </>
-                ) : (
-                  language === 'de' ? 'Hintergrund entfernen' : 'Remove background'
-                )}
-                {!hasKey && (
-                  <span className="badge badge-sm badge-outline">API</span>
-                )}
-              </span>
-            </label>
+            </div>
+
+            {/* Engraving Effect Slider */}
+            <div className="form-control w-full">
+              <label className="label">
+                <span className="label-text flex items-center gap-2">
+                  {language === 'de' ? 'Sepia-Effekt' : 'Sepia effect'}
+                  {isEnhancing && <span className="loading loading-spinner loading-xs"></span>}
+                </span>
+                <span className="label-text-alt">{Math.round(engravingIntensity * 100)}%</span>
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={engravingIntensity}
+                onChange={(e) => handleEngravingIntensityChange(parseFloat(e.target.value))}
+                className="range range-secondary range-sm"
+                disabled={isEnhancing || !rawImage}
+              />
+            </div>
           </div>
+
+          {/* Background Removal - Toggle or Opacity Slider */}
+          {!bgRemoved ? (
+            // Show toggle when background not yet removed
+            <div className="form-control">
+              <label className="label cursor-pointer justify-start gap-3">
+                <input
+                  type="checkbox"
+                  className={`toggle toggle-primary ${isRemovingBg ? 'opacity-50' : ''}`}
+                  checked={bgRemoved}
+                  onChange={handleToggleBgRemoval}
+                  disabled={isRemovingBg || !rawImage}
+                />
+                <span className="label-text flex items-center gap-2">
+                  {isRemovingBg ? (
+                    <>
+                      <span className="loading loading-spinner loading-xs"></span>
+                      {language === 'de' ? 'Hintergrund wird entfernt...' : 'Removing background...'}
+                    </>
+                  ) : (
+                    language === 'de' ? 'Hintergrund entfernen' : 'Remove background'
+                  )}
+                  {!hasKey && (
+                    <span className="badge badge-sm badge-outline">API</span>
+                  )}
+                </span>
+              </label>
+            </div>
+          ) : (
+            // Show opacity and blur sliders when background has been removed
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+              <div className="form-control w-full">
+                <label className="label">
+                  <span className="label-text">
+                    {language === 'de' ? 'Hintergrund' : 'Background'}
+                  </span>
+                  <span className="label-text-alt">{Math.round(bgOpacity * 100)}%</span>
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={bgOpacity}
+                  onChange={(e) => handleBgOpacityChange(parseFloat(e.target.value))}
+                  className="range range-primary range-sm"
+                />
+              </div>
+              <div className="form-control w-full">
+                <label className="label">
+                  <span className="label-text">
+                    {language === 'de' ? 'Unschärfe' : 'Blur'}
+                  </span>
+                  <span className="label-text-alt">{Math.round(bgBlur * 100)}%</span>
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={bgBlur}
+                  onChange={(e) => handleBgBlurChange(parseFloat(e.target.value))}
+                  className="range range-primary range-sm"
+                />
+              </div>
+            </div>
+          )}
 
           {aiError && (
             <div className="alert alert-warning text-sm py-2">

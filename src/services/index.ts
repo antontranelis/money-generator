@@ -31,4 +31,4 @@ export {
 export type { EnhanceStyle } from './stabilityAI';
 
 // Local image effects
-export { applyEngravingEffect } from './imageEffects';
+export { applyEngravingEffect, resizeImage, compositeWithBackground } from './imageEffects';

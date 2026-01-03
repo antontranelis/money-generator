@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { applyEngravingEffect } from '../services/imageEffects';
 import {
   removeBackground,
@@ -21,7 +21,12 @@ export function useStabilityAI(): UseStabilityAIReturn {
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [isRemovingBg, setIsRemovingBg] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasKey, setHasKey] = useState(hasApiKey());
+  const [hasKey, setHasKey] = useState(() => hasApiKey());
+
+  // Re-check API key availability on mount (handles async env loading)
+  useEffect(() => {
+    setHasKey(hasApiKey());
+  }, []);
 
   const clearError = useCallback(() => setError(null), []);
 

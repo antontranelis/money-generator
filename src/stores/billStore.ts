@@ -11,6 +11,8 @@ interface BillActions {
   setPortraitZoom: (zoom: number) => void;
   setPortraitRawImage: (rawImage: string | null) => void;
   setPortraitBgRemoved: (bgRemoved: boolean, bgRemovedImage?: string | null) => void;
+  setPortraitBgOpacity: (opacity: number) => void;
+  setPortraitBgBlur: (blur: number) => void;
   setPortraitEngravingIntensity: (intensity: number) => void;
   setCurrentSide: (side: BillSide) => void;
   flipSide: () => void;
@@ -40,6 +42,8 @@ const initialState: BillState = {
     rawImage: null,
     bgRemovedImage: null,
     bgRemoved: false,
+    bgOpacity: 0,
+    bgBlur: 0,
     engravingIntensity: 0,
   },
   currentSide: 'front',
@@ -116,6 +120,22 @@ export const useBillStore = create<BillState & BillActions>()(
           },
         })),
 
+      setPortraitBgOpacity: (bgOpacity) =>
+        set((state) => ({
+          portrait: {
+            ...state.portrait,
+            bgOpacity,
+          },
+        })),
+
+      setPortraitBgBlur: (bgBlur) =>
+        set((state) => ({
+          portrait: {
+            ...state.portrait,
+            bgBlur,
+          },
+        })),
+
       setPortraitEngravingIntensity: (engravingIntensity) =>
         set((state) => ({
           portrait: {
@@ -152,7 +172,19 @@ export const useBillStore = create<BillState & BillActions>()(
       partialize: (state) => ({
         personalInfo: state.personalInfo,
         voucherConfig: state.voucherConfig,
-        portrait: state.portrait,
+        // Only persist small settings, NOT image data (too large for localStorage)
+        portrait: {
+          original: null, // Don't persist - too large
+          enhanced: null, // Don't persist - too large
+          useEnhanced: state.portrait.useEnhanced,
+          zoom: state.portrait.zoom,
+          rawImage: null, // Don't persist - too large
+          bgRemovedImage: null, // Don't persist - too large
+          bgRemoved: false, // Reset to false since we don't persist the image
+          bgOpacity: 0, // Reset since we don't persist the image
+          bgBlur: 0, // Reset since we don't persist the image
+          engravingIntensity: state.portrait.engravingIntensity,
+        },
       }),
     }
   )
