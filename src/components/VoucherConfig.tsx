@@ -18,40 +18,40 @@ export function VoucherConfig() {
     <div className="space-y-4">
       {/* Bill Language Selector */}
       <div className="form-control">
-        <label className="label">
+        <div className="flex items-center justify-between">
           <span className="label-text font-medium">{trans.form.voucher.billLanguage}</span>
-        </label>
-        <div className="join">
-          <button
-            className={`join-item btn btn-sm ${billLanguage === 'de' ? 'btn-active btn-primary' : 'btn-ghost'}`}
-            onClick={() => setBillLanguage('de')}
-          >
-            {trans.form.voucher.billLanguageGerman}
-          </button>
-          <button
-            className={`join-item btn btn-sm ${billLanguage === 'en' ? 'btn-active btn-primary' : 'btn-ghost'}`}
-            onClick={() => setBillLanguage('en')}
-          >
-            {trans.form.voucher.billLanguageEnglish}
-          </button>
+          <div className="join border border-base-300 rounded-lg">
+            <button
+              className={`join-item btn btn-sm ${billLanguage === 'de' ? 'btn-active btn-primary' : 'btn-ghost'}`}
+              onClick={() => setBillLanguage('de')}
+            >
+              {trans.form.voucher.billLanguageGerman}
+            </button>
+            <button
+              className={`join-item btn btn-sm ${billLanguage === 'en' ? 'btn-active btn-primary' : 'btn-ghost'}`}
+              onClick={() => setBillLanguage('en')}
+            >
+              {trans.form.voucher.billLanguageEnglish}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Hours Selector */}
       <div className="form-control">
-        <label className="label">
+        <div className="flex items-center justify-between">
           <span className="label-text font-medium">{trans.form.voucher.hours}</span>
-        </label>
-        <div className="join">
-          {hourOptions.map((h) => (
-            <button
-              key={h}
-              className={`join-item btn btn-sm ${hours === h ? 'btn-active btn-primary' : 'btn-ghost'}`}
-              onClick={() => setHours(h)}
-            >
-              {h} {h === 1 ? trans.form.voucher.hourLabel : trans.form.voucher.hoursLabel}
-            </button>
-          ))}
+          <div className="join border border-base-300 rounded-lg">
+            {hourOptions.map((h) => (
+              <button
+                key={h}
+                className={`join-item btn btn-sm ${hours === h ? 'btn-active btn-primary' : 'btn-ghost'}`}
+                onClick={() => setHours(h)}
+              >
+                {h} {h === 1 ? trans.form.voucher.hourLabel : trans.form.voucher.hoursLabel}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
