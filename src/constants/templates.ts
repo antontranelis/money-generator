@@ -153,3 +153,60 @@ export function getLayout(language: Language): { front: TemplateLayout; back: Te
 export function getTemplate(language: Language, hours: HourValue): TemplateConfig {
   return TEMPLATES[language][hours];
 }
+
+// Preview scale factor for faster rendering (1 = full res, 0.25 = quarter res)
+export const PREVIEW_SCALE = 0.25;
+
+// Get scaled layout for preview rendering
+export function getPreviewLayout(language: Language): { front: TemplateLayout; back: TemplateLayout } {
+  const layout = getLayout(language);
+  const scale = PREVIEW_SCALE;
+
+  const scaleLayout = (l: TemplateLayout): TemplateLayout => ({
+    portrait: {
+      x: l.portrait.x * scale,
+      y: l.portrait.y * scale,
+      radiusX: l.portrait.radiusX * scale,
+      radiusY: l.portrait.radiusY * scale,
+    },
+    namePlate: {
+      x: l.namePlate.x * scale,
+      y: l.namePlate.y * scale,
+      fontSize: l.namePlate.fontSize * scale,
+      maxWidth: l.namePlate.maxWidth ? l.namePlate.maxWidth * scale : undefined,
+      lineHeight: l.namePlate.lineHeight ? l.namePlate.lineHeight * scale : undefined,
+      align: l.namePlate.align,
+    },
+    contactInfo: l.contactInfo ? {
+      x: l.contactInfo.x * scale,
+      y: l.contactInfo.y * scale,
+      fontSize: l.contactInfo.fontSize * scale,
+      maxWidth: l.contactInfo.maxWidth ? l.contactInfo.maxWidth * scale : undefined,
+      lineHeight: l.contactInfo.lineHeight ? l.contactInfo.lineHeight * scale : undefined,
+      align: l.contactInfo.align,
+    } : undefined,
+    description: l.description ? {
+      x: l.description.x * scale,
+      y: l.description.y * scale,
+      fontSize: l.description.fontSize * scale,
+      maxWidth: l.description.maxWidth ? l.description.maxWidth * scale : undefined,
+      lineHeight: l.description.lineHeight ? l.description.lineHeight * scale : undefined,
+      align: l.description.align,
+    } : undefined,
+  });
+
+  return {
+    front: scaleLayout(layout.front),
+    back: scaleLayout(layout.back),
+  };
+}
+
+// Get scaled template dimensions for preview
+export function getPreviewTemplate(language: Language, hours: HourValue): TemplateConfig {
+  const template = TEMPLATES[language][hours];
+  return {
+    ...template,
+    width: Math.round(template.width * PREVIEW_SCALE),
+    height: Math.round(template.height * PREVIEW_SCALE),
+  };
+}

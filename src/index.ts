@@ -36,6 +36,7 @@ export {
   getRemoveBackgroundEndpoint,
   hasCustomEndpoint,
   applyEngravingEffect,
+  applyHueShift,
 } from './services';
 export type { EnhanceStyle } from './services';
 

@@ -197,3 +197,143 @@ export async function applyEngravingEffect(imageDataUrl: string, intensity: numb
   ctx.putImageData(imageData, 0, 0);
   return reusableCanvas!.toDataURL('image/png');
 }
+
+// RGB to HSL conversion
+function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
+  r /= 255;
+  g /= 255;
+  b /= 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0;
+  let s = 0;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
+    switch (max) {
+      case r:
+        h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+        break;
+      case g:
+        h = ((b - r) / d + 2) / 6;
+        break;
+      case b:
+        h = ((r - g) / d + 4) / 6;
+        break;
+    }
+  }
+
+  return [h, s, l];
+}
+
+// HSL to RGB conversion
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  if (s === 0) {
+    const gray = Math.round(l * 255);
+    return [gray, gray, gray];
+  }
+
+  const hue2rgb = (p: number, q: number, t: number): number => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+
+  return [
+    Math.round(hue2rgb(p, q, h + 1 / 3) * 255),
+    Math.round(hue2rgb(p, q, h) * 255),
+    Math.round(hue2rgb(p, q, h - 1 / 3) * 255),
+  ];
+}
+
+/**
+ * Replace cool colors (greens, cyans, blues) with target hue
+ * Maps all cool colors to the target hue while preserving saturation and lightness
+ * @param imageDataUrl - Base64 data URL of the image
+ * @param targetHue - Target hue in degrees (0-360). 160 = original (no shift)
+ * @returns Image with cool colors replaced by target hue
+ */
+export async function applyHueShift(imageDataUrl: string, targetHue: number): Promise<string> {
+  // No shift needed when hue is at source color (~160°)
+  if (targetHue >= 155 && targetHue <= 165) {
+    return imageDataUrl;
+  }
+
+  const img = await loadImageCached(imageDataUrl);
+
+  // Use reusable canvas
+  const ctx = getReusableCanvas(img.width, img.height);
+  ctx.drawImage(img, 0, 0);
+
+  // Get image data for pixel manipulation
+  const imageData = ctx.getImageData(0, 0, img.width, img.height);
+  const data = imageData.data;
+
+  // Use Uint32Array view for faster pixel access
+  const pixels = new Uint32Array(data.buffer);
+
+  // Target hue in 0-1 range
+  const targetH = (targetHue % 360) / 360;
+
+  // Cool color range to replace: green to blue (roughly 60° to 260°)
+  const coolHueMin = 60 / 360;   // ~0.17 (yellow-green)
+  const coolHueMax = 260 / 360;  // ~0.72 (blue-violet)
+
+  // Process pixels in chunks to avoid blocking UI
+  const CHUNK_SIZE = 100000; // Process 100k pixels per chunk
+  const totalPixels = pixels.length;
+
+  for (let start = 0; start < totalPixels; start += CHUNK_SIZE) {
+    const end = Math.min(start + CHUNK_SIZE, totalPixels);
+
+    // Process chunk
+    for (let i = start; i < end; i++) {
+      const pixel = pixels[i];
+
+      // Extract RGBA (little-endian: ABGR in memory)
+      const r = pixel & 0xff;
+      const g = (pixel >> 8) & 0xff;
+      const b = (pixel >> 16) & 0xff;
+      const a = (pixel >> 24) & 0xff;
+
+      // Skip fully transparent pixels
+      if (a === 0) continue;
+
+      // Convert RGB to HSL
+      const [h, s, l] = rgbToHsl(r, g, b);
+
+      // Skip very low saturation pixels (grays)
+      if (s < 0.06) continue;
+
+      // Only replace cool colors (greens, cyans, blues)
+      if (h < coolHueMin || h > coolHueMax) continue;
+
+      // Direct replacement: set hue to target, keep saturation and lightness
+      const newH = targetH;
+
+      // Convert back to RGB
+      const [newR, newG, newB] = hslToRgb(newH, s, l);
+
+      // Pack back into 32-bit value (little-endian: ABGR)
+      pixels[i] = (a << 24) | (newB << 16) | (newG << 8) | newR;
+    }
+
+    // Yield to browser between chunks (except for last chunk)
+    if (end < totalPixels) {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+  return reusableCanvas!.toDataURL('image/png');
+}

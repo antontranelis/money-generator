@@ -15,6 +15,7 @@ export {
   generateBillPDF,
   downloadBlob,
   exportBillAsPDF,
+  terminateWorker,
 } from './pdfGenerator';
 
 // AI enhancement (Stability AI)
@@ -31,4 +32,4 @@ export {
 export type { EnhanceStyle } from './stabilityAI';
 
 // Local image effects
-export { applyEngravingEffect, resizeImage, compositeWithBackground, clearImageCache } from './imageEffects';
+export { applyEngravingEffect, applyHueShift, resizeImage, compositeWithBackground, clearImageCache } from './imageEffects';

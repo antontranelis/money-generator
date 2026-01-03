@@ -12,6 +12,7 @@ export interface VoucherConfig {
   hours: HourValue;
   description: string;
   language: Language;
+  templateHue: number; // 0-360, default 0 (no shift)
 }
 
 export interface PortraitState {

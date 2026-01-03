@@ -33,6 +33,10 @@ interface Translations {
       description: string;
       descriptionPlaceholder: string;
     };
+    billColor: {
+      title: string;
+      label: string;
+    };
   };
   preview: {
     front: string;
@@ -82,6 +86,10 @@ const de: Translations = {
       description: 'Beschreibung',
       descriptionPlaceholder: 'Was kann mit diesem Gutschein eingelöst werden?',
     },
+    billColor: {
+      title: 'Scheinfarbe',
+      label: 'Farbton',
+    },
   },
   preview: {
     front: 'Vorderseite',
@@ -130,6 +138,10 @@ const en: Translations = {
       hoursLabel: 'hours',
       description: 'Description',
       descriptionPlaceholder: 'What can be redeemed with this voucher?',
+    },
+    billColor: {
+      title: 'Bill Color',
+      label: 'Hue',
     },
   },
   preview: {

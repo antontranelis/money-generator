@@ -21,6 +21,7 @@ interface BillActions {
   setIsExporting: (value: boolean) => void;
   setLanguage: (language: Language) => void;
   setHours: (hours: HourValue) => void;
+  setTemplateHue: (hue: number) => void;
   reset: () => void;
 }
 
@@ -34,6 +35,7 @@ const initialState: BillState = {
     hours: 1,
     description: '',
     language: 'de',
+    templateHue: 160, // Default to original teal-green color
   },
   portrait: {
     original: null,
@@ -177,6 +179,11 @@ export const useBillStore = create<BillState & BillActions>()(
       setHours: (hours) =>
         set((state) => ({
           voucherConfig: { ...state.voucherConfig, hours },
+        })),
+
+      setTemplateHue: (templateHue) =>
+        set((state) => ({
+          voucherConfig: { ...state.voucherConfig, templateHue },
         })),
 
       reset: () => set(initialState),

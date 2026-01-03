@@ -1,18 +1,34 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { useBillStore } from '../stores/billStore';
 import { t, formatDescription } from '../constants/translations';
-import { getTemplate, getLayout } from '../constants/templates';
+import { getPreviewTemplate, getPreviewLayout } from '../constants/templates';
 import { renderFrontSide, renderBackSide } from '../services/canvasRenderer';
+
+// Debounce hook for expensive operations
+function useDebouncedValue<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 export function BillPreview() {
   const language = useBillStore((state) => state.voucherConfig.language);
   const hours = useBillStore((state) => state.voucherConfig.hours);
   const description = useBillStore((state) => state.voucherConfig.description);
+  const templateHue = useBillStore((state) => state.voucherConfig.templateHue);
   const personalInfo = useBillStore((state) => state.personalInfo);
   const portrait = useBillStore((state) => state.portrait);
   const currentSide = useBillStore((state) => state.currentSide);
   const flipSide = useBillStore((state) => state.flipSide);
   const setPortraitPan = useBillStore((state) => state.setPortraitPan);
+
+  // Debounce templateHue to avoid expensive recalculations on every slider move
+  const debouncedHue = useDebouncedValue(templateHue, 150);
 
   const trans = t(language);
 
@@ -24,8 +40,8 @@ export function BillPreview() {
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
 
-  const template = getTemplate(language, hours);
-  const layout = getLayout(language);
+  const template = getPreviewTemplate(language, hours);
+  const layout = getPreviewLayout(language);
 
   const currentPortrait =
     portrait.useEnhanced && portrait.enhanced ? portrait.enhanced : portrait.original;
@@ -46,9 +62,10 @@ export function BillPreview() {
       template.height,
       portrait.zoom,
       portrait.panX,
-      portrait.panY
+      portrait.panY,
+      debouncedHue
     );
-  }, [template, currentPortrait, personalInfo.name, layout, portrait.zoom, portrait.panX, portrait.panY]);
+  }, [template, currentPortrait, personalInfo.name, layout, portrait.zoom, portrait.panX, portrait.panY, debouncedHue]);
 
   // Render back side
   useEffect(() => {
@@ -63,9 +80,10 @@ export function BillPreview() {
       displayDescription,
       layout.back,
       template.width,
-      template.height
+      template.height,
+      debouncedHue
     );
-  }, [template, personalInfo, displayDescription, layout]);
+  }, [template, personalInfo, displayDescription, layout, debouncedHue]);
 
   const handleFlip = () => {
     setIsFlipping(true);

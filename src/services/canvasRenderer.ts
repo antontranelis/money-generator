@@ -1,7 +1,11 @@
 import type { TemplateLayout, TextConfig } from '../types/bill';
+import { applyHueShift } from './imageEffects';
 
 // Image cache to avoid reloading
 const imageCache = new Map<string, HTMLImageElement>();
+
+// Cache for hue-shifted templates: key = `${src}:${hue}`
+const hueShiftedCache = new Map<string, string>();
 
 export async function loadImage(src: string): Promise<HTMLImageElement> {
   if (imageCache.has(src)) {
@@ -27,6 +31,63 @@ export function drawTemplate(
   height: number
 ): void {
   ctx.drawImage(template, 0, 0, width, height);
+}
+
+/**
+ * Get or create a hue-shifted template image
+ * Uses caching to avoid reprocessing the same hue shift
+ * @param templateSrc - URL of the template image
+ * @param hue - Hue shift in degrees (0-360)
+ * @param targetWidth - Target width for processing (for performance)
+ * @param targetHeight - Target height for processing (for performance)
+ */
+async function getHueShiftedTemplate(
+  templateSrc: string,
+  hue: number,
+  targetWidth: number,
+  targetHeight: number
+): Promise<HTMLImageElement> {
+  // No shift needed when hue is at source color (~160°)
+  // Use a small tolerance range (155-165) for "original"
+  if (hue >= 155 && hue <= 165) {
+    return loadImage(templateSrc);
+  }
+
+  // Include dimensions in cache key for different resolutions
+  const cacheKey = `${templateSrc}:${hue}:${targetWidth}x${targetHeight}`;
+
+  // Check cache first
+  if (hueShiftedCache.has(cacheKey)) {
+    return loadImage(hueShiftedCache.get(cacheKey)!);
+  }
+
+  // Load original template
+  const originalImg = await loadImage(templateSrc);
+
+  // Create temp canvas at TARGET size (smaller for preview, full for export)
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = targetWidth;
+  tempCanvas.height = targetHeight;
+  const tempCtx = tempCanvas.getContext('2d');
+  if (!tempCtx) throw new Error('Failed to get canvas context');
+
+  // Draw scaled to target dimensions
+  tempCtx.drawImage(originalImg, 0, 0, targetWidth, targetHeight);
+  const originalDataUrl = tempCanvas.toDataURL('image/png');
+
+  // Apply hue shift (now on smaller image for preview)
+  const shiftedDataUrl = await applyHueShift(originalDataUrl, hue);
+
+  // Limit cache size
+  if (hueShiftedCache.size > 20) {
+    const firstKey = hueShiftedCache.keys().next().value;
+    if (firstKey) hueShiftedCache.delete(firstKey);
+  }
+
+  // Cache the result
+  hueShiftedCache.set(cacheKey, shiftedDataUrl);
+
+  return loadImage(shiftedDataUrl);
 }
 
 export function drawOvalPortrait(
@@ -193,7 +254,8 @@ export async function renderFrontSide(
   height: number,
   portraitZoom: number = 1,
   portraitPanX: number = 0,
-  portraitPanY: number = 0
+  portraitPanY: number = 0,
+  templateHue: number = 0
 ): Promise<void> {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -204,8 +266,8 @@ export async function renderFrontSide(
   // Clear canvas
   ctx.clearRect(0, 0, width, height);
 
-  // Draw template
-  const template = await loadImage(templateSrc);
+  // Draw template (with optional hue shift)
+  const template = await getHueShiftedTemplate(templateSrc, templateHue, width, height);
   drawTemplate(ctx, template, width, height);
 
   // Draw portrait if available
@@ -243,7 +305,8 @@ export async function renderBackSide(
   description: string,
   layout: TemplateLayout,
   width: number,
-  height: number
+  height: number,
+  templateHue: number = 0
 ): Promise<void> {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -254,8 +317,8 @@ export async function renderBackSide(
   // Clear canvas
   ctx.clearRect(0, 0, width, height);
 
-  // Draw template
-  const template = await loadImage(templateSrc);
+  // Draw template (with optional hue shift)
+  const template = await getHueShiftedTemplate(templateSrc, templateHue, width, height);
   drawTemplate(ctx, template, width, height);
 
   // Draw contact info

@@ -5,4 +5,7 @@ export {
   LAYOUT_HDPI,
   getLayout,
   getTemplate,
+  PREVIEW_SCALE,
+  getPreviewLayout,
+  getPreviewTemplate,
 } from './templates';
