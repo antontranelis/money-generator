@@ -4,7 +4,6 @@ import { PortraitUpload } from './components/PortraitUpload';
 import { VoucherConfig } from './components/VoucherConfig';
 import { BillPreview } from './components/BillPreview';
 import { ExportButton } from './components/ExportButton';
-import { LanguageToggle } from './components/LanguageToggle';
 import { useBillStore } from './stores/billStore';
 import { t } from './constants/translations';
 
@@ -17,11 +16,6 @@ function App() {
       <Header />
 
       <main className="container mx-auto p-4 max-w-6xl">
-        {/* Language Toggle */}
-        <div className="flex justify-end mb-4">
-          <LanguageToggle />
-        </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column - Form */}
           <div className="space-y-6">
