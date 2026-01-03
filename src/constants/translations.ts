@@ -32,6 +32,9 @@ interface Translations {
       hoursLabel: string;
       description: string;
       descriptionPlaceholder: string;
+      billLanguage: string;
+      billLanguageGerman: string;
+      billLanguageEnglish: string;
     };
     billColor: {
       title: string;
@@ -85,6 +88,9 @@ const de: Translations = {
       hoursLabel: 'Stunden',
       description: 'Beschreibung',
       descriptionPlaceholder: 'Was kann mit diesem Gutschein eingelöst werden?',
+      billLanguage: 'Schein-Sprache',
+      billLanguageGerman: 'Deutsch',
+      billLanguageEnglish: 'Englisch',
     },
     billColor: {
       title: 'Scheinfarbe',
@@ -138,6 +144,9 @@ const en: Translations = {
       hoursLabel: 'hours',
       description: 'Description',
       descriptionPlaceholder: 'What can be redeemed with this voucher?',
+      billLanguage: 'Bill Language',
+      billLanguageGerman: 'German',
+      billLanguageEnglish: 'English',
     },
     billColor: {
       title: 'Bill Color',

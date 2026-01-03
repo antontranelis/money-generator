@@ -6,7 +6,7 @@ import { ApiKeyModal } from './ApiKeyModal';
 import { resizeImage, compositeWithBackground, clearImageCache } from '../services/imageEffects';
 
 export function PortraitUpload() {
-  const language = useBillStore((state) => state.voucherConfig.language);
+  const appLanguage = useBillStore((state) => state.appLanguage);
   const portrait = useBillStore((state) => state.portrait);
   const setPortrait = useBillStore((state) => state.setPortrait);
   const setPortraitZoom = useBillStore((state) => state.setPortraitZoom);
@@ -19,7 +19,7 @@ export function PortraitUpload() {
 
   const { enhance, removeBg, isEnhancing, isRemovingBg, error: aiError, hasKey, setApiKey } = useStabilityAI();
 
-  const trans = t(language);
+  const trans = t(appLanguage);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const portraitRef = useRef<HTMLDivElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -394,7 +394,7 @@ export function PortraitUpload() {
           {isRemovingBg ? (
             <div className="flex flex-col items-center gap-2">
               <span className="loading loading-spinner loading-lg text-primary"></span>
-              <p className="font-medium">{language === 'de' ? 'Hintergrund wird entfernt...' : 'Removing background...'}</p>
+              <p className="font-medium">{appLanguage === 'de' ? 'Hintergrund wird entfernt...' : 'Removing background...'}</p>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
@@ -495,7 +495,7 @@ export function PortraitUpload() {
             <div className="form-control w-full">
               <label className="label">
                 <span className="label-text flex items-center gap-2">
-                  {language === 'de' ? 'Farbanpassung' : 'Color adjustment'}
+                  {appLanguage === 'de' ? 'Farbanpassung' : 'Color adjustment'}
                   {isEnhancing && <span className="loading loading-spinner loading-xs"></span>}
                 </span>
                 <span className="label-text-alt">{Math.round(engravingIntensity * 100)}%</span>
@@ -529,10 +529,10 @@ export function PortraitUpload() {
                   {isRemovingBg ? (
                     <>
                       <span className="loading loading-spinner loading-xs"></span>
-                      {language === 'de' ? 'Hintergrund wird entfernt...' : 'Removing background...'}
+                      {appLanguage === 'de' ? 'Hintergrund wird entfernt...' : 'Removing background...'}
                     </>
                   ) : (
-                    language === 'de' ? 'Hintergrund entfernen' : 'Remove background'
+                    appLanguage === 'de' ? 'Hintergrund entfernen' : 'Remove background'
                   )}
                   {!hasKey && (
                     <span className="badge badge-sm badge-outline">API</span>
@@ -546,7 +546,7 @@ export function PortraitUpload() {
               <div className="form-control w-full">
                 <label className="label">
                   <span className="label-text">
-                    {language === 'de' ? 'Hintergrund' : 'Background'}
+                    {appLanguage === 'de' ? 'Hintergrund' : 'Background'}
                   </span>
                   <span className="label-text-alt">{Math.round(bgOpacity * 100)}%</span>
                 </label>
@@ -563,7 +563,7 @@ export function PortraitUpload() {
               <div className="form-control w-full">
                 <label className="label">
                   <span className="label-text">
-                    {language === 'de' ? 'Unschärfe' : 'Blur'}
+                    {appLanguage === 'de' ? 'Unschärfe' : 'Blur'}
                   </span>
                   <span className="label-text-alt">{Math.round(bgBlur * 100)}%</span>
                 </label>

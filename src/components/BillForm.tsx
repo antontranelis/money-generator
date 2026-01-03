@@ -5,8 +5,8 @@ import { PortraitUpload } from './PortraitUpload';
 import { VoucherConfig } from './VoucherConfig';
 
 export function BillForm() {
-  const language = useBillStore((state) => state.voucherConfig.language);
-  const trans = t(language);
+  const appLanguage = useBillStore((state) => state.appLanguage);
+  const trans = t(appLanguage);
 
   return (
     <div className="space-y-6">

@@ -9,8 +9,8 @@ import { useBillStore } from './stores/billStore';
 import { t } from './constants/translations';
 
 function App() {
-  const language = useBillStore((state) => state.voucherConfig.language);
-  const trans = t(language);
+  const appLanguage = useBillStore((state) => state.appLanguage);
+  const trans = t(appLanguage);
 
   return (
     <div className="min-h-screen bg-base-200">
@@ -29,7 +29,7 @@ function App() {
             <div className="card bg-base-100 shadow-xl">
               <div className="card-body">
                 <h2 className="card-title">
-                  {language === 'de' ? 'Persönliche Daten' : 'Personal Information'}
+                  {appLanguage === 'de' ? 'Persönliche Daten' : 'Personal Information'}
                 </h2>
                 <PersonalInfoForm />
               </div>
@@ -39,7 +39,7 @@ function App() {
             <div className="card bg-base-100 shadow-xl">
               <div className="card-body">
                 <h2 className="card-title">
-                  {language === 'de' ? 'Portrait' : 'Portrait'}
+                  {appLanguage === 'de' ? 'Portrait' : 'Portrait'}
                 </h2>
                 <PortraitUpload />
               </div>
@@ -49,7 +49,7 @@ function App() {
             <div className="card bg-base-100 shadow-xl">
               <div className="card-body">
                 <h2 className="card-title">
-                  {language === 'de' ? 'Gutschein-Einstellungen' : 'Voucher Settings'}
+                  {appLanguage === 'de' ? 'Gutschein-Einstellungen' : 'Voucher Settings'}
                 </h2>
                 <VoucherConfig />
               </div>

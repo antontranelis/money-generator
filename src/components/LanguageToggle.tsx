@@ -2,23 +2,23 @@ import { useBillStore } from '../stores/billStore';
 import type { Language } from '../types/bill';
 
 export function LanguageToggle() {
-  const language = useBillStore((state) => state.voucherConfig.language);
-  const setLanguage = useBillStore((state) => state.setLanguage);
+  const appLanguage = useBillStore((state) => state.appLanguage);
+  const setAppLanguage = useBillStore((state) => state.setAppLanguage);
 
   const handleChange = (lang: Language) => {
-    setLanguage(lang);
+    setAppLanguage(lang);
   };
 
   return (
     <div className="join">
       <button
-        className={`join-item btn btn-sm ${language === 'de' ? 'btn-active btn-primary' : 'btn-ghost'}`}
+        className={`join-item btn btn-sm ${appLanguage === 'de' ? 'btn-active btn-primary' : 'btn-ghost'}`}
         onClick={() => handleChange('de')}
       >
         DE
       </button>
       <button
-        className={`join-item btn btn-sm ${language === 'en' ? 'btn-active btn-primary' : 'btn-ghost'}`}
+        className={`join-item btn btn-sm ${appLanguage === 'en' ? 'btn-active btn-primary' : 'btn-ghost'}`}
         onClick={() => handleChange('en')}
       >
         EN

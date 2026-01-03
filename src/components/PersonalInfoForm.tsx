@@ -2,10 +2,10 @@ import { useBillStore } from '../stores/billStore';
 import { t } from '../constants/translations';
 
 export function PersonalInfoForm() {
-  const language = useBillStore((state) => state.voucherConfig.language);
+  const appLanguage = useBillStore((state) => state.appLanguage);
   const personalInfo = useBillStore((state) => state.personalInfo);
   const setPersonalInfo = useBillStore((state) => state.setPersonalInfo);
-  const trans = t(language);
+  const trans = t(appLanguage);
 
   return (
     <div className="space-y-4">

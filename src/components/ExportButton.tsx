@@ -4,7 +4,8 @@ import { getTemplate, getLayout } from '../constants/templates';
 import { exportBillAsPDF } from '../services/pdfGenerator';
 
 export function ExportButton() {
-  const language = useBillStore((state) => state.voucherConfig.language);
+  const appLanguage = useBillStore((state) => state.appLanguage);
+  const billLanguage = useBillStore((state) => state.voucherConfig.language);
   const hours = useBillStore((state) => state.voucherConfig.hours);
   const description = useBillStore((state) => state.voucherConfig.description);
   const templateHue = useBillStore((state) => state.voucherConfig.templateHue);
@@ -13,15 +14,15 @@ export function ExportButton() {
   const isExporting = useBillStore((state) => state.isExporting);
   const setIsExporting = useBillStore((state) => state.setIsExporting);
 
-  const trans = t(language);
+  const trans = t(appLanguage);
 
-  const template = getTemplate(language, hours);
-  const layout = getLayout(language);
+  const template = getTemplate(billLanguage, hours);
+  const layout = getLayout(billLanguage);
 
   const currentPortrait =
     portrait.useEnhanced && portrait.enhanced ? portrait.enhanced : portrait.original;
 
-  const displayDescription = formatDescription(language, hours, description);
+  const displayDescription = formatDescription(billLanguage, hours, description);
 
   const canExport =
     personalInfo.name.trim().length > 0 &&
@@ -53,7 +54,7 @@ export function ExportButton() {
         phone: personalInfo.phone,
         description: displayDescription,
         filename,
-        language,
+        language: billLanguage,
       });
     } catch (err) {
       console.error('PDF export failed:', err);

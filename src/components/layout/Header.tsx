@@ -3,8 +3,8 @@ import { t } from '../../constants/translations';
 import { LanguageToggle } from '../LanguageToggle';
 
 export function Header() {
-  const language = useBillStore((state) => state.voucherConfig.language);
-  const trans = t(language);
+  const appLanguage = useBillStore((state) => state.appLanguage);
+  const trans = t(appLanguage);
 
   return (
     <div className="navbar bg-currency-green text-currency-cream shadow-lg">

@@ -19,7 +19,8 @@ interface BillActions {
   flipSide: () => void;
   setIsEnhancing: (value: boolean) => void;
   setIsExporting: (value: boolean) => void;
-  setLanguage: (language: Language) => void;
+  setAppLanguage: (language: Language) => void;
+  setBillLanguage: (language: Language) => void;
   setHours: (hours: HourValue) => void;
   setTemplateHue: (hue: number) => void;
   reset: () => void;
@@ -34,7 +35,7 @@ const initialState: BillState = {
   voucherConfig: {
     hours: 1,
     description: '',
-    language: 'de',
+    language: 'de', // Bill/template language
     templateHue: 160, // Default to original teal-green color
   },
   portrait: {
@@ -54,6 +55,7 @@ const initialState: BillState = {
   currentSide: 'front',
   isEnhancing: false,
   isExporting: false,
+  appLanguage: 'de', // UI language
 };
 
 export const useBillStore = create<BillState & BillActions>()(
@@ -171,7 +173,9 @@ export const useBillStore = create<BillState & BillActions>()(
 
       setIsExporting: (value) => set({ isExporting: value }),
 
-      setLanguage: (language) =>
+      setAppLanguage: (appLanguage) => set({ appLanguage }),
+
+      setBillLanguage: (language) =>
         set((state) => ({
           voucherConfig: { ...state.voucherConfig, language },
         })),
@@ -193,6 +197,7 @@ export const useBillStore = create<BillState & BillActions>()(
       partialize: (state) => ({
         personalInfo: state.personalInfo,
         voucherConfig: state.voucherConfig,
+        appLanguage: state.appLanguage,
         // Only persist small settings, NOT image data (too large for localStorage)
         portrait: {
           original: null, // Don't persist - too large

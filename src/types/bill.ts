@@ -44,6 +44,7 @@ export interface BillState {
   currentSide: BillSide;
   isEnhancing: boolean;
   isExporting: boolean;
+  appLanguage: Language; // UI language (separate from bill language)
 }
 
 export interface TemplateConfig {

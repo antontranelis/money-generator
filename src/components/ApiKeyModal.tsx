@@ -8,7 +8,7 @@ interface ApiKeyModalProps {
 }
 
 export function ApiKeyModal({ isOpen, onClose, onSubmit }: ApiKeyModalProps) {
-  const language = useBillStore((state) => state.voucherConfig.language);
+  const appLanguage = useBillStore((state) => state.appLanguage);
   const [apiKey, setApiKey] = useState('');
 
   if (!isOpen) return null;
@@ -43,7 +43,7 @@ export function ApiKeyModal({ isOpen, onClose, onSubmit }: ApiKeyModalProps) {
     },
   };
 
-  const txt = texts[language];
+  const txt = texts[appLanguage];
 
   return (
     <dialog className="modal modal-open">

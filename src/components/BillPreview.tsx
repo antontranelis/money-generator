@@ -17,7 +17,8 @@ function useDebouncedValue<T>(value: T, delay: number): T {
 }
 
 export function BillPreview() {
-  const language = useBillStore((state) => state.voucherConfig.language);
+  const appLanguage = useBillStore((state) => state.appLanguage);
+  const billLanguage = useBillStore((state) => state.voucherConfig.language);
   const hours = useBillStore((state) => state.voucherConfig.hours);
   const description = useBillStore((state) => state.voucherConfig.description);
   const templateHue = useBillStore((state) => state.voucherConfig.templateHue);
@@ -30,7 +31,7 @@ export function BillPreview() {
   // Debounce templateHue to avoid expensive recalculations on every slider move
   const debouncedHue = useDebouncedValue(templateHue, 150);
 
-  const trans = t(language);
+  const trans = t(appLanguage);
 
   const frontCanvasRef = useRef<HTMLCanvasElement>(null);
   const backCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -40,13 +41,13 @@ export function BillPreview() {
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
 
-  const template = getPreviewTemplate(language, hours);
-  const layout = getPreviewLayout(language);
+  const template = getPreviewTemplate(billLanguage, hours);
+  const layout = getPreviewLayout(billLanguage);
 
   const currentPortrait =
     portrait.useEnhanced && portrait.enhanced ? portrait.enhanced : portrait.original;
 
-  const displayDescription = formatDescription(language, hours, description);
+  const displayDescription = formatDescription(billLanguage, hours, description);
 
   // Render front side
   useEffect(() => {
@@ -82,9 +83,9 @@ export function BillPreview() {
       template.width,
       template.height,
       debouncedHue,
-      language
+      billLanguage
     );
-  }, [template, personalInfo, displayDescription, layout, debouncedHue, language]);
+  }, [template, personalInfo, displayDescription, layout, debouncedHue, billLanguage]);
 
   const handleFlip = () => {
     setIsFlipping(true);
