@@ -143,6 +143,9 @@ export async function applyEngravingEffect(imageDataUrl: string, intensity: numb
 
   // Use reusable canvas
   const ctx = getReusableCanvas(img.width, img.height);
+
+  // Clear previous content to ensure deterministic output
+  ctx.clearRect(0, 0, img.width, img.height);
   ctx.drawImage(img, 0, 0);
 
   // Get image data for pixel manipulation
@@ -273,6 +276,9 @@ export async function applyHueShift(imageDataUrl: string, targetHue: number): Pr
 
   // Use reusable canvas
   const ctx = getReusableCanvas(img.width, img.height);
+
+  // Clear previous content to ensure deterministic output
+  ctx.clearRect(0, 0, img.width, img.height);
   ctx.drawImage(img, 0, 0);
 
   // Get image data for pixel manipulation
