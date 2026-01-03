@@ -1,6 +1,6 @@
 {
   "name": "@antontranelis/money-printer",
-  "version": "1.0.28",
+  "version": "1.0.29",
   "description": "Create personalized time vouchers that look like real currency. React components for voucher generation with PDF export.",
   "type": "module",
   "license": "MIT",
