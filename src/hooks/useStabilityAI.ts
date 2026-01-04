@@ -23,9 +23,17 @@ export function useStabilityAI(): UseStabilityAIReturn {
   const [error, setError] = useState<string | null>(null);
   const [hasKey, setHasKey] = useState(() => hasApiKey());
 
-  // Re-check API key availability on mount (handles async env loading)
+  // Re-check API key availability on mount and after short delay
+  // This handles the case where setRemoveBackgroundEndpoint is called after initial render
   useEffect(() => {
     setHasKey(hasApiKey());
+
+    // Check again after a short delay to catch late endpoint configuration
+    const timeout = setTimeout(() => {
+      setHasKey(hasApiKey());
+    }, 150);
+
+    return () => clearTimeout(timeout);
   }, []);
 
   const clearError = useCallback(() => setError(null), []);
