@@ -415,30 +415,41 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
             >
               {/* Combined silhouette + text button with dashed border */}
               <button
-                className="btn btn-dash hover:btn-dash hover:border-base-content/60 flex flex-col items-center gap-0.5 sm:gap-1 h-auto py-1.5 px-2.5 sm:py-3 sm:px-4 bg-base-100/20 hover:bg-base-100/30"
+                className="btn btn-dash hover:btn-dash hover:border-base-content/60 relative flex flex-col items-center gap-0.5 sm:gap-1 h-auto py-1.5 px-2.5 sm:py-3 sm:px-4 bg-base-100/20 hover:bg-base-100/30"
                 onClick={(e) => {
                   e.stopPropagation();
                   onPortraitClick?.();
                 }}
               >
-                {/* User silhouette icon with plus */}
+                {/* Plus sign in top-right corner */}
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="w-7 h-6 sm:w-11 sm:h-10 text-base-content/50"
+                  className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 w-3 h-3 sm:w-4 sm:h-4 text-base-content/60"
                   fill="none"
-                  viewBox="0 0 26 24"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                {/* User silhouette icon - centered */}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-7 h-6 sm:w-10 sm:h-9 text-base-content/50"
+                  fill="none"
+                  viewBox="0 0 24 24"
                   stroke="currentColor"
                   strokeWidth={1.5}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
                   {/* Head */}
-                  <circle cx="11" cy="8" r="4" />
+                  <circle cx="12" cy="8" r="4" />
                   {/* Shoulders */}
-                  <path d="M3 21c0-4 4-6 8-6s8 2 8 6" />
-                  {/* Plus sign */}
-                  <line x1="22" y1="4" x2="22" y2="10" strokeWidth={2} />
-                  <line x1="19" y1="7" x2="25" y2="7" strokeWidth={2} />
+                  <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
                 </svg>
                 <span className="text-[10px] sm:text-xs text-center leading-tight whitespace-pre-line">{appLanguage === 'de' ? 'Foto\nhochladen' : 'Upload\nphoto'}</span>
               </button>
