@@ -2,6 +2,7 @@ import { useBillStore } from '../stores/billStore';
 import { t, formatDescription } from '../constants/translations';
 import { getTemplate, getLayout } from '../constants/templates';
 import { exportBillAsPDF } from '../services/pdfGenerator';
+import { composeTemplateFullRes } from '../services/templateCompositor';
 
 export function ExportButton() {
   const appLanguage = useBillStore((state) => state.appLanguage);
@@ -36,11 +37,17 @@ export function ExportButton() {
     setIsExporting(true);
 
     try {
+      // Compose templates at full resolution for PDF export
+      const [frontTemplateSrc, backTemplateSrc] = await Promise.all([
+        composeTemplateFullRes(hours, billLanguage, 'front'),
+        composeTemplateFullRes(hours, billLanguage, 'back'),
+      ]);
+
       const filename = `zeitgutschein-${hours}h-${personalInfo.name.replace(/\s+/g, '-').toLowerCase()}.pdf`;
 
       await exportBillAsPDF({
-        frontTemplateSrc: template.front,
-        backTemplateSrc: template.back,
+        frontTemplateSrc,
+        backTemplateSrc,
         templateWidth: template.width,
         templateHeight: template.height,
         layout,

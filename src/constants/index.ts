@@ -1,6 +1,6 @@
 export { t, formatDescription } from './translations';
 export {
-  TEMPLATES,
+  TEMPLATE_LAYOUT,
   LAYOUT_LDPI,
   LAYOUT_HDPI,
   getLayout,

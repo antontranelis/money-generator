@@ -44,12 +44,22 @@ export type { EnhanceStyle } from './services';
 export {
   t,
   formatDescription,
-  TEMPLATES,
+  TEMPLATE_LAYOUT,
   LAYOUT_LDPI,
   LAYOUT_HDPI,
   getLayout,
   getTemplate,
 } from './constants';
+
+// Template compositor (dynamic template generation)
+export {
+  composeTemplate,
+  getTemplateDimensions,
+  clearCompositorCache,
+  preloadAllTemplates,
+  TEMPLATE_WIDTH,
+  TEMPLATE_HEIGHT,
+} from './services';
 
 // Types
 export type {

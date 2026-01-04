@@ -10,6 +10,20 @@ export {
   renderBackSide,
 } from './canvasRenderer';
 
+// Template composition (dynamic template generation)
+export {
+  composeTemplate,
+  composeTemplateFullRes,
+  preloadBaseImages,
+  getTemplateDimensions,
+  clearCompositorCache,
+  preloadAllTemplates,
+  TEMPLATE_WIDTH,
+  TEMPLATE_HEIGHT,
+  PREVIEW_WIDTH,
+  PREVIEW_HEIGHT,
+} from './templateCompositor';
+
 // PDF generation
 export {
   generateBillPDF,

@@ -3,6 +3,7 @@ import { useBillStore } from '../stores/billStore';
 import { t, formatDescription } from '../constants/translations';
 import { getPreviewTemplate, getPreviewLayout } from '../constants/templates';
 import { renderFrontSide, renderBackSide } from '../services/canvasRenderer';
+import { composeTemplate } from '../services/templateCompositor';
 
 // Debounce hook for expensive operations
 function useDebouncedValue<T>(value: T, delay: number): T {
@@ -37,7 +38,7 @@ export function BillPreview() {
   const backCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [isFlipping, setIsFlipping] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
 
@@ -49,13 +50,36 @@ export function BillPreview() {
 
   const displayDescription = formatDescription(billLanguage, hours, description);
 
+  // State for dynamically composed template URLs
+  const [frontTemplateUrl, setFrontTemplateUrl] = useState<string>('');
+  const [backTemplateUrl, setBackTemplateUrl] = useState<string>('');
+
+  // Compose templates when hours or billLanguage changes
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadTemplates() {
+      const [front, back] = await Promise.all([
+        composeTemplate(hours, billLanguage, 'front'),
+        composeTemplate(hours, billLanguage, 'back'),
+      ]);
+      if (mounted) {
+        setFrontTemplateUrl(front);
+        setBackTemplateUrl(back);
+      }
+    }
+
+    loadTemplates();
+    return () => { mounted = false; };
+  }, [hours, billLanguage]);
+
   // Render front side
   useEffect(() => {
-    if (!frontCanvasRef.current) return;
+    if (!frontCanvasRef.current || !frontTemplateUrl) return;
 
     renderFrontSide(
       frontCanvasRef.current,
-      template.front,
+      frontTemplateUrl,
       currentPortrait,
       personalInfo.name,
       layout.front,
@@ -66,15 +90,15 @@ export function BillPreview() {
       portrait.panY,
       debouncedHue
     );
-  }, [template, currentPortrait, personalInfo.name, layout, portrait.zoom, portrait.panX, portrait.panY, debouncedHue]);
+  }, [template, frontTemplateUrl, currentPortrait, personalInfo.name, layout, portrait.zoom, portrait.panX, portrait.panY, debouncedHue]);
 
   // Render back side
   useEffect(() => {
-    if (!backCanvasRef.current) return;
+    if (!backCanvasRef.current || !backTemplateUrl) return;
 
     renderBackSide(
       backCanvasRef.current,
-      template.back,
+      backTemplateUrl,
       personalInfo.name,
       personalInfo.email,
       personalInfo.phone,
@@ -85,14 +109,11 @@ export function BillPreview() {
       debouncedHue,
       billLanguage
     );
-  }, [template, personalInfo, displayDescription, layout, debouncedHue, billLanguage]);
+  }, [template, backTemplateUrl, personalInfo, displayDescription, layout, debouncedHue, billLanguage]);
 
   const handleFlip = () => {
-    setIsFlipping(true);
-    setTimeout(() => {
-      flipSide();
-      setIsFlipping(false);
-    }, 150);
+    setIsFlipped(!isFlipped);
+    flipSide();
   };
 
   // Check if click is within portrait area (ellipse hit test)
@@ -225,42 +246,49 @@ export function BillPreview() {
         </button>
       </div>
 
-      {/* Canvas Container */}
+      {/* Canvas Container with 3D perspective */}
       <div
-        ref={containerRef}
-        className={`relative w-full overflow-hidden shadow-lg ${canPan ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
-        style={{ aspectRatio }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        className="relative w-full overflow-visible"
+        style={{ aspectRatio, perspective: '1500px' }}
       >
-        {/* Front Canvas */}
-        <canvas
-          ref={frontCanvasRef}
-          className={`absolute inset-0 w-full h-full transition-all duration-300 ${
-            currentSide === 'front'
-              ? isFlipping
-                ? 'opacity-0 scale-95'
-                : 'opacity-100 scale-100'
-              : 'opacity-0 scale-95 pointer-events-none'
-          }`}
-        />
+        {/* Flip container - rotates on Y axis */}
+        <div
+          ref={containerRef}
+          className={`relative w-full h-full shadow-lg ${canPan ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
+          style={{
+            transformStyle: 'preserve-3d',
+            transition: 'transform 0.6s ease-in-out',
+            transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+          }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          {/* Front Canvas */}
+          <canvas
+            ref={frontCanvasRef}
+            className="absolute inset-0 w-full h-full"
+            style={{
+              backfaceVisibility: 'hidden',
+              WebkitBackfaceVisibility: 'hidden',
+            }}
+          />
 
-        {/* Back Canvas */}
-        <canvas
-          ref={backCanvasRef}
-          className={`absolute inset-0 w-full h-full transition-all duration-300 ${
-            currentSide === 'back'
-              ? isFlipping
-                ? 'opacity-0 scale-95'
-                : 'opacity-100 scale-100'
-              : 'opacity-0 scale-95 pointer-events-none'
-          }`}
-        />
+          {/* Back Canvas - pre-rotated 180deg so it shows correctly when flipped */}
+          <canvas
+            ref={backCanvasRef}
+            className="absolute inset-0 w-full h-full"
+            style={{
+              backfaceVisibility: 'hidden',
+              WebkitBackfaceVisibility: 'hidden',
+              transform: 'rotateY(180deg)',
+            }}
+          />
+        </div>
       </div>
     </div>
   );

@@ -19,13 +19,13 @@ function App() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column - Form */}
           <div className="space-y-6">
-            {/* Personal Info Card */}
+            {/* Voucher Config Card (includes Bill Color) */}
             <div className="card bg-base-100 shadow-xl">
               <div className="card-body">
                 <h2 className="card-title">
-                  {appLanguage === 'de' ? 'Persönliche Daten' : 'Personal Information'}
+                  {appLanguage === 'de' ? 'Gutschein-Einstellungen' : 'Voucher Settings'}
                 </h2>
-                <PersonalInfoForm />
+                <VoucherConfig />
               </div>
             </div>
 
@@ -39,13 +39,13 @@ function App() {
               </div>
             </div>
 
-            {/* Voucher Config Card (includes Bill Color) */}
+            {/* Personal Info Card */}
             <div className="card bg-base-100 shadow-xl">
               <div className="card-body">
                 <h2 className="card-title">
-                  {appLanguage === 'de' ? 'Gutschein-Einstellungen' : 'Voucher Settings'}
+                  {appLanguage === 'de' ? 'Persönliche Daten' : 'Personal Information'}
                 </h2>
-                <VoucherConfig />
+                <PersonalInfoForm />
               </div>
             </div>
           </div>
