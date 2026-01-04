@@ -91,6 +91,28 @@ async function getHueShiftedTemplate(
   return loadImage(shiftedDataUrl);
 }
 
+export function drawPortraitPlaceholder(
+  ctx: CanvasRenderingContext2D,
+  centerX: number,
+  centerY: number,
+  radiusX: number,
+  radiusY: number,
+  _language: Language = 'de'
+): void {
+  ctx.save();
+
+  // Draw dashed ellipse border only - button overlay handles the rest
+  ctx.beginPath();
+  ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.setLineDash([20, 10]);
+  ctx.strokeStyle = 'rgba(100, 100, 100, 0.4)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
 export function drawOvalPortrait(
   ctx: CanvasRenderingContext2D,
   portrait: HTMLImageElement,
@@ -309,7 +331,7 @@ export async function renderFrontSide(
   const badges = await loadImage(badgesSrc);
   drawTemplate(offCtx, badges, width, height);
 
-  // Layer 3: Draw portrait if available (UNDER the frame)
+  // Layer 3: Draw portrait if available, or placeholder (UNDER the frame)
   if (portraitSrc) {
     try {
       const portrait = await loadImage(portraitSrc);
@@ -327,6 +349,16 @@ export async function renderFrontSide(
     } catch (e) {
       console.error('Failed to load portrait:', e);
     }
+  } else {
+    // Draw placeholder when no portrait
+    drawPortraitPlaceholder(
+      offCtx,
+      layout.portrait.x,
+      layout.portrait.y,
+      layout.portrait.radiusX,
+      layout.portrait.radiusY,
+      language
+    );
   }
 
   // Layer 4: Draw frame ON TOP of portrait - NO hue shift (frame stays original)

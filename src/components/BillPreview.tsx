@@ -19,9 +19,10 @@ function useDebouncedValue<T>(value: T, delay: number): T {
 
 interface BillPreviewProps {
   onPortraitClick?: () => void;
+  onFileDrop?: (file: File) => void;
 }
 
-export function BillPreview({ onPortraitClick }: BillPreviewProps = {}) {
+export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = {}) {
   const appLanguage = useBillStore((state) => state.appLanguage);
   const billLanguage = useBillStore((state) => state.voucherConfig.language);
   const hours = useBillStore((state) => state.voucherConfig.hours);
@@ -44,6 +45,8 @@ export function BillPreview({ onPortraitClick }: BillPreviewProps = {}) {
 
   const [isFlipped, setIsFlipped] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
+  const [isOverPortrait, setIsOverPortrait] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const panStartRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
 
   const template = getPreviewTemplate(billLanguage, hours);
@@ -134,9 +137,16 @@ export function BillPreview({ onPortraitClick }: BillPreviewProps = {}) {
   }, [template, backBackgroundUrl, backBadgesUrl, backFrameUrl, personalInfo, displayDescription, layout, debouncedHue, hours, billLanguage]);
 
   const handleFlip = () => {
+    // Toggle the visual flip animation
     setIsFlipped(!isFlipped);
+    // Toggle the logical side state
     flipSide();
   };
+
+  // Sync isFlipped with currentSide state (for when side is changed externally)
+  useEffect(() => {
+    setIsFlipped(currentSide === 'back');
+  }, [currentSide]);
 
   // Check if click is within portrait area (ellipse hit test)
   const isInPortraitArea = useCallback((clientX: number, clientY: number): boolean => {
@@ -218,10 +228,15 @@ export function BillPreview({ onPortraitClick }: BillPreviewProps = {}) {
 
   const handleMouseMove = (e: React.MouseEvent) => {
     handlePanMove(e.clientX, e.clientY);
+    // Update cursor state based on position
+    setIsOverPortrait(isInPortraitArea(e.clientX, e.clientY));
   };
 
   const handleMouseUp = () => handlePanEnd();
-  const handleMouseLeave = () => handlePanEnd();
+  const handleMouseLeave = () => {
+    handlePanEnd();
+    setIsOverPortrait(false);
+  };
 
   // Touch handlers
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -241,9 +256,8 @@ export function BillPreview({ onPortraitClick }: BillPreviewProps = {}) {
 
   const handleTouchEnd = () => handlePanEnd();
 
-  // Determine cursor style
+  // Determine cursor style for panning
   const canPan = currentSide === 'front' && portrait.original && portrait.zoom > 1;
-  const canClickToUpload = currentSide === 'front' && !portrait.original && onPortraitClick;
 
   // Calculate aspect ratio for responsive sizing
   const aspectRatio = template.width / template.height;
@@ -301,7 +315,7 @@ export function BillPreview({ onPortraitClick }: BillPreviewProps = {}) {
         {/* Flip container - rotates on Y axis */}
         <div
           ref={containerRef}
-          className={`relative w-full h-full shadow-lg ${canPan ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : canClickToUpload ? 'cursor-pointer' : ''} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
+          className={`relative w-full h-full shadow-lg ${isOverPortrait && canPan ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : ''} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
           style={{
             transformStyle: 'preserve-3d',
             transition: 'transform 0.6s ease-in-out, opacity 0.3s ease-in-out',
@@ -336,6 +350,77 @@ export function BillPreview({ onPortraitClick }: BillPreviewProps = {}) {
               transform: 'rotateY(180deg)',
             }}
           />
+
+          {/* Portrait upload dropzone - ellipse-shaped clickable/droppable area */}
+          {!portrait.original && currentSide === 'front' && (onPortraitClick || onFileDrop) && (
+            <div
+              className={`absolute flex flex-col items-center justify-center cursor-pointer transition-colors duration-300 ease-in-out ${
+                isDragOver ? 'bg-primary/20' : 'hover:bg-base-content/5'
+              }`}
+              style={{
+                left: `${((layout.front.portrait.x - layout.front.portrait.radiusX) / template.width) * 100}%`,
+                top: `${((layout.front.portrait.y - layout.front.portrait.radiusY) / template.height) * 100}%`,
+                width: `${((layout.front.portrait.radiusX * 2) / template.width) * 100}%`,
+                height: `${((layout.front.portrait.radiusY * 2) / template.height) * 100}%`,
+                borderRadius: '50%',
+                backfaceVisibility: 'hidden',
+                WebkitBackfaceVisibility: 'hidden',
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onPortraitClick?.();
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragOver(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragOver(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragOver(false);
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/') && onFileDrop) {
+                  onFileDrop(file);
+                }
+              }}
+            >
+              {/* Combined silhouette + text button with dashed border */}
+              <button
+                className="btn btn-dash hover:btn-dash hover:border-base-content/60 flex flex-col items-center gap-1 h-auto py-3 px-4 bg-base-100/20 hover:bg-base-100/30"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPortraitClick?.();
+                }}
+              >
+                {/* User silhouette icon with plus */}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-11 h-10 text-base-content/50"
+                  fill="none"
+                  viewBox="0 0 26 24"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  {/* Head */}
+                  <circle cx="11" cy="8" r="4" />
+                  {/* Shoulders */}
+                  <path d="M3 21c0-4 4-6 8-6s8 2 8 6" />
+                  {/* Plus sign */}
+                  <line x1="22" y1="4" x2="22" y2="10" strokeWidth={2} />
+                  <line x1="19" y1="7" x2="25" y2="7" strokeWidth={2} />
+                </svg>
+                <span className="text-xs">{appLanguage === 'de' ? 'Foto hochladen' : 'Upload photo'}</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

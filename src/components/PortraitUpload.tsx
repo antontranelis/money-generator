@@ -21,11 +21,8 @@ export function PortraitUpload() {
 
   const trans = t(appLanguage);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const portraitRef = useRef<HTMLDivElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
-  const [isPanning, setIsPanning] = useState(false);
-  const panStartRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
 
   // Debounce refs to track pending effect applications
   const engravingDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -299,74 +296,6 @@ export function PortraitUpload() {
     clearImageCache();
   };
 
-  // Pan handlers for dragging the portrait when zoomed
-  const handlePanStart = (clientX: number, clientY: number) => {
-    if (portrait.zoom <= 1) return; // Only allow panning when zoomed in
-    setIsPanning(true);
-    panStartRef.current = {
-      x: clientX,
-      y: clientY,
-      panX: portrait.panX,
-      panY: portrait.panY,
-    };
-  };
-
-  const handlePanMove = (clientX: number, clientY: number) => {
-    if (!isPanning || !panStartRef.current || !portraitRef.current) return;
-
-    const rect = portraitRef.current.getBoundingClientRect();
-    const sensitivity = 2 / Math.max(rect.width, rect.height); // Normalize by element size
-
-    const deltaX = (clientX - panStartRef.current.x) * sensitivity;
-    const deltaY = (clientY - panStartRef.current.y) * sensitivity;
-
-    // Calculate new pan values (clamped to -1 to 1)
-    const newPanX = Math.max(-1, Math.min(1, panStartRef.current.panX + deltaX));
-    const newPanY = Math.max(-1, Math.min(1, panStartRef.current.panY + deltaY));
-
-    setPortraitPan(newPanX, newPanY);
-  };
-
-  const handlePanEnd = () => {
-    setIsPanning(false);
-    panStartRef.current = null;
-  };
-
-  // Mouse event handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    handlePanStart(e.clientX, e.clientY);
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    handlePanMove(e.clientX, e.clientY);
-  };
-
-  const handleMouseUp = () => {
-    handlePanEnd();
-  };
-
-  const handleMouseLeave = () => {
-    handlePanEnd();
-  };
-
-  // Touch event handlers
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      handlePanStart(e.touches[0].clientX, e.touches[0].clientY);
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      handlePanMove(e.touches[0].clientX, e.touches[0].clientY);
-    }
-  };
-
-  const handleTouchEnd = () => {
-    handlePanEnd();
-  };
-
   return (
     <div className="space-y-4">
       {/* Upload Area */}
@@ -418,34 +347,14 @@ export function PortraitUpload() {
           )}
         </div>
       ) : (
-        <div className="flex flex-col items-center space-y-4">
-          {/* Preview */}
-          <div className="relative">
-            <div
-              ref={portraitRef}
-              className={`w-32 h-32 rounded-full overflow-hidden border-4 border-currency-gold shadow-lg ${
-                portrait.zoom > 1 ? 'cursor-grab' : ''
-              } ${isPanning ? 'cursor-grabbing' : ''}`}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseLeave}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-            >
-              <img
-                src={portrait.original || ''}
-                alt="Portrait"
-                className="w-full h-full object-cover pointer-events-none select-none"
-                style={{
-                  transform: `scale(${portrait.zoom}) translate(${portrait.panX * 50 * (portrait.zoom - 1)}%, ${portrait.panY * 50 * (portrait.zoom - 1)}%)`,
-                }}
-                draggable={false}
-              />
-            </div>
+        <div className="flex flex-col space-y-4">
+          {/* Controls Header with Remove Button */}
+          <div className="flex justify-between items-center w-full">
+            <span className="text-sm font-medium text-base-content/70">
+              {appLanguage === 'de' ? 'Portrait-Einstellungen' : 'Portrait settings'}
+            </span>
             <button
-              className="btn btn-circle btn-xs btn-error absolute -top-1 -right-1"
+              className="btn btn-xs btn-ghost text-error"
               onClick={handleRemove}
             >
               <svg
@@ -459,9 +368,10 @@ export function PortraitUpload() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                 />
               </svg>
+              {appLanguage === 'de' ? 'Entfernen' : 'Remove'}
             </button>
           </div>
 
@@ -516,7 +426,7 @@ export function PortraitUpload() {
           {/* Background Removal - Toggle or Opacity Slider */}
           {!bgRemoved ? (
             // Show toggle when background not yet removed
-            <div className="form-control">
+            <div className="form-control w-fit">
               <label className="label cursor-pointer justify-start gap-3">
                 <input
                   type="checkbox"
