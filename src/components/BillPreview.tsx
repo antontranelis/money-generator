@@ -256,6 +256,29 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
 
   const handleTouchEnd = () => handlePanEnd();
 
+  // Use ref to track panning state for event listener
+  const isPanningRef = useRef(false);
+  useEffect(() => {
+    isPanningRef.current = isPanning;
+  }, [isPanning]);
+
+  // Prevent page scroll while panning the portrait
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const preventScroll = (e: TouchEvent) => {
+      if (isPanningRef.current) {
+        e.preventDefault();
+      }
+    };
+
+    container.addEventListener('touchmove', preventScroll, { passive: false });
+    return () => {
+      container.removeEventListener('touchmove', preventScroll);
+    };
+  }, []);
+
   // Determine cursor style for panning
   const canPan = currentSide === 'front' && portrait.original && portrait.zoom > 1;
 
