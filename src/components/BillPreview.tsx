@@ -268,20 +268,20 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
       <div className="flex justify-between items-center">
         <div className="join border border-base-300 rounded-lg">
           <button
-            className={`join-item btn btn-sm ${currentSide === 'front' ? 'btn-active btn-primary' : 'btn-ghost'}`}
+            className={`join-item btn btn-md sm:btn-sm ${currentSide === 'front' ? 'btn-active btn-primary' : 'btn-ghost'}`}
             onClick={() => currentSide !== 'front' && handleFlip()}
           >
             {trans.preview.front}
           </button>
           <button
-            className={`join-item btn btn-sm ${currentSide === 'back' ? 'btn-active btn-primary' : 'btn-ghost'}`}
+            className={`join-item btn btn-md sm:btn-sm ${currentSide === 'back' ? 'btn-active btn-primary' : 'btn-ghost'}`}
             onClick={() => currentSide !== 'back' && handleFlip()}
           >
             {trans.preview.back}
           </button>
         </div>
 
-        <button className="btn btn-ghost btn-sm" onClick={handleFlip}>
+        <button className="btn btn-ghost btn-md sm:btn-sm" onClick={handleFlip}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-5 w-5"
@@ -296,7 +296,7 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-          {trans.preview.flip}
+          <span className="hidden sm:inline">{trans.preview.flip}</span>
         </button>
       </div>
 

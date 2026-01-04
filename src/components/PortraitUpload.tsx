@@ -3,6 +3,7 @@ import { useBillStore } from '../stores/billStore';
 import { t } from '../constants/translations';
 import { useStabilityAI } from '../hooks/useStabilityAI';
 import { ApiKeyModal } from './ApiKeyModal';
+import { TouchSlider } from './TouchSlider';
 import { resizeImage, compositeWithBackground, clearImageCache } from '../services/imageEffects';
 
 export function PortraitUpload() {
@@ -383,14 +384,12 @@ export function PortraitUpload() {
                 <span className="label-text">{trans.form.portrait.zoom}</span>
                 <span className="label-text-alt">{Math.round(portrait.zoom * 100)}%</span>
               </label>
-              <input
-                type="range"
-                min="0.5"
-                max="2"
-                step="0.05"
+              <TouchSlider
+                min={0.5}
+                max={2}
+                step={0.05}
                 value={portrait.zoom}
-                onChange={(e) => {
-                  const newZoom = parseFloat(e.target.value);
+                onChange={(newZoom) => {
                   setPortraitZoom(newZoom);
                   // Reset pan when zooming out to 1 or less
                   if (newZoom <= 1 && (portrait.panX !== 0 || portrait.panY !== 0)) {
@@ -410,13 +409,12 @@ export function PortraitUpload() {
                 </span>
                 <span className="label-text-alt">{Math.round(engravingIntensity * 100)}%</span>
               </label>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
+              <TouchSlider
+                min={0}
+                max={1}
+                step={0.05}
                 value={engravingIntensity}
-                onChange={(e) => handleEngravingIntensityChange(parseFloat(e.target.value))}
+                onChange={handleEngravingIntensityChange}
                 className="range range-secondary range-sm"
                 disabled={isEnhancing || !rawImage}
               />
@@ -460,13 +458,12 @@ export function PortraitUpload() {
                   </span>
                   <span className="label-text-alt">{Math.round(bgOpacity * 100)}%</span>
                 </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
+                <TouchSlider
+                  min={0}
+                  max={1}
+                  step={0.05}
                   value={bgOpacity}
-                  onChange={(e) => handleBgOpacityChange(parseFloat(e.target.value))}
+                  onChange={handleBgOpacityChange}
                   className="range range-primary range-sm"
                 />
               </div>
@@ -477,13 +474,12 @@ export function PortraitUpload() {
                   </span>
                   <span className="label-text-alt">{Math.round(bgBlur * 100)}%</span>
                 </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
+                <TouchSlider
+                  min={0}
+                  max={1}
+                  step={0.05}
                   value={bgBlur}
-                  onChange={(e) => handleBgBlurChange(parseFloat(e.target.value))}
+                  onChange={handleBgBlurChange}
                   className="range range-primary range-sm"
                   disabled={bgOpacity === 0}
                 />

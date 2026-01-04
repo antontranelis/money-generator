@@ -8,6 +8,7 @@ export {
   ExportButton,
   LanguageToggle,
   ApiKeyModal,
+  TouchSlider,
   Header,
 } from './components';
 
@@ -37,6 +38,7 @@ export {
   hasCustomEndpoint,
   applyEngravingEffect,
   applyHueShift,
+  resizeImage,
 } from './services';
 export type { EnhanceStyle } from './services';
 

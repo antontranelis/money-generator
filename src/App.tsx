@@ -68,6 +68,10 @@ function App() {
     await processImageFile(file);
   };
 
+  // Validation helpers
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isValidPhone = (phone: string) => phone.replace(/\D/g, '').length >= 6;
+
   // Build checklist with completed and pending items
   const checklistItems: { text: string; completed: boolean; action?: () => void }[] = [];
 
@@ -84,24 +88,27 @@ function App() {
   });
 
   // Name
+  const nameValid = !!personalInfo.name.trim();
   checklistItems.push({
     text: appLanguage === 'de' ? 'Namen eingeben' : 'Enter name',
-    completed: !!personalInfo.name.trim(),
-    action: !personalInfo.name.trim() ? () => handleFocusField('name') : undefined,
+    completed: nameValid,
+    action: !nameValid ? () => handleFocusField('name') : undefined,
   });
 
-  // Email
+  // Email - must be valid format
+  const emailValid = !!personalInfo.email.trim() && isValidEmail(personalInfo.email);
   checklistItems.push({
     text: appLanguage === 'de' ? 'Email eingeben' : 'Enter email',
-    completed: !!personalInfo.email.trim(),
-    action: !personalInfo.email.trim() ? () => handleFocusField('email') : undefined,
+    completed: emailValid,
+    action: !emailValid ? () => handleFocusField('email') : undefined,
   });
 
-  // Phone
+  // Phone - must have at least 6 digits
+  const phoneValid = !!personalInfo.phone.trim() && isValidPhone(personalInfo.phone);
   checklistItems.push({
     text: appLanguage === 'de' ? 'Telefonnummer eingeben' : 'Enter phone number',
-    completed: !!personalInfo.phone.trim(),
-    action: !personalInfo.phone.trim() ? () => handleFocusField('phone') : undefined,
+    completed: phoneValid,
+    action: !phoneValid ? () => handleFocusField('phone') : undefined,
   });
 
   return (
@@ -158,7 +165,7 @@ function App() {
                       key={i}
                       className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
                         item.completed
-                          ? 'opacity-50'
+                          ? ''
                           : 'cursor-pointer hover:bg-base-200'
                       }`}
                       onClick={item.action}

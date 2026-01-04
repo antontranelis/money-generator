@@ -53,6 +53,11 @@ interface Translations {
   };
   bill: {
     descriptionText: string;
+    bannerText: {
+      1: string;
+      5: string;
+      10: string;
+    };
   };
 }
 
@@ -108,7 +113,12 @@ const de: Translations = {
     success: 'Download gestartet!',
   },
   bill: {
-    descriptionText: 'Für diesen Schein erhältst du {hours} {hourLabel} meiner Zeit oder ein gleichwertiges Dankeschön',
+    descriptionText: 'Für diesen Schein erhältst du {bannerText} meiner Zeit oder ein gleichwertiges Dankeschön',
+    bannerText: {
+      1: 'eine Stunde',
+      5: 'fünf Stunden',
+      10: 'zehn Stunden',
+    },
   },
 };
 
@@ -164,7 +174,12 @@ const en: Translations = {
     success: 'Download started!',
   },
   bill: {
-    descriptionText: 'This voucher entitles you to {hours} {hourLabel} of my time or an equivalent thank you',
+    descriptionText: 'This voucher entitles you to {bannerText} of my time or an equivalent thank you',
+    bannerText: {
+      1: 'one hour',
+      5: 'five hours',
+      10: 'ten hours',
+    },
   },
 };
 
@@ -179,8 +194,6 @@ export function formatDescription(language: Language, hours: number, customDescr
     return customDescription;
   }
   const trans = t(language);
-  const hourLabel = hours === 1 ? trans.form.voucher.hourLabel : trans.form.voucher.hoursLabel;
-  return trans.bill.descriptionText
-    .replace('{hours}', hours.toString())
-    .replace('{hourLabel}', hourLabel);
+  const bannerText = trans.bill.bannerText[hours as 1 | 5 | 10] || trans.bill.bannerText[1];
+  return trans.bill.descriptionText.replace('{bannerText}', bannerText);
 }
