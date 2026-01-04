@@ -17,7 +17,11 @@ function useDebouncedValue<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-export function BillPreview() {
+interface BillPreviewProps {
+  onPortraitClick?: () => void;
+}
+
+export function BillPreview({ onPortraitClick }: BillPreviewProps = {}) {
   const appLanguage = useBillStore((state) => state.appLanguage);
   const billLanguage = useBillStore((state) => state.voucherConfig.language);
   const hours = useBillStore((state) => state.voucherConfig.hours);
@@ -136,7 +140,7 @@ export function BillPreview() {
 
   // Check if click is within portrait area (ellipse hit test)
   const isInPortraitArea = useCallback((clientX: number, clientY: number): boolean => {
-    if (!containerRef.current || currentSide !== 'front' || !portrait.original) return false;
+    if (!containerRef.current || currentSide !== 'front') return false;
 
     const rect = containerRef.current.getBoundingClientRect();
     const scaleX = rect.width / template.width;
@@ -152,11 +156,12 @@ export function BillPreview() {
     const dy = (templateY - cy) / radiusY;
 
     return (dx * dx + dy * dy) <= 1;
-  }, [currentSide, portrait.original, template.width, template.height, layout.front.portrait]);
+  }, [currentSide, template.width, template.height, layout.front.portrait]);
 
   // Pan handlers
   const handlePanStart = useCallback((clientX: number, clientY: number) => {
-    if (portrait.zoom <= 1 || !isInPortraitArea(clientX, clientY)) return;
+    // Only allow panning when zoomed in and portrait exists
+    if (!portrait.original || portrait.zoom <= 1 || !isInPortraitArea(clientX, clientY)) return;
 
     setIsPanning(true);
     panStartRef.current = {
@@ -165,7 +170,7 @@ export function BillPreview() {
       panX: portrait.panX,
       panY: portrait.panY,
     };
-  }, [portrait.zoom, portrait.panX, portrait.panY, isInPortraitArea]);
+  }, [portrait.original, portrait.zoom, portrait.panX, portrait.panY, isInPortraitArea]);
 
   const handlePanMove = useCallback((clientX: number, clientY: number) => {
     if (!isPanning || !panStartRef.current || !containerRef.current) return;
@@ -187,11 +192,27 @@ export function BillPreview() {
     panStartRef.current = null;
   }, []);
 
+  // Handle click on portrait area (for upload when empty)
+  const handlePortraitAreaClick = useCallback((clientX: number, clientY: number) => {
+    if (!portrait.original && isInPortraitArea(clientX, clientY) && onPortraitClick) {
+      onPortraitClick();
+    }
+  }, [portrait.original, isInPortraitArea, onPortraitClick]);
+
   // Mouse handlers
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (portrait.zoom > 1 && isInPortraitArea(e.clientX, e.clientY)) {
+    if (isInPortraitArea(e.clientX, e.clientY)) {
       e.preventDefault();
-      handlePanStart(e.clientX, e.clientY);
+      if (portrait.original && portrait.zoom > 1) {
+        handlePanStart(e.clientX, e.clientY);
+      }
+    }
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    // Only trigger portrait click if not panning
+    if (!isPanning) {
+      handlePortraitAreaClick(e.clientX, e.clientY);
     }
   };
 
@@ -222,6 +243,7 @@ export function BillPreview() {
 
   // Determine cursor style
   const canPan = currentSide === 'front' && portrait.original && portrait.zoom > 1;
+  const canClickToUpload = currentSide === 'front' && !portrait.original && onPortraitClick;
 
   // Calculate aspect ratio for responsive sizing
   const aspectRatio = template.width / template.height;
@@ -279,12 +301,13 @@ export function BillPreview() {
         {/* Flip container - rotates on Y axis */}
         <div
           ref={containerRef}
-          className={`relative w-full h-full shadow-lg ${canPan ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : ''} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
+          className={`relative w-full h-full shadow-lg ${canPan ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : canClickToUpload ? 'cursor-pointer' : ''} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
           style={{
             transformStyle: 'preserve-3d',
             transition: 'transform 0.6s ease-in-out, opacity 0.3s ease-in-out',
             transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
           }}
+          onClick={handleClick}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
