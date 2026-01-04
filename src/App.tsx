@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Header } from './components/layout/Header';
 import { PersonalInfoForm } from './components/PersonalInfoForm';
 import { PortraitUpload } from './components/PortraitUpload';
@@ -12,15 +12,22 @@ function App() {
   const currentSide = useBillStore((state) => state.currentSide);
   const portrait = useBillStore((state) => state.portrait);
   const personalInfo = useBillStore((state) => state.personalInfo);
-  const flipSide = useBillStore((state) => state.flipSide);
+  const setCurrentSide = useBillStore((state) => state.setCurrentSide);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [hasVisitedBack, setHasVisitedBack] = useState(false);
+  const [focusField, setFocusField] = useState<'name' | 'email' | 'phone' | null>(null);
 
-  // Track when user visits back side
-  if (currentSide === 'back' && !hasVisitedBack) {
-    setHasVisitedBack(true);
-  }
+  // Handle clicking on a personal info instruction
+  const handleFocusField = useCallback((field: 'name' | 'email' | 'phone') => {
+    if (currentSide !== 'back') {
+      setCurrentSide('back');
+    }
+    setFocusField(field);
+  }, [currentSide, setCurrentSide]);
+
+  const handleFocused = useCallback(() => {
+    setFocusField(null);
+  }, []);
 
   // Handle click on empty portrait area in preview
   const handlePortraitClick = () => {
@@ -61,35 +68,41 @@ function App() {
     await processImageFile(file);
   };
 
-  // Build instruction list
-  const instructions: { text: string; action?: () => void }[] = [];
+  // Build checklist with completed and pending items
+  const checklistItems: { text: string; completed: boolean; action?: () => void }[] = [];
 
-  if (!portrait.original) {
-    instructions.push({
-      text: appLanguage === 'de' ? 'Lade ein Bild hoch' : 'Upload a photo',
-    });
-  }
+  // Photo upload
+  checklistItems.push({
+    text: appLanguage === 'de' ? 'Foto hochladen' : 'Upload photo',
+    completed: !!portrait.original,
+    action: !portrait.original ? () => {
+      if (currentSide !== 'front') {
+        setCurrentSide('front');
+      }
+      fileInputRef.current?.click();
+    } : undefined,
+  });
 
-  if (portrait.original && !hasVisitedBack) {
-    instructions.push({
-      text: appLanguage === 'de' ? 'Gestalte die Rückseite' : 'Design the back side',
-      action: () => flipSide(),
-    });
-  }
+  // Name
+  checklistItems.push({
+    text: appLanguage === 'de' ? 'Namen eingeben' : 'Enter name',
+    completed: !!personalInfo.name.trim(),
+    action: !personalInfo.name.trim() ? () => handleFocusField('name') : undefined,
+  });
 
-  if (!personalInfo.name.trim()) {
-    instructions.push({
-      text: appLanguage === 'de' ? 'Füge deinen Namen ein' : 'Add your name',
-    });
-  }
+  // Email
+  checklistItems.push({
+    text: appLanguage === 'de' ? 'Email eingeben' : 'Enter email',
+    completed: !!personalInfo.email.trim(),
+    action: !personalInfo.email.trim() ? () => handleFocusField('email') : undefined,
+  });
 
-  if (!personalInfo.email.trim() || !personalInfo.phone.trim()) {
-    instructions.push({
-      text: appLanguage === 'de' ? 'Füge Email und Telefon ein' : 'Add email and phone',
-    });
-  }
-
-  const isComplete = instructions.length === 0;
+  // Phone
+  checklistItems.push({
+    text: appLanguage === 'de' ? 'Telefonnummer eingeben' : 'Enter phone number',
+    completed: !!personalInfo.phone.trim(),
+    action: !personalInfo.phone.trim() ? () => handleFocusField('phone') : undefined,
+  });
 
   return (
     <div className="min-h-screen bg-base-200">
@@ -104,60 +117,80 @@ function App() {
         onChange={handleFileChange}
       />
 
-      <main className="container mx-auto p-4 max-w-2xl">
-        {/* Voucher Settings - compact bar */}
-        <div className="card bg-base-100 shadow-xl mb-4">
-          <div className="card-body py-4">
-            <VoucherConfig />
-          </div>
-        </div>
-
-        {/* Main Configurator */}
-        <div className="card bg-base-100 shadow-xl">
-          <div className="card-body">
-            {/* Preview with integrated portrait click and drag-drop */}
-            <BillPreview onPortraitClick={handlePortraitClick} onFileDrop={handleFileDrop} />
-
-            {/* Contextual Controls */}
-            <div className="mt-4 pt-4 border-t border-base-300">
-              {currentSide === 'front' ? (
-                portrait.original ? (
-                  <PortraitUpload />
-                ) : null
-              ) : (
-                <PersonalInfoForm />
-              )}
+      <main className="container mx-auto p-4 max-w-5xl">
+        {/* Two-column layout on desktop */}
+        <div className="flex flex-col lg:flex-row gap-4">
+          {/* Left column: Settings + Preview */}
+          <div className="flex-1 lg:max-w-[65%] space-y-4">
+            {/* Voucher Settings */}
+            <div className="card bg-base-100 shadow-xl">
+              <div className="card-body py-4">
+                <VoucherConfig />
+              </div>
             </div>
 
-            {/* Actions / Instructions */}
-            <div className="mt-4 pt-4 border-t border-base-300">
-              {isComplete ? (
-                <ExportButton />
-              ) : (
-                <div className="space-y-2">
-                  {instructions.map((instruction, i) => (
+            {/* Preview Card */}
+            <div className="card bg-base-100 shadow-xl">
+              <div className="card-body">
+                <BillPreview onPortraitClick={handlePortraitClick} onFileDrop={handleFileDrop} />
+
+                {/* Contextual Controls - below preview */}
+                {(currentSide === 'back' || portrait.original) && (
+                  <div className="mt-4 pt-4 border-t border-base-300">
+                    {currentSide === 'front' ? (
+                      <PortraitUpload />
+                    ) : (
+                      <PersonalInfoForm focusField={focusField} onFocused={handleFocused} />
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right column: Checklist */}
+          <div className="lg:w-[35%]">
+            <div className="card bg-base-100 shadow-xl">
+              <div className="card-body">
+                <div className="space-y-1 mb-4">
+                  {[...checklistItems].sort((a, b) => (b.completed ? 1 : 0) - (a.completed ? 1 : 0)).map((item, i) => (
                     <div
                       key={i}
-                      className={`flex items-center gap-3 p-3 rounded-lg ${
-                        instruction.action
-                          ? 'bg-primary/10 cursor-pointer hover:bg-primary/20'
-                          : 'bg-base-200'
+                      className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
+                        item.completed
+                          ? 'opacity-50'
+                          : 'cursor-pointer hover:bg-base-200'
                       }`}
-                      onClick={instruction.action}
+                      onClick={item.action}
                     >
-                      <span className="text-lg">
-                        {instruction.text.includes('Bild') || instruction.text.includes('photo') ? '📷' : null}
-                        {instruction.action && '✏️'}
-                        {!instruction.action && (instruction.text.includes('Namen') || instruction.text.includes('name')) && '👤'}
-                        {!instruction.action && (instruction.text.includes('Email') || instruction.text.includes('email')) && '📧'}
+                      {/* Checkbox */}
+                      {item.completed ? (
+                        <div className="w-5 h-5 rounded border-2 border-success bg-success flex items-center justify-center shrink-0">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-3 w-3 text-success-content"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={3}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </div>
+                      ) : (
+                        <div className="w-5 h-5 rounded border-2 border-base-content/30 shrink-0" />
+                      )}
+                      <span className="flex-1">
+                        {item.text}
                       </span>
-                      <span className={instruction.action ? 'font-medium' : ''}>
-                        {instruction.text}
-                      </span>
-                      {instruction.action && (
+                      {!item.completed && (
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5 ml-auto"
+                          className="h-4 w-4 text-base-content/40"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -173,7 +206,8 @@ function App() {
                     </div>
                   ))}
                 </div>
-              )}
+                <ExportButton />
+              </div>
             </div>
           </div>
         </div>

@@ -266,15 +266,15 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
     <div className="space-y-4">
       {/* Controls - above preview */}
       <div className="flex justify-between items-center">
-        <div className="tabs tabs-boxed bg-base-200">
+        <div className="join border border-base-300 rounded-lg">
           <button
-            className={`tab ${currentSide === 'front' ? 'tab-active bg-primary text-primary-content font-semibold' : ''}`}
+            className={`join-item btn btn-sm ${currentSide === 'front' ? 'btn-active btn-primary' : 'btn-ghost'}`}
             onClick={() => currentSide !== 'front' && handleFlip()}
           >
             {trans.preview.front}
           </button>
           <button
-            className={`tab ${currentSide === 'back' ? 'tab-active bg-primary text-primary-content font-semibold' : ''}`}
+            className={`join-item btn btn-sm ${currentSide === 'back' ? 'btn-active btn-primary' : 'btn-ghost'}`}
             onClick={() => currentSide !== 'back' && handleFlip()}
           >
             {trans.preview.back}
