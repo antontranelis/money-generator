@@ -440,7 +440,7 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
                   <line x1="22" y1="4" x2="22" y2="10" strokeWidth={2} />
                   <line x1="19" y1="7" x2="25" y2="7" strokeWidth={2} />
                 </svg>
-                <span className="text-[10px] sm:text-xs">{appLanguage === 'de' ? 'Foto hochladen' : 'Upload photo'}</span>
+                <span className="text-[10px] sm:text-xs text-center leading-tight whitespace-pre-line">{appLanguage === 'de' ? 'Foto\nhochladen' : 'Upload\nphoto'}</span>
               </button>
             </div>
           )}
