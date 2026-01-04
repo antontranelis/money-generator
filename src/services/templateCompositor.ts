@@ -75,6 +75,9 @@ const fullResCache = new Map<string, string>();
 // Cache for base layer (background + badges, without frame)
 const baseLayerCache = new Map<string, string>();
 
+// Cache for frame layer (scaled frame images)
+const frameLayerCache = new Map<string, string>();
+
 /**
  * Draw text along an arc (curved text for banner)
  * The arc center is below the text, so text curves upward (like a smile)
@@ -425,6 +428,7 @@ export function clearCompositorCache(): void {
   previewCache.clear();
   fullResCache.clear();
   baseLayerCache.clear();
+  frameLayerCache.clear();
 }
 
 /**
@@ -452,21 +456,27 @@ export async function getTemplateLayers(
     baseLayerCache.set(cacheKey, baseUrl);
   }
 
-  // Get frame URL (front or back frame)
-  const frameImg = side === 'front'
-    ? (preloadedImages.frontFrame || await loadImage(LAYERS.frontFrame))
-    : (preloadedImages.backFrame || await loadImage(LAYERS.backFrame));
-  const width = Math.round(TEMPLATE_WIDTH * scale);
-  const height = Math.round(TEMPLATE_HEIGHT * scale);
+  // Get frame URL (front or back frame) - cached to ensure consistent data URLs for hue shift caching
+  const frameCacheKey = `${side}-${scale}`;
+  let frameUrl = frameLayerCache.get(frameCacheKey);
 
-  const frameCanvas = document.createElement('canvas');
-  frameCanvas.width = width;
-  frameCanvas.height = height;
-  const frameCtx = frameCanvas.getContext('2d');
-  if (!frameCtx) throw new Error('Failed to get canvas context');
-  frameCtx.drawImage(frameImg, 0, 0, width, height);
+  if (!frameUrl) {
+    const frameImg = side === 'front'
+      ? (preloadedImages.frontFrame || await loadImage(LAYERS.frontFrame))
+      : (preloadedImages.backFrame || await loadImage(LAYERS.backFrame));
+    const width = Math.round(TEMPLATE_WIDTH * scale);
+    const height = Math.round(TEMPLATE_HEIGHT * scale);
 
-  const frameUrl = frameCanvas.toDataURL('image/png'); // PNG for transparency
+    const frameCanvas = document.createElement('canvas');
+    frameCanvas.width = width;
+    frameCanvas.height = height;
+    const frameCtx = frameCanvas.getContext('2d');
+    if (!frameCtx) throw new Error('Failed to get canvas context');
+    frameCtx.drawImage(frameImg, 0, 0, width, height);
+
+    frameUrl = frameCanvas.toDataURL('image/png'); // PNG for transparency
+    frameLayerCache.set(frameCacheKey, frameUrl);
+  }
 
   return { base: baseUrl, frame: frameUrl };
 }
