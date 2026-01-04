@@ -217,11 +217,11 @@ export const useBillStore = create<BillState & BillActions>()(
         return state;
       },
       version: 1,
-      partialize: (state) => ({
+      partialize: (state): BillState => ({
         personalInfo: state.personalInfo,
         voucherConfig: {
           ...state.voucherConfig,
-          hours: 1, // Always reset to 1 hour
+          hours: 1 as const, // Always reset to 1 hour
           language: browserLanguage, // Always use browser language
           templateHue: 29, // Always reset to default - hue slider is disabled
         },
@@ -241,6 +241,9 @@ export const useBillStore = create<BillState & BillActions>()(
           bgBlur: 0, // Reset since we don't persist the image
           engravingIntensity: state.portrait.engravingIntensity,
         },
+        currentSide: 'front',
+        isEnhancing: false,
+        isExporting: false,
       }),
     }
   )
