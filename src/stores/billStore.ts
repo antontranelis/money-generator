@@ -2,6 +2,15 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { BillState, PersonalInfo, VoucherConfig, BillSide, HourValue, Language } from '../types/bill';
 
+// Detect browser language and return 'de' or 'en'
+function getBrowserLanguage(): Language {
+  const browserLang = typeof navigator !== 'undefined' ? navigator.language : 'de';
+  // Check if browser language starts with 'de' (e.g., 'de', 'de-DE', 'de-AT')
+  return browserLang.toLowerCase().startsWith('de') ? 'de' : 'en';
+}
+
+const browserLanguage = getBrowserLanguage();
+
 interface BillActions {
   setPersonalInfo: (info: Partial<PersonalInfo>) => void;
   setVoucherConfig: (config: Partial<VoucherConfig>) => void;
@@ -35,7 +44,7 @@ const initialState: BillState = {
   voucherConfig: {
     hours: 1,
     description: '',
-    language: 'de', // Bill/template language
+    language: browserLanguage, // Bill/template language - follows browser
     templateHue: 29, // Default to original beige color (~29°)
   },
   portrait: {
@@ -55,7 +64,7 @@ const initialState: BillState = {
   currentSide: 'front',
   isEnhancing: false,
   isExporting: false,
-  appLanguage: 'de', // UI language
+  appLanguage: browserLanguage, // UI language - follows browser
 };
 
 export const useBillStore = create<BillState & BillActions>()(
@@ -194,10 +203,29 @@ export const useBillStore = create<BillState & BillActions>()(
     }),
     {
       name: 'money-generator-storage',
+      // Migrate old storage to reset values
+      migrate: (persistedState: unknown) => {
+        const state = persistedState as BillState;
+        if (state?.voucherConfig) {
+          state.voucherConfig.templateHue = 29; // Reset to default
+          state.voucherConfig.hours = 1; // Always start at 1 hour
+          state.voucherConfig.language = browserLanguage; // Follow browser
+        }
+        if (state) {
+          state.appLanguage = browserLanguage; // Follow browser
+        }
+        return state;
+      },
+      version: 1,
       partialize: (state) => ({
         personalInfo: state.personalInfo,
-        voucherConfig: state.voucherConfig,
-        appLanguage: state.appLanguage,
+        voucherConfig: {
+          ...state.voucherConfig,
+          hours: 1, // Always reset to 1 hour
+          language: browserLanguage, // Always use browser language
+          templateHue: 29, // Always reset to default - hue slider is disabled
+        },
+        appLanguage: browserLanguage, // Always use browser language
         // Only persist small settings, NOT image data (too large for localStorage)
         portrait: {
           original: null, // Don't persist - too large

@@ -45,18 +45,20 @@ const PREVIEW_SCALE = 0.5;
 export const PREVIEW_WIDTH = Math.round(TEMPLATE_WIDTH * PREVIEW_SCALE);
 export const PREVIEW_HEIGHT = Math.round(TEMPLATE_HEIGHT * PREVIEW_SCALE);
 
-// Badge size scaled for 3633x1920 resolution
-const BADGE_SIZE = 330;
+// Badge sizes scaled for 3633x1920 resolution
+// Top badges are slightly smaller than bottom badges (perspective effect)
+const BADGE_SIZE_TOP = 320;
+const BADGE_SIZE_BOTTOM = 335;
 
 // Layout positions for compositing (relative to 3633x1920)
 // These positions are calibrated to match the ornament positions in the template
 const LAYOUT = {
   // Number badge positions (4 corners) - centered at ornament positions
   badges: {
-    topLeft: { x: 282, y: 237 },
+    topLeft: { x: 286, y: 235 },
     topRight: { x: 3340, y: 230 },
-    bottomLeft: { x: 282, y: 1655 },
-    bottomRight: { x: 3345, y: 1655 },
+    bottomLeft: { x: 282, y: 1665 },
+    bottomRight: { x: 3345, y: 1665 },
   },
   // Banner arc text settings
   banner: {
@@ -225,21 +227,22 @@ function composeBadgesLayer(
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Failed to get canvas context');
 
-  // Draw badges at scaled positions
-  const badgeSize = BADGE_SIZE * scale;
-  const halfBadge = badgeSize / 2;
+  // Draw badges at scaled positions with different sizes for top/bottom
+  const badgeSizeTop = BADGE_SIZE_TOP * scale;
+  const badgeSizeBottom = BADGE_SIZE_BOTTOM * scale;
   const badgePositions = LAYOUT.badges;
 
-  const drawBadge = (pos: { x: number; y: number }) => {
+  const drawBadge = (pos: { x: number; y: number }, size: number) => {
+    const halfBadge = size / 2;
     const x = pos.x * scale - halfBadge;
     const y = pos.y * scale - halfBadge;
-    ctx.drawImage(badge, x, y, badgeSize, badgeSize);
+    ctx.drawImage(badge, x, y, size, size);
   };
 
-  drawBadge(badgePositions.topLeft);
-  drawBadge(badgePositions.topRight);
-  drawBadge(badgePositions.bottomLeft);
-  drawBadge(badgePositions.bottomRight);
+  drawBadge(badgePositions.topLeft, badgeSizeTop);
+  drawBadge(badgePositions.topRight, badgeSizeTop);
+  drawBadge(badgePositions.bottomLeft, badgeSizeBottom);
+  drawBadge(badgePositions.bottomRight, badgeSizeBottom);
 
   return canvas.toDataURL('image/png'); // PNG for transparency
 }
@@ -315,22 +318,23 @@ function composeTemplateInternal(
   // Layer 1: Draw background
   ctx.drawImage(background, 0, 0, width, height);
 
-  // Layer 2: Draw badges at scaled positions (only on front side)
-  if (side === 'front') {
-    const badgeSize = BADGE_SIZE * scale;
-    const halfBadge = badgeSize / 2;
+  // Layer 2: Draw badges at scaled positions with different sizes for top/bottom (both sides)
+  {
+    const badgeSizeTop = BADGE_SIZE_TOP * scale;
+    const badgeSizeBottom = BADGE_SIZE_BOTTOM * scale;
     const badgePositions = LAYOUT.badges;
 
-    const drawBadge = (pos: { x: number; y: number }) => {
+    const drawBadge = (pos: { x: number; y: number }, size: number) => {
+      const halfBadge = size / 2;
       const x = pos.x * scale - halfBadge;
       const y = pos.y * scale - halfBadge;
-      ctx.drawImage(badge, x, y, badgeSize, badgeSize);
+      ctx.drawImage(badge, x, y, size, size);
     };
 
-    drawBadge(badgePositions.topLeft);
-    drawBadge(badgePositions.topRight);
-    drawBadge(badgePositions.bottomLeft);
-    drawBadge(badgePositions.bottomRight);
+    drawBadge(badgePositions.topLeft, badgeSizeTop);
+    drawBadge(badgePositions.topRight, badgeSizeTop);
+    drawBadge(badgePositions.bottomLeft, badgeSizeBottom);
+    drawBadge(badgePositions.bottomRight, badgeSizeBottom);
   }
 
   // Layer 3: Draw frame on top
