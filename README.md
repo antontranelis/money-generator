@@ -11,7 +11,7 @@ Create personalized time vouchers that look like real currency. Design your own 
 - **Sepia Effect**: Local vintage currency engraving effect (no API required)
 - **Personalization**: Add your name, email, and phone number
 - **Multiple Denominations**: Choose between 1, 5, or 10 hour vouchers
-- **Bilingual**: Full support for German and English
+- **Bilingual**: Full support for German and English (auto-detects browser language)
 - **High-Quality Export**: Download as print-ready PDF (A4 landscape)
 - **Responsive**: Works on desktop and mobile with touch support
 
@@ -69,6 +69,16 @@ import {
   renderFrontSide,
   renderBackSide,
 
+  // Template Composition
+  composeTemplate,
+  composeTemplateFullRes,
+  getTemplateLayers,
+  preloadBaseImages,
+  TEMPLATE_WIDTH,
+  TEMPLATE_HEIGHT,
+  PREVIEW_WIDTH,
+  PREVIEW_HEIGHT,
+
   // Image Effects (local, no API)
   applyEngravingEffect,
   resizeImage,
@@ -116,18 +126,20 @@ The sepia/engraving effect runs locally and doesn't require an API key.
 
 - **React 18/19** - UI Framework
 - **TypeScript** - Type Safety
-- **Zustand** - State Management
+- **Zustand** - State Management with persistence
 - **jsPDF** - PDF Generation
-- **Canvas API** - Image Processing
+- **Canvas API** - Image Processing & Template Compositing
 
 ## Templates
 
-The package includes two template sets:
+Templates are dynamically composed at runtime from layered assets:
 
-- **German (DE)**: High-DPI templates (6144x3200px)
-- **English (EN)**: Standard-DPI templates (1536x1024px)
+- **Background**: Base template background (3633x1920px @ 600 DPI)
+- **Badges**: Hour denomination badges (1, 5, 10) positioned in corners
+- **Frame**: Ornamental frame overlay
+- **Banner Text**: Arc-curved text rendered on canvas
 
-Templates are bundled in `public/templates/`.
+Both German and English use the same base templates with localized text.
 
 ## Development
 
@@ -153,10 +165,12 @@ npm run build
 
 The image processing is optimized for smooth performance:
 
-- **Image Caching**: Avoids reloading the same data URLs
-- **Uint32Array**: Fast pixel manipulation for sepia effect
+- **Layer Caching**: Composed templates are cached as data URLs
+- **Image Caching**: Avoids reloading the same images
+- **Uint32Array**: Fast pixel manipulation for effects
 - **Reusable Canvas**: Reduces garbage collection pressure
 - **Debounced Updates**: Slider changes are debounced to prevent lag
+- **Preview Scale**: Lower resolution previews (50% scale) for faster rendering
 
 ## License
 
