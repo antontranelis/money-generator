@@ -265,16 +265,21 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
   ];
 }
 
+// Source hue for background (beige ~29°)
+const SOURCE_HUE = 29;
+// Tolerance range around source hue to consider "no shift needed"
+const SOURCE_HUE_TOLERANCE = 5;
+
 /**
- * Replace cool colors (greens, cyans, blues) with target hue
- * Maps all cool colors to the target hue while preserving saturation and lightness
+ * Replace beige/warm colors with target hue
+ * Maps beige colors (background) to the target hue while preserving saturation and lightness
  * @param imageDataUrl - Base64 data URL of the image
- * @param targetHue - Target hue in degrees (0-360). 160 = original (no shift)
- * @returns Image with cool colors replaced by target hue
+ * @param targetHue - Target hue in degrees (0-360). ~29 = original beige (no shift)
+ * @returns Image with beige colors replaced by target hue
  */
 export async function applyHueShift(imageDataUrl: string, targetHue: number): Promise<string> {
-  // No shift needed when hue is at source color (~160°)
-  if (targetHue >= 155 && targetHue <= 165) {
+  // No shift needed when hue is at source color (~29° beige)
+  if (Math.abs(targetHue - SOURCE_HUE) <= SOURCE_HUE_TOLERANCE) {
     return imageDataUrl;
   }
 
@@ -297,55 +302,55 @@ export async function applyHueShift(imageDataUrl: string, targetHue: number): Pr
   // Target hue in 0-1 range
   const targetH = (targetHue % 360) / 360;
 
-  // Cool color range to replace: green to blue (roughly 60° to 260°)
-  const coolHueMin = 60 / 360;   // ~0.17 (yellow-green)
-  const coolHueMax = 260 / 360;  // ~0.72 (blue-violet)
+  // Beige/warm color range to replace: centered around SOURCE_HUE (29°)
+  // Range: 24°-34° captures the beige background color (#f6e4d3)
+  const beigeHueMin = 20 / 360;   // ~0.067
+  const beigeHueMax = 45 / 360;   // ~0.094
 
-  // Process pixels in chunks to avoid blocking UI
-  const CHUNK_SIZE = 100000; // Process 100k pixels per chunk
+  // Process all pixels (no chunking for better performance when called from precompute)
   const totalPixels = pixels.length;
 
-  for (let start = 0; start < totalPixels; start += CHUNK_SIZE) {
-    const end = Math.min(start + CHUNK_SIZE, totalPixels);
+  for (let i = 0; i < totalPixels; i++) {
+    const pixel = pixels[i];
 
-    // Process chunk
-    for (let i = start; i < end; i++) {
-      const pixel = pixels[i];
+    // Extract RGBA (little-endian: ABGR in memory)
+    const r = pixel & 0xff;
+    const g = (pixel >> 8) & 0xff;
+    const b = (pixel >> 16) & 0xff;
+    const a = (pixel >> 24) & 0xff;
 
-      // Extract RGBA (little-endian: ABGR in memory)
-      const r = pixel & 0xff;
-      const g = (pixel >> 8) & 0xff;
-      const b = (pixel >> 16) & 0xff;
-      const a = (pixel >> 24) & 0xff;
+    // Skip fully transparent pixels
+    if (a === 0) continue;
 
-      // Skip fully transparent pixels
-      if (a === 0) continue;
+    // Convert RGB to HSL
+    const [h, s, l] = rgbToHsl(r, g, b);
 
-      // Convert RGB to HSL
-      const [h, s, l] = rgbToHsl(r, g, b);
+    // Skip very low saturation pixels (grays)
+    if (s < 0.08) continue;
 
-      // Skip very low saturation pixels (grays)
-      if (s < 0.06) continue;
+    // Only replace beige/warm colors
+    if (h < beigeHueMin || h > beigeHueMax) continue;
 
-      // Only replace cool colors (greens, cyans, blues)
-      if (h < coolHueMin || h > coolHueMax) continue;
+    // Direct replacement: set hue to target, reduce saturation for subtle effect
+    const newH = targetH;
+    // Reduce saturation to keep colors muted/pastel (original beige has low saturation)
+    // Cap saturation at 0.15 to prevent garish colors
+    const newS = Math.min(s, 0.05);
 
-      // Direct replacement: set hue to target, keep saturation and lightness
-      const newH = targetH;
+    // Convert back to RGB
+    const [newR, newG, newB] = hslToRgb(newH, newS, l);
 
-      // Convert back to RGB
-      const [newR, newG, newB] = hslToRgb(newH, s, l);
-
-      // Pack back into 32-bit value (little-endian: ABGR)
-      pixels[i] = (a << 24) | (newB << 16) | (newG << 8) | newR;
-    }
-
-    // Yield to browser between chunks (except for last chunk)
-    if (end < totalPixels) {
-      await new Promise(resolve => setTimeout(resolve, 0));
-    }
+    // Pack back into 32-bit value (little-endian: ABGR)
+    pixels[i] = (a << 24) | (newB << 16) | (newG << 8) | newR;
   }
 
   ctx.putImageData(imageData, 0, 0);
   return reusableCanvas!.toDataURL('image/png');
+}
+
+/**
+ * Get the source hue value (brown) - useful for UI default
+ */
+export function getSourceHue(): number {
+  return SOURCE_HUE;
 }

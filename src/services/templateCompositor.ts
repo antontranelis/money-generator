@@ -72,8 +72,11 @@ const LAYOUT = {
 const previewCache = new Map<string, string>();
 const fullResCache = new Map<string, string>();
 
-// Cache for base layer (background + badges, without frame)
-const baseLayerCache = new Map<string, string>();
+// Cache for background layer (without badges - gets hue-shifted)
+const backgroundLayerCache = new Map<string, string>();
+
+// Cache for badges layer (does NOT get hue-shifted)
+const badgesLayerCache = new Map<string, string>();
 
 // Cache for frame layer (scaled frame images)
 const frameLayerCache = new Map<string, string>();
@@ -183,15 +186,34 @@ export async function preloadBaseImages(): Promise<void> {
 }
 
 /**
- * Compose base layer (background + badges) without frame or banner
- * This layer goes UNDER the portrait
- * Banner text is drawn separately AFTER the frame
+ * Compose background layer only (no badges)
+ * This layer gets hue-shifted
  */
-function composeBaseLayer(
-  _hours: HourValue,
-  _language: Language,
+function composeBackgroundLayer(
   scale: number,
-  background: HTMLImageElement,
+  background: HTMLImageElement
+): string {
+  const width = Math.round(TEMPLATE_WIDTH * scale);
+  const height = Math.round(TEMPLATE_HEIGHT * scale);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Failed to get canvas context');
+
+  ctx.drawImage(background, 0, 0, width, height);
+
+  const quality = scale < 1 ? 0.8 : 0.95;
+  return canvas.toDataURL('image/jpeg', quality);
+}
+
+/**
+ * Compose badges layer (transparent PNG with badges only)
+ * This layer does NOT get hue-shifted
+ */
+function composeBadgesLayer(
+  scale: number,
   badge: HTMLImageElement
 ): string {
   const width = Math.round(TEMPLATE_WIDTH * scale);
@@ -203,10 +225,7 @@ function composeBaseLayer(
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Failed to get canvas context');
 
-  // Layer 1: Draw background
-  ctx.drawImage(background, 0, 0, width, height);
-
-  // Layer 2: Draw badges at scaled positions
+  // Draw badges at scaled positions
   const badgeSize = BADGE_SIZE * scale;
   const halfBadge = badgeSize / 2;
   const badgePositions = LAYOUT.badges;
@@ -222,11 +241,7 @@ function composeBaseLayer(
   drawBadge(badgePositions.bottomLeft);
   drawBadge(badgePositions.bottomRight);
 
-  // NOTE: Banner text is NOT drawn here - it must be drawn AFTER the frame
-  // to appear on top of everything
-
-  const quality = scale < 1 ? 0.8 : 0.95;
-  return canvas.toDataURL('image/jpeg', quality);
+  return canvas.toDataURL('image/png'); // PNG for transparency
 }
 
 /**
@@ -427,36 +442,43 @@ export function getTemplateDimensions() {
 export function clearCompositorCache(): void {
   previewCache.clear();
   fullResCache.clear();
-  baseLayerCache.clear();
+  backgroundLayerCache.clear();
+  badgesLayerCache.clear();
   frameLayerCache.clear();
 }
 
 /**
  * Get separate layers for rendering (front or back)
- * Returns base (background + badges) and frame as separate URLs
+ * Returns background (gets hue-shifted), badges (no hue-shift), and frame as separate URLs
  * This allows content to be rendered BETWEEN these layers
  */
 export async function getTemplateLayers(
   hours: HourValue,
-  language: Language,
+  _language: Language,
   side: 'front' | 'back' = 'front',
   scale: number = PREVIEW_SCALE
-): Promise<{ base: string; frame: string }> {
-  const cacheKey = `${hours}-${language}-${side}-${scale}`;
+): Promise<{ background: string; badges: string; frame: string }> {
+  // Background layer (gets hue-shifted)
+  const bgCacheKey = `bg-${scale}`;
+  let backgroundUrl = backgroundLayerCache.get(bgCacheKey);
 
-  // Check cache for base layer
-  let baseUrl = baseLayerCache.get(cacheKey);
-
-  if (!baseUrl) {
-    // Get images
+  if (!backgroundUrl) {
     const background = preloadedImages.background || await loadImage(LAYERS.background);
-    const badge = preloadedImages.badges[hours] || await loadImage(NUMBER_BADGES[hours]);
-
-    baseUrl = composeBaseLayer(hours, language, scale, background, badge);
-    baseLayerCache.set(cacheKey, baseUrl);
+    backgroundUrl = composeBackgroundLayer(scale, background);
+    backgroundLayerCache.set(bgCacheKey, backgroundUrl);
   }
 
-  // Get frame URL (front or back frame) - cached to ensure consistent data URLs for hue shift caching
+  // Badges layer (does NOT get hue-shifted)
+  const badgesCacheKey = `badges-${hours}-${scale}`;
+  let badgesUrl = badgesLayerCache.get(badgesCacheKey);
+
+  if (!badgesUrl) {
+    const badge = preloadedImages.badges[hours] || await loadImage(NUMBER_BADGES[hours]);
+    badgesUrl = composeBadgesLayer(scale, badge);
+    badgesLayerCache.set(badgesCacheKey, badgesUrl);
+  }
+
+  // Frame layer (front or back frame)
   const frameCacheKey = `${side}-${scale}`;
   let frameUrl = frameLayerCache.get(frameCacheKey);
 
@@ -478,7 +500,7 @@ export async function getTemplateLayers(
     frameLayerCache.set(frameCacheKey, frameUrl);
   }
 
-  return { base: baseUrl, frame: frameUrl };
+  return { background: backgroundUrl, badges: badgesUrl, frame: frameUrl };
 }
 
 /**

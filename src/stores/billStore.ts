@@ -36,7 +36,7 @@ const initialState: BillState = {
     hours: 1,
     description: '',
     language: 'de', // Bill/template language
-    templateHue: 160, // Default to original teal-green color
+    templateHue: 29, // Default to original beige color (~29°)
   },
   portrait: {
     original: null,

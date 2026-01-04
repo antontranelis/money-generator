@@ -51,9 +51,11 @@ export function BillPreview() {
   const displayDescription = formatDescription(billLanguage, hours, description);
 
   // State for dynamically composed template URLs
-  const [frontBaseUrl, setFrontBaseUrl] = useState<string>('');
+  const [frontBackgroundUrl, setFrontBackgroundUrl] = useState<string>('');
+  const [frontBadgesUrl, setFrontBadgesUrl] = useState<string>('');
   const [frontFrameUrl, setFrontFrameUrl] = useState<string>('');
-  const [backBaseUrl, setBackBaseUrl] = useState<string>('');
+  const [backBackgroundUrl, setBackBackgroundUrl] = useState<string>('');
+  const [backBadgesUrl, setBackBadgesUrl] = useState<string>('');
   const [backFrameUrl, setBackFrameUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -68,9 +70,11 @@ export function BillPreview() {
         getTemplateLayers(hours, billLanguage, 'back'),
       ]);
       if (mounted) {
-        setFrontBaseUrl(frontLayers.base);
+        setFrontBackgroundUrl(frontLayers.background);
+        setFrontBadgesUrl(frontLayers.badges);
         setFrontFrameUrl(frontLayers.frame);
-        setBackBaseUrl(backLayers.base);
+        setBackBackgroundUrl(backLayers.background);
+        setBackBadgesUrl(backLayers.badges);
         setBackFrameUrl(backLayers.frame);
         setIsLoading(false);
       }
@@ -82,11 +86,12 @@ export function BillPreview() {
 
   // Render front side
   useEffect(() => {
-    if (!frontCanvasRef.current || !frontBaseUrl || !frontFrameUrl) return;
+    if (!frontCanvasRef.current || !frontBackgroundUrl || !frontBadgesUrl || !frontFrameUrl) return;
 
     renderFrontSide(
       frontCanvasRef.current,
-      frontBaseUrl,
+      frontBackgroundUrl,
+      frontBadgesUrl,
       frontFrameUrl,
       currentPortrait,
       personalInfo.name,
@@ -100,15 +105,16 @@ export function BillPreview() {
       hours,
       billLanguage
     );
-  }, [template, frontBaseUrl, frontFrameUrl, currentPortrait, personalInfo.name, layout, portrait.zoom, portrait.panX, portrait.panY, debouncedHue, hours, billLanguage]);
+  }, [template, frontBackgroundUrl, frontBadgesUrl, frontFrameUrl, currentPortrait, personalInfo.name, layout, portrait.zoom, portrait.panX, portrait.panY, debouncedHue, hours, billLanguage]);
 
   // Render back side
   useEffect(() => {
-    if (!backCanvasRef.current || !backBaseUrl || !backFrameUrl) return;
+    if (!backCanvasRef.current || !backBackgroundUrl || !backBadgesUrl || !backFrameUrl) return;
 
     renderBackSide(
       backCanvasRef.current,
-      backBaseUrl,
+      backBackgroundUrl,
+      backBadgesUrl,
       backFrameUrl,
       personalInfo.name,
       personalInfo.email,
@@ -121,7 +127,7 @@ export function BillPreview() {
       hours,
       billLanguage
     );
-  }, [template, backBaseUrl, backFrameUrl, personalInfo, displayDescription, layout, debouncedHue, hours, billLanguage]);
+  }, [template, backBackgroundUrl, backBadgesUrl, backFrameUrl, personalInfo, displayDescription, layout, debouncedHue, hours, billLanguage]);
 
   const handleFlip = () => {
     setIsFlipped(!isFlipped);
