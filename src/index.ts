@@ -54,11 +54,16 @@ export {
 // Template compositor (dynamic template generation)
 export {
   composeTemplate,
+  composeTemplateFullRes,
+  getTemplateLayers,
   getTemplateDimensions,
   clearCompositorCache,
   preloadAllTemplates,
+  preloadBaseImages,
   TEMPLATE_WIDTH,
   TEMPLATE_HEIGHT,
+  PREVIEW_WIDTH,
+  PREVIEW_HEIGHT,
 } from './services';
 
 // Types
