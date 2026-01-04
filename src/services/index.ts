@@ -14,6 +14,10 @@ export {
 export {
   composeTemplate,
   composeTemplateFullRes,
+  getTemplateLayers,
+  drawBannerText,
+  getBannerText,
+  getBannerConfig,
   preloadBaseImages,
   getTemplateDimensions,
   clearCompositorCache,

@@ -14,21 +14,21 @@ export function getTemplate(_language: Language, _hours: HourValue): TemplateCon
   };
 }
 
-// Layout coordinates for 7032x3740 templates
+// Layout coordinates for 3633x1920 templates (600 DPI)
 // These are used for both DE and EN since they share the same base template
 export const TEMPLATE_LAYOUT: { front: TemplateLayout; back: TemplateLayout } = {
   front: {
     portrait: {
-      x: 3516,        // Center X
-      y: 1760,        // Center Y (slightly above center for the oval frame)
-      radiusX: 1080,  // Horizontal radius of the oval
-      radiusY: 1170,  // Vertical radius of the oval
+      x: 1810,        // Center X
+      y: 918,         // Center Y (slightly above center for the oval frame)
+      radiusX: 570,   // Horizontal radius of the oval
+      radiusY: 605,   // Vertical radius of the oval
     },
     namePlate: {
-      x: 3516,
-      y: 3420,        // Bottom name plate position
-      fontSize: 165,
-      maxWidth: 1740,
+      x: 1816,
+      y: 1765,        // Bottom name plate position
+      fontSize: 85,
+      maxWidth: 898,
       align: 'center',
     },
   },
@@ -40,33 +40,33 @@ export const TEMPLATE_LAYOUT: { front: TemplateLayout; back: TemplateLayout } = 
       radiusY: 0,
     },
     namePlate: {
-      x: 3516,
-      y: 3400,
-      fontSize: 165,
-      maxWidth: 1740,
+      x: 1816,
+      y: 1770,
+      fontSize: 85,
+      maxWidth: 898,
       align: 'center',
     },
     contactInfo: {
-      x: 1740,
-      y: 1820,
-      fontSize: 180,
-      lineHeight: 320,
+      x: 898,
+      y: 939,
+      fontSize: 93,
+      lineHeight: 165,
       align: 'center',
     },
     description: {
-      x: 5270,
-      y: 1820,
-      fontSize: 165,
-      maxWidth: 2280,
-      lineHeight: 240,
+      x: 2721,
+      y: 939,
+      fontSize: 85,
+      maxWidth: 1177,
+      lineHeight: 124,
       align: 'center',
     },
     signature: {
-      x: 3526,
-      y: 2800,
-      width: 1840,
-      height: 280,
-      labelFontSize: 165,
+      x: 1820,
+      y: 1445,
+      width: 950,
+      height: 145,
+      labelFontSize: 85,
     },
   },
 };
@@ -80,8 +80,8 @@ export function getLayout(_language: Language): { front: TemplateLayout; back: T
   return TEMPLATE_LAYOUT;
 }
 
-// Preview scale factor for faster rendering (1 = full res, 0.25 = quarter res)
-export const PREVIEW_SCALE = 0.25;
+// Preview scale factor for faster rendering (1 = full res, 0.75 = 3/4 res)
+export const PREVIEW_SCALE = 0.75;
 
 // Get scaled layout for preview rendering
 export function getPreviewLayout(language: Language): { front: TemplateLayout; back: TemplateLayout } {

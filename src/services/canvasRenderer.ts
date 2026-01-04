@@ -1,5 +1,6 @@
-import type { TemplateLayout, TextConfig, SignatureConfig } from '../types/bill';
+import type { TemplateLayout, TextConfig, SignatureConfig, HourValue, Language } from '../types/bill';
 import { applyHueShift } from './imageEffects';
+import { drawBannerText } from './templateCompositor';
 
 // Image cache to avoid reloading
 const imageCache = new Map<string, HTMLImageElement>();
@@ -272,7 +273,8 @@ export function drawSignature(
 
 export async function renderFrontSide(
   canvas: HTMLCanvasElement,
-  templateSrc: string,
+  baseSrc: string,
+  frameSrc: string,
   portraitSrc: string | null,
   name: string,
   layout: TemplateLayout,
@@ -281,7 +283,9 @@ export async function renderFrontSide(
   portraitZoom: number = 1,
   portraitPanX: number = 0,
   portraitPanY: number = 0,
-  templateHue: number = 0
+  templateHue: number = 0,
+  hours: HourValue = 1,
+  language: Language = 'de'
 ): Promise<void> {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -296,11 +300,11 @@ export async function renderFrontSide(
   // Clear off-screen canvas
   offCtx.clearRect(0, 0, width, height);
 
-  // Draw template (with optional hue shift)
-  const template = await getHueShiftedTemplate(templateSrc, templateHue, width, height);
-  drawTemplate(offCtx, template, width, height);
+  // Layer 1: Draw base (background + badges) with optional hue shift
+  const base = await getHueShiftedTemplate(baseSrc, templateHue, width, height);
+  drawTemplate(offCtx, base, width, height);
 
-  // Draw portrait if available
+  // Layer 2: Draw portrait if available (UNDER the frame)
   if (portraitSrc) {
     try {
       const portrait = await loadImage(portraitSrc);
@@ -320,7 +324,17 @@ export async function renderFrontSide(
     }
   }
 
-  // Draw name
+  // Layer 3: Draw frame ON TOP of portrait (with optional hue shift)
+  const frame = await getHueShiftedTemplate(frameSrc, templateHue, width, height);
+  drawTemplate(offCtx, frame, width, height);
+
+  // Layer 4: Draw banner text ON TOP of frame
+  // Calculate scale based on preview vs full resolution
+  // Preview is 0.5 scale (width ~1816), full is 1.0 (width 3633)
+  const scale = width / 3633;
+  drawBannerText(offCtx, hours, language, scale);
+
+  // Layer 5: Draw name
   if (name) {
     drawText(offCtx, name, layout.namePlate);
   }
@@ -333,7 +347,8 @@ export async function renderFrontSide(
 
 export async function renderBackSide(
   canvas: HTMLCanvasElement,
-  templateSrc: string,
+  baseSrc: string,
+  frameSrc: string,
   name: string,
   email: string,
   phone: string,
@@ -342,7 +357,8 @@ export async function renderBackSide(
   width: number,
   height: number,
   templateHue: number = 0,
-  language: 'de' | 'en' = 'de'
+  hours: HourValue = 1,
+  language: Language = 'de'
 ): Promise<void> {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -357,26 +373,34 @@ export async function renderBackSide(
   // Clear off-screen canvas
   offCtx.clearRect(0, 0, width, height);
 
-  // Draw template (with optional hue shift)
-  const template = await getHueShiftedTemplate(templateSrc, templateHue, width, height);
-  drawTemplate(offCtx, template, width, height);
+  // Layer 1: Draw base (background + badges) with optional hue shift
+  const base = await getHueShiftedTemplate(baseSrc, templateHue, width, height);
+  drawTemplate(offCtx, base, width, height);
 
-  // Draw contact info
+  // Layer 2: Draw frame ON TOP (with optional hue shift)
+  const frame = await getHueShiftedTemplate(frameSrc, templateHue, width, height);
+  drawTemplate(offCtx, frame, width, height);
+
+  // Layer 3: Draw banner text ON TOP of frame
+  const scale = width / 3633;
+  drawBannerText(offCtx, hours, language, scale);
+
+  // Layer 4: Draw contact info
   if (layout.contactInfo && (name || email || phone)) {
     drawContactInfo(offCtx, name, email, phone, layout.contactInfo);
   }
 
-  // Draw description
+  // Layer 5: Draw description
   if (layout.description && description) {
     drawMultilineText(offCtx, description, layout.description);
   }
 
-  // Draw name at bottom
+  // Layer 6: Draw name at bottom
   if (name) {
     drawText(offCtx, name, layout.namePlate);
   }
 
-  // Draw signature field
+  // Layer 7: Draw signature field
   if (layout.signature) {
     const signatureLabel = language === 'de' ? 'Unterschrift' : 'Signature';
     drawSignature(offCtx, layout.signature, signatureLabel);

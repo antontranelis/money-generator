@@ -3,7 +3,7 @@ import { useBillStore } from '../stores/billStore';
 import { t, formatDescription } from '../constants/translations';
 import { getPreviewTemplate, getPreviewLayout } from '../constants/templates';
 import { renderFrontSide, renderBackSide } from '../services/canvasRenderer';
-import { composeTemplate } from '../services/templateCompositor';
+import { getTemplateLayers } from '../services/templateCompositor';
 
 // Debounce hook for expensive operations
 function useDebouncedValue<T>(value: T, delay: number): T {
@@ -51,21 +51,28 @@ export function BillPreview() {
   const displayDescription = formatDescription(billLanguage, hours, description);
 
   // State for dynamically composed template URLs
-  const [frontTemplateUrl, setFrontTemplateUrl] = useState<string>('');
-  const [backTemplateUrl, setBackTemplateUrl] = useState<string>('');
+  const [frontBaseUrl, setFrontBaseUrl] = useState<string>('');
+  const [frontFrameUrl, setFrontFrameUrl] = useState<string>('');
+  const [backBaseUrl, setBackBaseUrl] = useState<string>('');
+  const [backFrameUrl, setBackFrameUrl] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
 
   // Compose templates when hours or billLanguage changes
   useEffect(() => {
     let mounted = true;
+    setIsLoading(true);
 
     async function loadTemplates() {
-      const [front, back] = await Promise.all([
-        composeTemplate(hours, billLanguage, 'front'),
-        composeTemplate(hours, billLanguage, 'back'),
+      const [frontLayers, backLayers] = await Promise.all([
+        getTemplateLayers(hours, billLanguage, 'front'),
+        getTemplateLayers(hours, billLanguage, 'back'),
       ]);
       if (mounted) {
-        setFrontTemplateUrl(front);
-        setBackTemplateUrl(back);
+        setFrontBaseUrl(frontLayers.base);
+        setFrontFrameUrl(frontLayers.frame);
+        setBackBaseUrl(backLayers.base);
+        setBackFrameUrl(backLayers.frame);
+        setIsLoading(false);
       }
     }
 
@@ -75,11 +82,12 @@ export function BillPreview() {
 
   // Render front side
   useEffect(() => {
-    if (!frontCanvasRef.current || !frontTemplateUrl) return;
+    if (!frontCanvasRef.current || !frontBaseUrl || !frontFrameUrl) return;
 
     renderFrontSide(
       frontCanvasRef.current,
-      frontTemplateUrl,
+      frontBaseUrl,
+      frontFrameUrl,
       currentPortrait,
       personalInfo.name,
       layout.front,
@@ -88,17 +96,20 @@ export function BillPreview() {
       portrait.zoom,
       portrait.panX,
       portrait.panY,
-      debouncedHue
+      debouncedHue,
+      hours,
+      billLanguage
     );
-  }, [template, frontTemplateUrl, currentPortrait, personalInfo.name, layout, portrait.zoom, portrait.panX, portrait.panY, debouncedHue]);
+  }, [template, frontBaseUrl, frontFrameUrl, currentPortrait, personalInfo.name, layout, portrait.zoom, portrait.panX, portrait.panY, debouncedHue, hours, billLanguage]);
 
   // Render back side
   useEffect(() => {
-    if (!backCanvasRef.current || !backTemplateUrl) return;
+    if (!backCanvasRef.current || !backBaseUrl || !backFrameUrl) return;
 
     renderBackSide(
       backCanvasRef.current,
-      backTemplateUrl,
+      backBaseUrl,
+      backFrameUrl,
       personalInfo.name,
       personalInfo.email,
       personalInfo.phone,
@@ -107,9 +118,10 @@ export function BillPreview() {
       template.width,
       template.height,
       debouncedHue,
+      hours,
       billLanguage
     );
-  }, [template, backTemplateUrl, personalInfo, displayDescription, layout, debouncedHue, billLanguage]);
+  }, [template, backBaseUrl, backFrameUrl, personalInfo, displayDescription, layout, debouncedHue, hours, billLanguage]);
 
   const handleFlip = () => {
     setIsFlipped(!isFlipped);
@@ -251,13 +263,20 @@ export function BillPreview() {
         className="relative w-full overflow-visible"
         style={{ aspectRatio, perspective: '1500px' }}
       >
+        {/* Loading overlay */}
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-base-300 rounded-lg z-10">
+            <span className="loading loading-spinner loading-lg text-primary"></span>
+          </div>
+        )}
+
         {/* Flip container - rotates on Y axis */}
         <div
           ref={containerRef}
-          className={`relative w-full h-full shadow-lg ${canPan ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : ''}`}
+          className={`relative w-full h-full shadow-lg ${canPan ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : ''} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
           style={{
             transformStyle: 'preserve-3d',
-            transition: 'transform 0.6s ease-in-out',
+            transition: 'transform 0.6s ease-in-out, opacity 0.3s ease-in-out',
             transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
           }}
           onMouseDown={handleMouseDown}
