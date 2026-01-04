@@ -146,10 +146,10 @@ function App() {
                       onClick={instruction.action}
                     >
                       <span className="text-lg">
-                        {i === 0 && !portrait.original && '📷'}
+                        {instruction.text.includes('Bild') || instruction.text.includes('photo') ? '📷' : null}
                         {instruction.action && '✏️'}
-                        {!instruction.action && portrait.original && !personalInfo.name.trim() && '👤'}
-                        {!instruction.action && portrait.original && personalInfo.name.trim() && '📧'}
+                        {!instruction.action && (instruction.text.includes('Namen') || instruction.text.includes('name')) && '👤'}
+                        {!instruction.action && (instruction.text.includes('Email') || instruction.text.includes('email')) && '📧'}
                       </span>
                       <span className={instruction.action ? 'font-medium' : ''}>
                         {instruction.text}
