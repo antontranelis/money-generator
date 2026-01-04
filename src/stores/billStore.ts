@@ -221,11 +221,10 @@ export const useBillStore = create<BillState & BillActions>()(
         personalInfo: state.personalInfo,
         voucherConfig: {
           ...state.voucherConfig,
-          hours: 1 as const, // Always reset to 1 hour
-          language: browserLanguage, // Always use browser language
+          // Persist hours and language selections
           templateHue: 29, // Always reset to default - hue slider is disabled
         },
-        appLanguage: browserLanguage, // Always use browser language
+        appLanguage: state.appLanguage, // Persist app language selection
         // Only persist small settings, NOT image data (too large for localStorage)
         portrait: {
           original: null, // Don't persist - too large
