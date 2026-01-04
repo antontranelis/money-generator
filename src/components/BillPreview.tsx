@@ -415,7 +415,7 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
             >
               {/* Combined silhouette + text button with dashed border */}
               <button
-                className="btn btn-dash hover:btn-dash hover:border-base-content/60 flex flex-col items-center gap-1 h-auto py-3 px-4 bg-base-100/20 hover:bg-base-100/30"
+                className="btn btn-dash hover:btn-dash hover:border-base-content/60 flex flex-col items-center gap-0.5 sm:gap-1 h-auto py-1.5 px-2.5 sm:py-3 sm:px-4 bg-base-100/20 hover:bg-base-100/30"
                 onClick={(e) => {
                   e.stopPropagation();
                   onPortraitClick?.();
@@ -424,7 +424,7 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
                 {/* User silhouette icon with plus */}
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="w-11 h-10 text-base-content/50"
+                  className="w-7 h-6 sm:w-11 sm:h-10 text-base-content/50"
                   fill="none"
                   viewBox="0 0 26 24"
                   stroke="currentColor"
@@ -440,7 +440,7 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
                   <line x1="22" y1="4" x2="22" y2="10" strokeWidth={2} />
                   <line x1="19" y1="7" x2="25" y2="7" strokeWidth={2} />
                 </svg>
-                <span className="text-xs">{appLanguage === 'de' ? 'Foto hochladen' : 'Upload photo'}</span>
+                <span className="text-[10px] sm:text-xs">{appLanguage === 'de' ? 'Foto hochladen' : 'Upload photo'}</span>
               </button>
             </div>
           )}
