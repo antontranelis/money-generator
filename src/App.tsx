@@ -66,7 +66,7 @@ function App() {
   const processImageFile = async (file: File) => {
     if (!file.type.startsWith('image/')) return;
 
-    const { resizeImage } = await import('./services/imageEffects');
+    const { resizeImage, clearImageCache } = await import('./services/imageEffects');
     const { useBillStore } = await import('./stores/billStore');
     const store = useBillStore.getState();
 
@@ -74,9 +74,16 @@ function App() {
     reader.onload = async (evt) => {
       const dataUrl = evt.target?.result as string;
       const resizedImage = await resizeImage(dataUrl);
+      // Clear cached images from previous photo
+      clearImageCache();
+      // Reset all portrait settings for new image
       store.setPortraitRawImage(resizedImage);
       store.setPortrait(resizedImage);
+      store.setPortraitZoom(1);
+      store.setPortraitPan(0, 0);
       store.setPortraitBgRemoved(false, null);
+      store.setPortraitBgOpacity(0);
+      store.setPortraitBgBlur(0);
       store.setPortraitEngravingIntensity(0);
     };
     reader.readAsDataURL(file);
@@ -155,9 +162,9 @@ function App() {
       prevBackComplete.current = backComplete;
       return;
     }
-    if (currentSide === 'front' && frontComplete && !prevFrontComplete.current && editAreaExpanded) {
-      setEditAreaExpanded(false);
-    } else if (currentSide === 'back' && backComplete && !prevBackComplete.current && editAreaExpanded) {
+    // Don't collapse on front side when photo is uploaded - user needs to see the portrait controls
+    // Only collapse on back side when all fields are complete
+    if (currentSide === 'back' && backComplete && !prevBackComplete.current && editAreaExpanded) {
       setEditAreaExpanded(false);
     }
     prevFrontComplete.current = frontComplete;
@@ -229,7 +236,7 @@ function App() {
                   {/* Reset button - only when inputs exist */}
                   {(portrait.original || personalInfo.name || personalInfo.email || personalInfo.phone) && (
                     <button
-                      className="btn btn-ghost text-error mr-auto"
+                      className="btn text-error mr-auto"
                       onClick={handleResetClick}
                     >
                       {appLanguage === 'de' ? 'Zurücksetzen' : 'Reset'}

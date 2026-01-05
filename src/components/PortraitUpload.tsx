@@ -67,15 +67,21 @@ export function PortraitUpload() {
         const dataUrl = e.target?.result as string;
         // Resize image for better performance (max 1600px)
         const resizedImage = await resizeImage(dataUrl);
-        // Store raw image and set as portrait
+        // Clear cached images from previous photo
+        clearImageCache();
+        // Reset all portrait settings for new image
         setPortraitRawImage(resizedImage);
         setPortrait(resizedImage);
+        setPortraitZoom(1);
+        setPortraitPan(0, 0);
         setPortraitBgRemoved(false, null);
+        setPortraitBgOpacity(0);
+        setPortraitBgBlur(0);
         setPortraitEngravingIntensity(0);
       };
       reader.readAsDataURL(file);
     },
-    [setPortrait, setPortraitRawImage, setPortraitBgRemoved, setPortraitEngravingIntensity]
+    [setPortrait, setPortraitRawImage, setPortraitZoom, setPortraitPan, setPortraitBgRemoved, setPortraitBgOpacity, setPortraitBgBlur, setPortraitEngravingIntensity]
   );
 
   const handleDrop = useCallback(
@@ -286,17 +292,6 @@ export function PortraitUpload() {
     bgOpacityDebounceRef.current = setTimeout(applyAllEffects, 150);
   };
 
-  const handleRemove = () => {
-    setPortrait(null);
-    setPortraitRawImage(null);
-    setPortraitBgRemoved(false, null);
-    setPortraitBgOpacity(0);
-    setPortraitBgBlur(0);
-    setPortraitEngravingIntensity(0);
-    // Clear cached images to free memory
-    clearImageCache();
-  };
-
   return (
     <div className="space-y-4">
       {/* Upload Area */}
@@ -349,33 +344,6 @@ export function PortraitUpload() {
         </div>
       ) : (
         <div className="flex flex-col space-y-4">
-          {/* Controls Header with Remove Button */}
-          <div className="flex justify-between items-center w-full">
-            <span className="text-sm font-medium text-base-content/70">
-              {appLanguage === 'de' ? 'Portrait-Einstellungen' : 'Portrait settings'}
-            </span>
-            <button
-              className="btn btn-xs btn-ghost text-error"
-              onClick={handleRemove}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
-              {appLanguage === 'de' ? 'Foto entfernen' : 'Remove photo'}
-            </button>
-          </div>
-
           {/* Zoom and Sepia Sliders */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
             {/* Zoom Slider */}
@@ -389,13 +357,7 @@ export function PortraitUpload() {
                 max={2}
                 step={0.05}
                 value={portrait.zoom}
-                onChange={(newZoom) => {
-                  setPortraitZoom(newZoom);
-                  // Reset pan when zooming out to 1 or less
-                  if (newZoom <= 1 && (portrait.panX !== 0 || portrait.panY !== 0)) {
-                    setPortraitPan(0, 0);
-                  }
-                }}
+                onChange={setPortraitZoom}
                 className="range range-primary range-sm"
               />
             </div>
@@ -421,32 +383,30 @@ export function PortraitUpload() {
             </div>
           </div>
 
-          {/* Background Removal - Toggle or Opacity Slider */}
+          {/* Background Removal - Button or Opacity Slider */}
           {!bgRemoved ? (
-            // Show toggle when background not yet removed
-            <div className="form-control w-fit">
-              <label className="label cursor-pointer justify-start gap-3">
-                <input
-                  type="checkbox"
-                  className={`toggle toggle-primary ${isRemovingBg ? 'opacity-50' : ''}`}
-                  checked={bgRemoved}
-                  onChange={handleToggleBgRemoval}
-                  disabled={isRemovingBg || !rawImage}
-                />
-                <span className="label-text flex items-center gap-2">
-                  {isRemovingBg ? (
-                    <>
-                      <span className="loading loading-spinner loading-xs"></span>
-                      {appLanguage === 'de' ? 'Hintergrund wird entfernt...' : 'Removing background...'}
-                    </>
-                  ) : (
-                    appLanguage === 'de' ? 'Hintergrund entfernen' : 'Remove background'
-                  )}
-                  {!hasKey && (
-                    <span className="badge badge-sm badge-outline">API</span>
-                  )}
-                </span>
-              </label>
+            // Show button when background not yet removed
+            <div className="flex justify-center">
+              <button
+                className="btn btn-ghost btn gap-2 text-base-content/70"
+                onClick={handleToggleBgRemoval}
+                disabled={isRemovingBg || !rawImage}
+              >
+                {isRemovingBg ? (
+                  <>
+                    {appLanguage === 'de' ? 'Hintergrund wird entfernt' : 'Removing background'}
+                    <span className="loading loading-dots loading-xs"></span>
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                    </svg>
+                    {appLanguage === 'de' ? 'Hintergrund entfernen' : 'Remove background'}
+                    {!hasKey && <span className="badge badge-sm badge-outline">API</span>}
+                  </>
+                )}
+              </button>
             </div>
           ) : (
             // Show opacity and blur sliders when background has been removed

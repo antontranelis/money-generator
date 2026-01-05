@@ -47,7 +47,11 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
   const [isPanning, setIsPanning] = useState(false);
   const [isOverPortrait, setIsOverPortrait] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  // Pan tracking refs
   const panStartRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
+  const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
+  const didDragRef = useRef(false);
+  const lastPanUpdateRef = useRef<number>(0);
 
   const template = getPreviewTemplate(billLanguage, hours);
   const layout = getPreviewLayout(billLanguage);
@@ -168,10 +172,13 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
     return (dx * dx + dy * dy) <= 1;
   }, [currentSide, template.width, template.height, layout.front.portrait]);
 
+  // Drag threshold in pixels - movement below this is considered a click
+  const DRAG_THRESHOLD = 5;
+
   // Pan handlers
   const handlePanStart = useCallback((clientX: number, clientY: number) => {
-    // Only allow panning when zoomed in and portrait exists
-    if (!portrait.original || portrait.zoom <= 1 || !isInPortraitArea(clientX, clientY)) return;
+    // Allow panning when portrait exists
+    if (!portrait.original) return;
 
     setIsPanning(true);
     panStartRef.current = {
@@ -180,13 +187,20 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
       panX: portrait.panX,
       panY: portrait.panY,
     };
-  }, [portrait.original, portrait.zoom, portrait.panX, portrait.panY, isInPortraitArea]);
+  }, [portrait.original, portrait.panX, portrait.panY]);
 
   const handlePanMove = useCallback((clientX: number, clientY: number) => {
     if (!isPanning || !panStartRef.current || !containerRef.current) return;
 
+    // Throttle updates to ~30fps (every 33ms) for smooth but performant panning
+    const now = performance.now();
+    if (now - lastPanUpdateRef.current < 33) return;
+    lastPanUpdateRef.current = now;
+
     const rect = containerRef.current.getBoundingClientRect();
-    const sensitivity = 3 / Math.max(rect.width, rect.height);
+    // Scale sensitivity with zoom - higher zoom needs more sensitivity for 1:1 feel
+    const baseSensitivity = 4 / Math.max(rect.width, rect.height);
+    const sensitivity = baseSensitivity * portrait.zoom;
 
     const deltaX = (clientX - panStartRef.current.x) * sensitivity;
     const deltaY = (clientY - panStartRef.current.y) * sensitivity;
@@ -195,44 +209,62 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
     const newPanY = Math.max(-1, Math.min(1, panStartRef.current.panY + deltaY));
 
     setPortraitPan(newPanX, newPanY);
-  }, [isPanning, setPortraitPan]);
+  }, [isPanning, setPortraitPan, portrait.zoom]);
 
   const handlePanEnd = useCallback(() => {
     setIsPanning(false);
     panStartRef.current = null;
+    mouseDownPosRef.current = null;
   }, []);
 
-  // Handle click on portrait area (for upload when empty)
-  const handlePortraitAreaClick = useCallback((clientX: number, clientY: number) => {
-    if (!portrait.original && isInPortraitArea(clientX, clientY) && onPortraitClick) {
+  // Handle click on portrait area (for upload/replace)
+  const handlePortraitAreaClick = useCallback(() => {
+    if (onPortraitClick) {
       onPortraitClick();
     }
-  }, [portrait.original, isInPortraitArea, onPortraitClick]);
+  }, [onPortraitClick]);
 
   // Mouse handlers
   const handleMouseDown = (e: React.MouseEvent) => {
     if (isInPortraitArea(e.clientX, e.clientY)) {
       e.preventDefault();
-      if (portrait.original && portrait.zoom > 1) {
-        handlePanStart(e.clientX, e.clientY);
-      }
-    }
-  };
-
-  const handleClick = (e: React.MouseEvent) => {
-    // Only trigger portrait click if not panning
-    if (!isPanning) {
-      handlePortraitAreaClick(e.clientX, e.clientY);
+      // Store initial position and reset drag flag
+      mouseDownPosRef.current = { x: e.clientX, y: e.clientY };
+      didDragRef.current = false;
     }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    handlePanMove(e.clientX, e.clientY);
     // Update cursor state based on position
     setIsOverPortrait(isInPortraitArea(e.clientX, e.clientY));
+
+    // Check if we should start panning (mouse is down and moved beyond threshold)
+    if (mouseDownPosRef.current && portrait.original) {
+      const dx = e.clientX - mouseDownPosRef.current.x;
+      const dy = e.clientY - mouseDownPosRef.current.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance > DRAG_THRESHOLD && !isPanning) {
+        // Start panning
+        didDragRef.current = true;
+        handlePanStart(mouseDownPosRef.current.x, mouseDownPosRef.current.y);
+      }
+    }
+
+    // Continue panning if already started
+    if (isPanning) {
+      handlePanMove(e.clientX, e.clientY);
+    }
   };
 
-  const handleMouseUp = () => handlePanEnd();
+  const handleMouseUp = (e: React.MouseEvent) => {
+    // If we didn't drag, treat as click (open file dialog)
+    if (mouseDownPosRef.current && !didDragRef.current && isInPortraitArea(e.clientX, e.clientY)) {
+      handlePortraitAreaClick();
+    }
+    handlePanEnd();
+  };
+
   const handleMouseLeave = () => {
     handlePanEnd();
     setIsOverPortrait(false);
@@ -242,19 +274,44 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       const touch = e.touches[0];
-      if (portrait.zoom > 1 && isInPortraitArea(touch.clientX, touch.clientY)) {
-        handlePanStart(touch.clientX, touch.clientY);
+      if (isInPortraitArea(touch.clientX, touch.clientY)) {
+        // Store initial position and reset drag flag
+        mouseDownPosRef.current = { x: touch.clientX, y: touch.clientY };
+        didDragRef.current = false;
       }
     }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      handlePanMove(e.touches[0].clientX, e.touches[0].clientY);
+    if (e.touches.length === 1 && mouseDownPosRef.current && portrait.original) {
+      const touch = e.touches[0];
+      const dx = touch.clientX - mouseDownPosRef.current.x;
+      const dy = touch.clientY - mouseDownPosRef.current.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance > DRAG_THRESHOLD && !isPanning) {
+        // Start panning
+        didDragRef.current = true;
+        handlePanStart(mouseDownPosRef.current.x, mouseDownPosRef.current.y);
+      }
+
+      // Continue panning if already started
+      if (isPanning) {
+        handlePanMove(touch.clientX, touch.clientY);
+      }
     }
   };
 
-  const handleTouchEnd = () => handlePanEnd();
+  const handleTouchEnd = () => {
+    // If we didn't drag, treat as click (open file dialog)
+    if (mouseDownPosRef.current && !didDragRef.current) {
+      // Use the stored position since touch has ended
+      if (isInPortraitArea(mouseDownPosRef.current.x, mouseDownPosRef.current.y)) {
+        handlePortraitAreaClick();
+      }
+    }
+    handlePanEnd();
+  };
 
   // Use ref to track panning state for event listener
   const isPanningRef = useRef(false);
@@ -280,7 +337,7 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
   }, []);
 
   // Determine cursor style for panning
-  const canPan = currentSide === 'front' && portrait.original && portrait.zoom > 1;
+  const canPan = currentSide === 'front' && portrait.original;
 
   // Calculate aspect ratio for responsive sizing
   const aspectRatio = template.width / template.height;
@@ -344,7 +401,6 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
             transition: 'transform 0.6s ease-in-out, opacity 0.3s ease-in-out',
             transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
           }}
-          onClick={handleClick}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -352,6 +408,26 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (currentSide === 'front') {
+              setIsDragOver(true);
+            }
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            setIsDragOver(false);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragOver(false);
+            if (currentSide === 'front' && onFileDrop) {
+              const file = e.dataTransfer.files[0];
+              if (file && file.type.startsWith('image/')) {
+                onFileDrop(file);
+              }
+            }
+          }}
         >
           {/* Front Canvas */}
           <canvas
@@ -374,10 +450,10 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
             }}
           />
 
-          {/* Portrait upload dropzone - ellipse-shaped clickable/droppable area */}
-          {!portrait.original && currentSide === 'front' && (onPortraitClick || onFileDrop) && (
+          {/* Portrait upload overlay - only shown when no photo exists */}
+          {currentSide === 'front' && !portrait.original && (
             <div
-              className={`absolute flex flex-col items-center justify-center cursor-pointer transition-colors duration-300 ease-in-out ${
+              className={`absolute flex flex-col items-center justify-center transition-colors duration-300 ease-in-out pointer-events-none ${
                 isDragOver ? 'bg-primary/20' : 'hover:bg-base-content/5'
               }`}
               style={{
@@ -389,39 +465,10 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
                 backfaceVisibility: 'hidden',
                 WebkitBackfaceVisibility: 'hidden',
               }}
-              onClick={(e) => {
-                e.stopPropagation();
-                onPortraitClick?.();
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsDragOver(true);
-              }}
-              onDragLeave={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsDragOver(false);
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsDragOver(false);
-                const file = e.dataTransfer.files[0];
-                if (file && file.type.startsWith('image/') && onFileDrop) {
-                  onFileDrop(file);
-                }
-              }}
             >
-              {/* Combined silhouette + text button with dashed border */}
               <button
                 className="btn btn-dash hover:btn-dash hover:border-base-content/60 flex flex-col items-center gap-0.5 sm:gap-1 h-auto py-1.5 px-2.5 sm:py-3 sm:px-4 bg-base-100/20 hover:bg-base-100/30"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPortraitClick?.();
-                }}
               >
-                {/* User silhouette icon - centered */}
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="w-7 h-6 sm:w-10 sm:h-9 text-base-content/50"
@@ -432,9 +479,7 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
-                  {/* Head */}
                   <circle cx="12" cy="8" r="4" />
-                  {/* Shoulders */}
                   <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
                 </svg>
                 <span className="text-[10px] sm:text-xs text-center leading-tight whitespace-pre-line">{appLanguage === 'de' ? 'Foto\nhochladen' : 'Upload\nphoto'}</span>

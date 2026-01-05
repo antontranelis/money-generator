@@ -3,8 +3,9 @@ import { persist } from 'zustand/middleware';
 import type { BillState, PersonalInfo, VoucherConfig, BillSide, HourValue, Language } from '../types/bill';
 import { resizeImageForStorage } from '../services/imageEffects';
 
-// Storage key for portrait image (separate from main store to handle size limits)
+// Storage keys for portrait images (separate from main store to handle size limits)
 const PORTRAIT_STORAGE_KEY = 'money-generator-portrait';
+const BG_REMOVED_STORAGE_KEY = 'money-generator-bg-removed';
 
 /**
  * Save portrait to localStorage with fallback
@@ -32,6 +33,30 @@ async function savePortraitToStorage(imageDataUrl: string | null): Promise<void>
 }
 
 /**
+ * Save background-removed image to localStorage
+ */
+async function saveBgRemovedToStorage(imageDataUrl: string | null): Promise<void> {
+  try {
+    // Always clear old image first to prevent overflow
+    localStorage.removeItem(BG_REMOVED_STORAGE_KEY);
+
+    if (!imageDataUrl) return;
+
+    // Resize for storage (1200px max, PNG for transparency)
+    const resized = await resizeImageForStorage(imageDataUrl);
+
+    try {
+      localStorage.setItem(BG_REMOVED_STORAGE_KEY, resized);
+    } catch (e) {
+      // Storage quota exceeded - silently fail, image will only be in memory
+      console.warn('Could not persist bg-removed image to localStorage:', e);
+    }
+  } catch (e) {
+    console.warn('Error processing bg-removed image for storage:', e);
+  }
+}
+
+/**
  * Load portrait from localStorage
  */
 function loadPortraitFromStorage(): string | null {
@@ -43,11 +68,23 @@ function loadPortraitFromStorage(): string | null {
 }
 
 /**
- * Clear portrait from localStorage
+ * Load background-removed image from localStorage
+ */
+function loadBgRemovedFromStorage(): string | null {
+  try {
+    return localStorage.getItem(BG_REMOVED_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Clear all portrait data from localStorage
  */
 function clearPortraitFromStorage(): void {
   try {
     localStorage.removeItem(PORTRAIT_STORAGE_KEY);
+    localStorage.removeItem(BG_REMOVED_STORAGE_KEY);
   } catch {
     // Ignore errors
   }
@@ -193,14 +230,20 @@ export const useBillStore = create<BillState & BillActions>()(
           },
         })),
 
-      setPortraitBgRemoved: (bgRemoved, bgRemovedImage) =>
-        set((state) => ({
+      setPortraitBgRemoved: (bgRemoved, bgRemovedImage) => {
+        // Save bg-removed image to localStorage asynchronously
+        if (bgRemovedImage !== undefined) {
+          saveBgRemovedToStorage(bgRemovedImage);
+        }
+
+        return set((state) => ({
           portrait: {
             ...state.portrait,
             bgRemoved,
             bgRemovedImage: bgRemovedImage !== undefined ? bgRemovedImage : state.portrait.bgRemovedImage,
           },
-        })),
+        }));
+      },
 
       setPortraitBgOpacity: (bgOpacity) =>
         set((state) => ({
@@ -293,9 +336,10 @@ export const useBillStore = create<BillState & BillActions>()(
           panY: state.portrait.panY,
           rawImage: null, // Don't persist - too large
           bgRemovedImage: null, // Don't persist - too large
-          bgRemoved: false, // Reset to false since we don't persist the image
-          bgOpacity: 0, // Reset since we don't persist the image
-          bgBlur: 0, // Reset since we don't persist the image
+          // Persist background removal settings so UI shows correct controls after reload
+          bgRemoved: state.portrait.bgRemoved,
+          bgOpacity: state.portrait.bgOpacity,
+          bgBlur: state.portrait.bgBlur,
           engravingIntensity: state.portrait.engravingIntensity,
         },
         currentSide: 'front',
@@ -310,16 +354,29 @@ export const useBillStore = create<BillState & BillActions>()(
 // This runs once when the module is loaded
 if (typeof window !== 'undefined') {
   const storedPortrait = loadPortraitFromStorage();
+  const storedBgRemoved = loadBgRemovedFromStorage();
+
   if (storedPortrait) {
     // Use setTimeout to ensure store is fully initialized
     setTimeout(() => {
       const state = useBillStore.getState();
       // Only restore if no portrait is currently set (avoid overwriting fresh uploads)
       if (!state.portrait.original) {
+        // Check if we have bgRemoved state but missing image - reset if so
+        const hasBgRemovedState = state.portrait.bgRemoved;
+        const hasBgRemovedImage = storedBgRemoved !== null;
+
         useBillStore.setState({
           portrait: {
             ...state.portrait,
             original: storedPortrait,
+            rawImage: storedPortrait, // Also restore rawImage for effects
+            // Restore bg-removed image if available
+            bgRemovedImage: storedBgRemoved,
+            // Only keep bgRemoved state if we have the image
+            bgRemoved: hasBgRemovedState && hasBgRemovedImage,
+            bgOpacity: hasBgRemovedState && hasBgRemovedImage ? state.portrait.bgOpacity : 0,
+            bgBlur: hasBgRemovedState && hasBgRemovedImage ? state.portrait.bgBlur : 0,
           },
         });
       }
