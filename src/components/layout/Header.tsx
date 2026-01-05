@@ -7,7 +7,7 @@ export function Header() {
   const trans = t(appLanguage);
 
   return (
-    <div className="navbar bg-currency-green text-currency-cream shadow-lg">
+    <div className="navbar bg-currency-green text-currency-cream shadow-lg sticky top-0 z-50">
       <div className="navbar-start">
         <a className="btn btn-ghost text-xl font-currency font-bold">{trans.header.title}</a>
       </div>

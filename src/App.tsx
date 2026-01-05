@@ -18,8 +18,19 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editAreaRef = useRef<HTMLDivElement>(null);
   const previewCardRef = useRef<HTMLDivElement>(null);
+  const resetDialogRef = useRef<HTMLDialogElement>(null);
   const [focusField, setFocusField] = useState<'name' | 'email' | 'phone' | null>(null);
   const [editAreaExpanded, setEditAreaExpanded] = useState(true);
+
+  // Handle reset with confirmation dialog
+  const handleResetClick = useCallback(() => {
+    resetDialogRef.current?.showModal();
+  }, []);
+
+  const handleResetConfirm = useCallback(() => {
+    reset();
+    resetDialogRef.current?.close();
+  }, [reset]);
 
   // Toggle edit area and scroll preview card to top when opening
   const toggleEditArea = useCallback(() => {
@@ -131,14 +142,20 @@ function App() {
   const frontComplete = !!portrait.original;
   const backComplete = nameValid && emailValid && phoneValid;
 
-  // Auto-collapse when all fields for current side are complete
+  // Auto-collapse only when completing fields (not on side switch)
+  const prevFrontComplete = useRef(frontComplete);
+  const prevBackComplete = useRef(backComplete);
+
   useEffect(() => {
-    if (currentSide === 'front' && frontComplete && editAreaExpanded) {
+    // Only collapse when transitioning from incomplete to complete
+    if (currentSide === 'front' && frontComplete && !prevFrontComplete.current && editAreaExpanded) {
       setEditAreaExpanded(false);
-    } else if (currentSide === 'back' && backComplete && editAreaExpanded) {
+    } else if (currentSide === 'back' && backComplete && !prevBackComplete.current && editAreaExpanded) {
       setEditAreaExpanded(false);
     }
-  }, [currentSide, frontComplete, backComplete]);
+    prevFrontComplete.current = frontComplete;
+    prevBackComplete.current = backComplete;
+  }, [currentSide, frontComplete, backComplete, editAreaExpanded]);
 
   // Scroll preview card to top when switching sides or uploading image (if form is visible)
   useEffect(() => {
@@ -175,7 +192,7 @@ function App() {
             </div>
 
             {/* Preview Card */}
-            <div ref={previewCardRef} className="card bg-base-100 shadow-xl scroll-mt-4">
+            <div ref={previewCardRef} className="card bg-base-100 shadow-xl scroll-mt-20">
               <div className="card-body">
                 <BillPreview onPortraitClick={handlePortraitClick} onFileDrop={handleFileDrop} />
 
@@ -199,20 +216,79 @@ function App() {
                         )}
                       </div>
                     </div>
-                    {/* Action buttons */}
-                    {frontComplete && backComplete ? (
-                      <div className="flex justify-between items-center pt-4">
-                        <button
-                          className="btn btn-ghost text-error"
-                          onClick={reset}
-                        >
-                          {appLanguage === 'de' ? 'Zurücksetzen' : 'Reset'}
-                        </button>
-                        <button
-                          className="btn"
-                          onClick={toggleEditArea}
-                        >
-                          {editAreaExpanded ? (
+                    {/* Action buttons - always visible */}
+                    <div className="flex justify-between items-center pt-4">
+                      <button
+                        className="btn btn-ghost text-error"
+                        onClick={handleResetClick}
+                      >
+                        {appLanguage === 'de' ? 'Zurücksetzen' : 'Reset'}
+                      </button>
+                      {(() => {
+                        // Determine button state: Continue, Edit, or Done
+                        const allComplete = frontComplete && backComplete;
+                        const showContinue = currentSide === 'front' && frontComplete && !backComplete;
+                        const showEdit = allComplete && !editAreaExpanded;
+                        const showDone = !showContinue && !showEdit;
+                        const doneDisabled = showDone && !allComplete;
+
+                        if (showContinue) {
+                          return (
+                            <button
+                              className="btn"
+                              onClick={() => setCurrentSide('back')}
+                            >
+                              {appLanguage === 'de' ? 'Weiter' : 'Continue'}
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 5l7 7-7 7"
+                                />
+                              </svg>
+                            </button>
+                          );
+                        }
+
+                        if (showEdit) {
+                          return (
+                            <button
+                              className="btn"
+                              onClick={toggleEditArea}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
+                              </svg>
+                              {appLanguage === 'de' ? 'Bearbeiten' : 'Edit'}
+                            </button>
+                          );
+                        }
+
+                        // Done button (active or disabled)
+                        return (
+                          <button
+                            className="btn"
+                            onClick={doneDisabled ? undefined : toggleEditArea}
+                            disabled={doneDisabled}
+                          >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               className="h-5 w-5"
@@ -227,52 +303,11 @@ function App() {
                                 d="M5 13l4 4L19 7"
                               />
                             </svg>
-                          ) : (
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-5 w-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
-                          )}
-                          {editAreaExpanded
-                            ? (appLanguage === 'de' ? 'Fertig' : 'Done')
-                            : (appLanguage === 'de' ? 'Bearbeiten' : 'Edit')
-                          }
-                        </button>
-                      </div>
-                    ) : frontComplete && !backComplete && currentSide === 'front' && (
-                      <div className="flex justify-end pt-4">
-                        <button
-                          className="btn"
-                          onClick={() => setCurrentSide('back')}
-                        >
-                          {appLanguage === 'de' ? 'Weiter' : 'Continue'}
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 5l7 7-7 7"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
+                            {appLanguage === 'de' ? 'Fertig' : 'Done'}
+                          </button>
+                        );
+                      })()}
+                    </div>
                   </div>
                 )}
               </div>
@@ -345,6 +380,33 @@ function App() {
           </div>
         </div>
       </main>
+
+      {/* Reset confirmation dialog */}
+      <dialog ref={resetDialogRef} className="modal">
+        <div className="modal-box">
+          <h3 className="font-bold text-lg">
+            {appLanguage === 'de' ? 'Zurücksetzen?' : 'Reset?'}
+          </h3>
+          <p className="py-4">
+            {appLanguage === 'de'
+              ? 'Möchtest du wirklich alle Eingaben löschen und von vorne beginnen?'
+              : 'Do you really want to delete all entries and start over?'}
+          </p>
+          <div className="modal-action">
+            <form method="dialog">
+              <button className="btn btn-ghost">
+                {appLanguage === 'de' ? 'Abbrechen' : 'Cancel'}
+              </button>
+            </form>
+            <button className="btn btn-error" onClick={handleResetConfirm}>
+              {appLanguage === 'de' ? 'Zurücksetzen' : 'Reset'}
+            </button>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button>close</button>
+        </form>
+      </dialog>
     </div>
   );
 }

@@ -288,7 +288,7 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
   return (
     <div className="space-y-4">
       {/* Controls - above preview */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-6">
         <div className="join border border-base-300 rounded-lg">
           <button
             className={`join-item btn btn-md  ${currentSide === 'front' ? 'btn-active btn-primary' : 'btn-ghost'}`}
