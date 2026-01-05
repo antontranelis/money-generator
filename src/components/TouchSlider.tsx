@@ -11,9 +11,10 @@ interface TouchSliderProps {
 }
 
 /**
- * A touch-friendly slider that prevents accidental value changes.
- * - Taps on the track are ignored - only dragging changes the value
+ * A touch-friendly slider that prevents accidental value changes while scrolling.
+ * - Taps on the track work if the user doesn't move (no scroll intent)
  * - Vertical scrolling is preserved when the gesture is predominantly vertical
+ * - Horizontal dragging activates the slider
  * - On desktop, normal mouse/keyboard interaction works as expected
  */
 export function TouchSlider({
@@ -91,11 +92,22 @@ export function TouchSlider({
     }
   }, [disabled, calculateValue, onChange, value]);
 
-  const handleTouchEnd = useCallback(() => {
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    // If we never decided on a direction (minimal movement), treat as tap
+    if (touchStartRef.current && !touchStartRef.current.decided) {
+      // Use the last known touch position from changedTouches
+      const touch = e.changedTouches[0];
+      if (touch) {
+        const newValue = calculateValue(touch.clientX);
+        if (newValue !== value) {
+          onChange(newValue);
+        }
+      }
+    }
     touchStartRef.current = null;
     isActiveRef.current = false;
     setIsActive(false);
-  }, []);
+  }, [calculateValue, onChange, value]);
 
   // Prevent default touch behavior to stop native slider from jumping on tap
   useEffect(() => {
