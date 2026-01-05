@@ -17,19 +17,19 @@ function App() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editAreaRef = useRef<HTMLDivElement>(null);
+  const previewCardRef = useRef<HTMLDivElement>(null);
   const [focusField, setFocusField] = useState<'name' | 'email' | 'phone' | null>(null);
   const [editAreaExpanded, setEditAreaExpanded] = useState(true);
 
-  // Toggle edit area and scroll card into view when opening
+  // Toggle edit area and scroll preview card to top when opening
   const toggleEditArea = useCallback(() => {
     const willExpand = !editAreaExpanded;
     setEditAreaExpanded(willExpand);
     if (willExpand) {
       setTimeout(() => {
-        // Find the parent card and scroll it into view so the whole card is visible
-        const card = editAreaRef.current?.closest('.card');
-        card?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-      }, 50);
+        // Scroll the preview card to the top of the viewport
+        previewCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 350); // Wait for animation to complete
     }
   }, [editAreaExpanded]);
 
@@ -140,6 +140,15 @@ function App() {
     }
   }, [currentSide, frontComplete, backComplete]);
 
+  // Scroll preview card to top when switching sides or uploading image (if form is visible)
+  useEffect(() => {
+    if (previewCardRef.current && !(frontComplete && backComplete && !editAreaExpanded)) {
+      setTimeout(() => {
+        previewCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 350);
+    }
+  }, [currentSide, portrait.original]);
+
   return (
     <div className="min-h-screen bg-base-200">
       <Header />
@@ -166,23 +175,23 @@ function App() {
             </div>
 
             {/* Preview Card */}
-            <div className="card bg-base-100 shadow-xl">
+            <div ref={previewCardRef} className="card bg-base-100 shadow-xl scroll-mt-4">
               <div className="card-body">
                 <BillPreview onPortraitClick={handlePortraitClick} onFileDrop={handleFileDrop} />
 
                 {/* Contextual Controls - below preview */}
                 {(currentSide === 'back' || portrait.original) && (
-                  <div className="mt-4">
+                  <div>
                     {/* Content - collapsible only when all fields are complete */}
                     <div
                       ref={editAreaRef}
-                      className="overflow-hidden transition-all duration-300 ease-in-out"
+                      className="overflow-hidden transition-all duration-500 ease-out"
                       style={{
                         maxHeight: (frontComplete && backComplete && !editAreaExpanded) ? '0' : '500px',
                         opacity: (frontComplete && backComplete && !editAreaExpanded) ? 0 : 1,
                       }}
                     >
-                      <div className="pt-2 pb-4">
+                      <div className="pt-4 pb-4">
                         {currentSide === 'front' ? (
                           <PortraitUpload />
                         ) : (
@@ -190,23 +199,77 @@ function App() {
                         )}
                       </div>
                     </div>
-                    {/* Action buttons - only show when all fields are complete */}
-                    {frontComplete && backComplete && (
-                      <div className="flex justify-between items-center gap-4 pt-4">
-                        <button
-                          className="btn btn-ghost"
-                          onClick={toggleEditArea}
-                        >
-                          {editAreaExpanded
-                            ? (appLanguage === 'de' ? 'Schließen' : 'Close')
-                            : (appLanguage === 'de' ? 'Bearbeiten' : 'Edit')
-                          }
-                        </button>
+                    {/* Action buttons */}
+                    {frontComplete && backComplete ? (
+                      <div className="flex justify-between items-center pt-4">
                         <button
                           className="btn btn-ghost text-error"
                           onClick={reset}
                         >
                           {appLanguage === 'de' ? 'Zurücksetzen' : 'Reset'}
+                        </button>
+                        <button
+                          className="btn"
+                          onClick={toggleEditArea}
+                        >
+                          {editAreaExpanded ? (
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          ) : (
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                              />
+                            </svg>
+                          )}
+                          {editAreaExpanded
+                            ? (appLanguage === 'de' ? 'Fertig' : 'Done')
+                            : (appLanguage === 'de' ? 'Bearbeiten' : 'Edit')
+                          }
+                        </button>
+                      </div>
+                    ) : frontComplete && !backComplete && currentSide === 'front' && (
+                      <div className="flex justify-end pt-4">
+                        <button
+                          className="btn"
+                          onClick={() => setCurrentSide('back')}
+                        >
+                          {appLanguage === 'de' ? 'Weiter' : 'Continue'}
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
                         </button>
                       </div>
                     )}
