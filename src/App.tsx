@@ -269,8 +269,8 @@ function App() {
                       );
                     }
 
-                    if (currentSide === 'front') {
-                      // Front side: show "Weiter"
+                    if (currentSide === 'front' && !backComplete) {
+                      // Front side with back incomplete: show "Weiter"
                       return (
                         <button
                           className="btn"
