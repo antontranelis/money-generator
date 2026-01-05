@@ -109,22 +109,22 @@ export function TouchSlider({
     setIsActive(false);
   }, [calculateValue, onChange, value]);
 
-  // Prevent default touch behavior to stop native slider from jumping on tap
+  // Prevent default touch behavior only when slider is active (horizontal movement)
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    const preventTouchDefault = (e: TouchEvent) => {
-      // Always prevent default to stop the native range input from handling touches
-      e.preventDefault();
+    const preventTouchMove = (e: TouchEvent) => {
+      // Only prevent default when slider is actively being dragged horizontally
+      if (isActiveRef.current) {
+        e.preventDefault();
+      }
     };
 
-    container.addEventListener('touchstart', preventTouchDefault, { passive: false });
-    container.addEventListener('touchmove', preventTouchDefault, { passive: false });
+    container.addEventListener('touchmove', preventTouchMove, { passive: false });
 
     return () => {
-      container.removeEventListener('touchstart', preventTouchDefault);
-      container.removeEventListener('touchmove', preventTouchDefault);
+      container.removeEventListener('touchmove', preventTouchMove);
     };
   }, []);
 
