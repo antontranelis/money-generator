@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Header } from './components/layout/Header';
 import { PersonalInfoForm } from './components/PersonalInfoForm';
 import { PortraitUpload } from './components/PortraitUpload';
@@ -13,9 +13,25 @@ function App() {
   const portrait = useBillStore((state) => state.portrait);
   const personalInfo = useBillStore((state) => state.personalInfo);
   const setCurrentSide = useBillStore((state) => state.setCurrentSide);
+  const reset = useBillStore((state) => state.reset);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editAreaRef = useRef<HTMLDivElement>(null);
   const [focusField, setFocusField] = useState<'name' | 'email' | 'phone' | null>(null);
+  const [editAreaExpanded, setEditAreaExpanded] = useState(true);
+
+  // Toggle edit area and scroll card into view when opening
+  const toggleEditArea = useCallback(() => {
+    const willExpand = !editAreaExpanded;
+    setEditAreaExpanded(willExpand);
+    if (willExpand) {
+      setTimeout(() => {
+        // Find the parent card and scroll it into view so the whole card is visible
+        const card = editAreaRef.current?.closest('.card');
+        card?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 50);
+    }
+  }, [editAreaExpanded]);
 
   // Handle clicking on a personal info instruction
   const handleFocusField = useCallback((field: 'name' | 'email' | 'phone') => {
@@ -111,6 +127,19 @@ function App() {
     action: !phoneValid ? () => handleFocusField('phone') : undefined,
   });
 
+  // Check if all fields for current side are complete
+  const frontComplete = !!portrait.original;
+  const backComplete = nameValid && emailValid && phoneValid;
+
+  // Auto-collapse when all fields for current side are complete
+  useEffect(() => {
+    if (currentSide === 'front' && frontComplete && editAreaExpanded) {
+      setEditAreaExpanded(false);
+    } else if (currentSide === 'back' && backComplete && editAreaExpanded) {
+      setEditAreaExpanded(false);
+    }
+  }, [currentSide, frontComplete, backComplete]);
+
   return (
     <div className="min-h-screen bg-base-200">
       <Header />
@@ -143,11 +172,43 @@ function App() {
 
                 {/* Contextual Controls - below preview */}
                 {(currentSide === 'back' || portrait.original) && (
-                  <div className="mt-4 pt-4 border-t border-base-300">
-                    {currentSide === 'front' ? (
-                      <PortraitUpload />
-                    ) : (
-                      <PersonalInfoForm focusField={focusField} onFocused={handleFocused} />
+                  <div className="mt-4">
+                    {/* Content - collapsible only when all fields are complete */}
+                    <div
+                      ref={editAreaRef}
+                      className="overflow-hidden transition-all duration-300 ease-in-out"
+                      style={{
+                        maxHeight: (frontComplete && backComplete && !editAreaExpanded) ? '0' : '500px',
+                        opacity: (frontComplete && backComplete && !editAreaExpanded) ? 0 : 1,
+                      }}
+                    >
+                      <div className="pt-2 pb-4">
+                        {currentSide === 'front' ? (
+                          <PortraitUpload />
+                        ) : (
+                          <PersonalInfoForm focusField={focusField} onFocused={handleFocused} />
+                        )}
+                      </div>
+                    </div>
+                    {/* Action buttons - only show when all fields are complete */}
+                    {frontComplete && backComplete && (
+                      <div className="flex justify-between items-center gap-4 pt-4">
+                        <button
+                          className="btn btn-ghost"
+                          onClick={toggleEditArea}
+                        >
+                          {editAreaExpanded
+                            ? (appLanguage === 'de' ? 'Schließen' : 'Close')
+                            : (appLanguage === 'de' ? 'Bearbeiten' : 'Edit')
+                          }
+                        </button>
+                        <button
+                          className="btn btn-ghost text-error"
+                          onClick={reset}
+                        >
+                          {appLanguage === 'de' ? 'Zurücksetzen' : 'Reset'}
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}
@@ -157,7 +218,7 @@ function App() {
 
           {/* Right column: Checklist */}
           <div className="lg:w-[35%]">
-            <div className="card bg-base-100 shadow-xl">
+            <div className="lg:sticky lg:top-4 card bg-base-100 shadow-xl">
               <div className="card-body">
                 {checklistItems.some(item => !item.completed) && (
                   <div className="space-y-1 mb-4">
