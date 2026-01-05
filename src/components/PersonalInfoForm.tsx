@@ -5,6 +5,7 @@ import { t } from '../constants/translations';
 interface PersonalInfoFormProps {
   focusField?: 'name' | 'email' | 'phone' | null;
   onFocused?: () => void;
+  onFormFocusChange?: (focused: boolean) => void;
 }
 
 // Simple email validation
@@ -18,7 +19,7 @@ function isValidPhone(phone: string): boolean {
   return digits.length >= 6;
 }
 
-export function PersonalInfoForm({ focusField, onFocused }: PersonalInfoFormProps = {}) {
+export function PersonalInfoForm({ focusField, onFocused, onFormFocusChange }: PersonalInfoFormProps = {}) {
   const appLanguage = useBillStore((state) => state.appLanguage);
   const personalInfo = useBillStore((state) => state.personalInfo);
   const setPersonalInfo = useBillStore((state) => state.setPersonalInfo);
@@ -42,6 +43,10 @@ export function PersonalInfoForm({ focusField, onFocused }: PersonalInfoFormProp
         // Use click() instead of focus() to trigger browser autofill dropdown
         ref.current?.click();
         ref.current?.focus();
+        // Scroll into view after a delay to account for mobile keyboard appearing
+        setTimeout(() => {
+          ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 300);
         onFocused?.();
       }, 100);
     }
@@ -63,6 +68,12 @@ export function PersonalInfoForm({ focusField, onFocused }: PersonalInfoFormProp
           className="input input-bordered w-full input-md"
           value={personalInfo.name}
           onChange={(e) => setPersonalInfo({ name: e.target.value })}
+          onFocus={(e) => {
+            onFormFocusChange?.(true);
+            // Scroll into view when keyboard appears on mobile
+            setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+          }}
+          onBlur={() => onFormFocusChange?.(false)}
         />
       </div>
 
@@ -80,7 +91,11 @@ export function PersonalInfoForm({ focusField, onFocused }: PersonalInfoFormProp
           className={`input input-bordered w-full input-md ${emailError ? 'input-error' : ''}`}
           value={personalInfo.email}
           onChange={(e) => setPersonalInfo({ email: e.target.value })}
-          onBlur={() => setEmailTouched(true)}
+          onFocus={(e) => {
+            onFormFocusChange?.(true);
+            setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+          }}
+          onBlur={() => { setEmailTouched(true); onFormFocusChange?.(false); }}
         />
         {emailError && (
           <label className="label">
@@ -105,7 +120,11 @@ export function PersonalInfoForm({ focusField, onFocused }: PersonalInfoFormProp
           className={`input input-bordered w-full input-md ${phoneError ? 'input-error' : ''}`}
           value={personalInfo.phone}
           onChange={(e) => setPersonalInfo({ phone: e.target.value })}
-          onBlur={() => setPhoneTouched(true)}
+          onFocus={(e) => {
+            onFormFocusChange?.(true);
+            setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+          }}
+          onBlur={() => { setPhoneTouched(true); onFormFocusChange?.(false); }}
         />
         {phoneError && (
           <label className="label">

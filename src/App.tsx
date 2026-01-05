@@ -21,6 +21,7 @@ function App() {
   const resetDialogRef = useRef<HTMLDialogElement>(null);
   const [focusField, setFocusField] = useState<'name' | 'email' | 'phone' | null>(null);
   const [editAreaExpanded, setEditAreaExpanded] = useState(true);
+  const [isFormFocused, setIsFormFocused] = useState(false);
 
   // Handle reset with confirmation dialog
   const handleResetClick = useCallback(() => {
@@ -148,6 +149,12 @@ function App() {
 
   useEffect(() => {
     // Only collapse when transitioning from incomplete to complete
+    // Don't collapse while user is actively typing in form fields
+    if (isFormFocused) {
+      prevFrontComplete.current = frontComplete;
+      prevBackComplete.current = backComplete;
+      return;
+    }
     if (currentSide === 'front' && frontComplete && !prevFrontComplete.current && editAreaExpanded) {
       setEditAreaExpanded(false);
     } else if (currentSide === 'back' && backComplete && !prevBackComplete.current && editAreaExpanded) {
@@ -155,7 +162,7 @@ function App() {
     }
     prevFrontComplete.current = frontComplete;
     prevBackComplete.current = backComplete;
-  }, [currentSide, frontComplete, backComplete, editAreaExpanded]);
+  }, [currentSide, frontComplete, backComplete, editAreaExpanded, isFormFocused]);
 
   // Scroll preview card to top when switching sides or uploading image (if form is visible)
   useEffect(() => {
@@ -207,11 +214,11 @@ function App() {
                       opacity: (frontComplete && backComplete && !editAreaExpanded) ? 0 : 1,
                     }}
                   >
-                    <div className="pt-4 pb-4">
+                    <div className="pt-4 pb-4 px-1">
                       {currentSide === 'front' ? (
                         <PortraitUpload />
                       ) : (
-                        <PersonalInfoForm focusField={focusField} onFocused={handleFocused} />
+                        <PersonalInfoForm focusField={focusField} onFocused={handleFocused} onFormFocusChange={setIsFormFocused} />
                       )}
                     </div>
                   </div>
@@ -230,14 +237,40 @@ function App() {
                   )}
                   {(() => {
                     // Button logic:
-                    // - Front side: "Weiter" (disabled until front complete)
+                    // - All complete + collapsed: "Bearbeiten" (expands) - on any side
+                    // - Front side (incomplete): "Weiter" (disabled until front complete)
                     // - Back side (incomplete): "Fertig" disabled
                     // - All complete + expanded: "Fertig" enabled (collapses)
-                    // - All complete + collapsed: "Bearbeiten" (expands)
                     const allComplete = frontComplete && backComplete;
 
+                    // All complete and collapsed: show "Bearbeiten" (on any side)
+                    if (allComplete && !editAreaExpanded) {
+                      return (
+                        <button
+                          className="btn"
+                          onClick={toggleEditArea}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
+                          </svg>
+                          {appLanguage === 'de' ? 'Bearbeiten' : 'Edit'}
+                        </button>
+                      );
+                    }
+
                     if (currentSide === 'front') {
-                      // Front side: always show "Weiter"
+                      // Front side: show "Weiter"
                       return (
                         <button
                           className="btn"
@@ -259,33 +292,6 @@ function App() {
                               d="M9 5l7 7-7 7"
                             />
                           </svg>
-                        </button>
-                      );
-                    }
-
-                    // Back side
-                    if (allComplete && !editAreaExpanded) {
-                      // All complete and collapsed: show "Bearbeiten"
-                      return (
-                        <button
-                          className="btn"
-                          onClick={toggleEditArea}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                            />
-                          </svg>
-                          {appLanguage === 'de' ? 'Bearbeiten' : 'Edit'}
                         </button>
                       );
                     }
@@ -338,10 +344,10 @@ function App() {
                       >
                         {/* Checkbox */}
                         {item.completed ? (
-                          <div className="w-5 h-5 rounded border-2 border-success bg-success flex items-center justify-center shrink-0">
+                          <div className="w-5 h-5 rounded border-2 border-primary bg-primary flex items-center justify-center shrink-0">
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
-                              className="h-3 w-3 text-success-content"
+                              className="h-3 w-3 text-primary-content"
                               fill="none"
                               viewBox="0 0 24 24"
                               stroke="currentColor"

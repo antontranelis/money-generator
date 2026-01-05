@@ -152,38 +152,44 @@ export function TouchSlider({
     document.addEventListener('mouseup', handleMouseUp);
   }, [disabled, calculateValue, onChange]);
 
+  // Track is full width, thumb slides along it
+  // We use clamp to keep thumb fully visible at edges (not cut off)
+  // At 0%: thumb left edge at 0, so center at 10px
+  // At 100%: thumb right edge at 100%, so center at calc(100% - 10px)
+  const thumbPosition = `calc(10px + (100% - 20px) * ${percentage / 100})`;
+
   return (
     <div
       ref={containerRef}
-      className={`relative h-6 flex items-center cursor-pointer ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+      className={`relative h-10 flex items-center cursor-pointer overflow-visible ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onMouseDown={handleMouseDown}
     >
-      {/* Track background */}
-      <div className="absolute inset-x-0 h-2 bg-base-300 rounded-full" />
+      {/* Track background - full width */}
+      <div className="absolute h-2 bg-base-300 rounded-full inset-x-0" />
 
-      {/* Filled track */}
+      {/* Filled track - starts at 0, width matches thumb center position */}
       <div
-        className={`absolute left-0 h-2 rounded-full transition-colors ${
+        className={`absolute h-2 rounded-full transition-colors ${
           className.includes('range-primary') ? 'bg-primary' :
           className.includes('range-secondary') ? 'bg-secondary' :
           'bg-primary'
         }`}
-        style={{ width: `${percentage}%` }}
+        style={{ left: 0, width: thumbPosition }}
       />
 
-      {/* Thumb */}
+      {/* Thumb - centered at thumbPosition */}
       <div
-        className={`absolute w-5 h-5 rounded-full bg-base-100 border-2 shadow-md transform -translate-x-1/2 transition-transform ${
-          isActive ? 'scale-125' : ''
+        className={`absolute w-5 h-5 rounded-full bg-base-100 border-2 shadow-md transition-transform ${
+          isActive ? 'scale-110' : ''
         } ${
           className.includes('range-primary') ? 'border-primary' :
           className.includes('range-secondary') ? 'border-secondary' :
           'border-primary'
         }`}
-        style={{ left: `${percentage}%` }}
+        style={{ left: thumbPosition, transform: 'translateX(-50%)' }}
       />
     </div>
   );
