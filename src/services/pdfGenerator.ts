@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import type { TemplateLayout } from '../types/bill';
+import type { TemplateLayout, HourValue } from '../types/bill';
 
 interface PDFGeneratorOptions {
   frontTemplateSrc: string;
@@ -18,6 +18,7 @@ interface PDFGeneratorOptions {
   description: string;
   filename: string;
   language?: 'de' | 'en';
+  hours?: HourValue;
 }
 
 export interface WorkerResponse {
@@ -31,6 +32,33 @@ export interface WorkerResponse {
 
 // Inline worker code as string - bundler agnostic, works with Vite, Next.js, Webpack, etc.
 const workerCode = `
+// Translations for banner text
+const TRANSLATIONS = {
+  de: {
+    banner: {
+      1: 'EINE STUNDE',
+      5: 'FÜNF STUNDEN',
+      10: 'ZEHN STUNDEN',
+    },
+  },
+  en: {
+    banner: {
+      1: 'ONE HOUR',
+      5: 'FIVE HOURS',
+      10: 'TEN HOURS',
+    },
+  },
+};
+
+// Banner arc text settings (at full 3633x1920 resolution)
+const BANNER_CONFIG = {
+  centerX: 1816,
+  centerY: 3820,
+  radius: 3610,
+  fontSize: 103,
+  color: '#2a3a2a',
+};
+
 // RGB to HSL conversion
 function rgbToHsl(r, g, b) {
   r /= 255;
@@ -231,6 +259,72 @@ function drawContactInfo(ctx, name, email, phone, x, y, fontSize, lineHeight, al
   ctx.restore();
 }
 
+// Draw text along an arc (curved text for banner)
+function drawTextOnArc(ctx, text, centerX, centerY, radius, fontSize, color) {
+  ctx.save();
+  ctx.font = '900 ' + fontSize + 'px "Times New Roman", Georgia, serif';
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Measure total text width
+  const textWidth = ctx.measureText(text).width;
+
+  // Calculate the angle span based on text width and radius
+  const angleSpan = textWidth / radius;
+
+  // Center the text on the arc (at -90 degrees = top of circle)
+  const startAngle = -Math.PI / 2 - angleSpan / 2;
+
+  // Get individual character widths
+  const chars = text.split('');
+  const charWidths = [];
+  for (const char of chars) {
+    charWidths.push(ctx.measureText(char).width);
+  }
+
+  // Draw each character
+  let currentAngle = startAngle;
+
+  for (let i = 0; i < chars.length; i++) {
+    const char = chars[i];
+    const charWidth = charWidths[i];
+
+    // Angle for this character's center
+    const charAngle = currentAngle + (charWidth / 2) / radius;
+
+    // Calculate position on arc
+    const x = centerX + radius * Math.cos(charAngle);
+    const y = centerY + radius * Math.sin(charAngle);
+
+    ctx.save();
+    ctx.translate(x, y);
+    // Rotate to follow the arc tangent, +90° to make text upright
+    ctx.rotate(charAngle + Math.PI / 2);
+    ctx.fillText(char, 0, 0);
+    ctx.restore();
+
+    // Move to next character
+    currentAngle += charWidth / radius;
+  }
+
+  ctx.restore();
+}
+
+// Draw banner text on both sides
+function drawBannerText(ctx, hours, language) {
+  const bannerText = TRANSLATIONS[language].banner[hours];
+  drawTextOnArc(
+    ctx,
+    bannerText,
+    BANNER_CONFIG.centerX,
+    BANNER_CONFIG.centerY,
+    BANNER_CONFIG.radius,
+    BANNER_CONFIG.fontSize,
+    BANNER_CONFIG.color
+  );
+}
+
 self.onmessage = async (e) => {
   const {
     frontTemplateUrl,
@@ -248,6 +342,7 @@ self.onmessage = async (e) => {
     phone,
     description,
     language,
+    hours,
   } = e.data;
 
   try {
@@ -305,6 +400,9 @@ self.onmessage = async (e) => {
         layout.front.namePlate.maxWidth
       );
     }
+
+    // Draw banner text on front
+    drawBannerText(frontCtx, hours, language);
 
     // Render back side
     backCtx.drawImage(backTemplate, 0, 0, templateWidth, templateHeight);
@@ -378,6 +476,9 @@ self.onmessage = async (e) => {
       backCtx.fillStyle = '#2a3a2a';
       backCtx.fillText(signatureLabel, sig.x, sig.y + sig.labelFontSize * 0.3);
     }
+
+    // Draw banner text on back
+    drawBannerText(backCtx, hours, language);
 
     // Convert canvases to blobs and then to ArrayBuffer for transfer
     const [frontBlob, backBlob] = await Promise.all([
@@ -454,6 +555,7 @@ export async function generateBillPDF(options: PDFGeneratorOptions): Promise<Blo
     phone,
     description,
     language = 'de',
+    hours = 1,
   } = options;
 
   // Convert all URLs to blob URLs for worker (worker can't resolve relative URLs)
@@ -575,6 +677,7 @@ export async function generateBillPDF(options: PDFGeneratorOptions): Promise<Blo
       phone,
       description,
       language,
+      hours,
     });
   });
 }

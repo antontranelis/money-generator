@@ -343,7 +343,7 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
   const aspectRatio = template.width / template.height;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* Controls - above preview */}
       <div className="flex justify-between items-center mb-6">
         <div className="join border border-base-300 rounded-lg">

@@ -62,6 +62,7 @@ export function ExportButton() {
         description: displayDescription,
         filename,
         language: billLanguage,
+        hours,
       });
     } catch (err) {
       console.error('PDF export failed:', err);
