@@ -72,7 +72,7 @@ export function ExportButton() {
 
   return (
     <button
-      className={`btn btn-primary w-full btn-lg sm:btn-md ${!canExport ? 'btn-disabled' : ''}`}
+      className={`btn btn-primary w-full btn-md ${!canExport ? 'btn-disabled' : ''}`}
       onClick={handleExport}
       disabled={!canExport}
       aria-busy={isExporting}
