@@ -167,7 +167,7 @@ function App() {
   }, [currentSide, portrait.original]);
 
   return (
-    <div className="h-screen flex flex-col bg-base-200">
+    <div className="h-dvh flex flex-col bg-base-200">
       <Header />
 
       {/* Hidden file input for portrait upload via preview click */}
