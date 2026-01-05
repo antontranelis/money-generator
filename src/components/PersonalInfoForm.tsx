@@ -60,7 +60,7 @@ export function PersonalInfoForm({ focusField, onFocused }: PersonalInfoFormProp
           name="name"
           autoComplete="name"
           placeholder={trans.form.personalInfo.namePlaceholder}
-          className="input input-bordered w-full input-lg sm:input-md"
+          className="input input-bordered w-full input-md"
           value={personalInfo.name}
           onChange={(e) => setPersonalInfo({ name: e.target.value })}
         />
@@ -77,7 +77,7 @@ export function PersonalInfoForm({ focusField, onFocused }: PersonalInfoFormProp
           name="email"
           autoComplete="email"
           placeholder={trans.form.personalInfo.emailPlaceholder}
-          className={`input input-bordered w-full input-lg sm:input-md ${emailError ? 'input-error' : ''}`}
+          className={`input input-bordered w-full input-md ${emailError ? 'input-error' : ''}`}
           value={personalInfo.email}
           onChange={(e) => setPersonalInfo({ email: e.target.value })}
           onBlur={() => setEmailTouched(true)}
@@ -102,7 +102,7 @@ export function PersonalInfoForm({ focusField, onFocused }: PersonalInfoFormProp
           name="phone"
           autoComplete="tel"
           placeholder={trans.form.personalInfo.phonePlaceholder}
-          className={`input input-bordered w-full input-lg sm:input-md ${phoneError ? 'input-error' : ''}`}
+          className={`input input-bordered w-full input-md ${phoneError ? 'input-error' : ''}`}
           value={personalInfo.phone}
           onChange={(e) => setPersonalInfo({ phone: e.target.value })}
           onBlur={() => setPhoneTouched(true)}
