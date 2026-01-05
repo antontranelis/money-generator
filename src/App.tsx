@@ -167,7 +167,7 @@ function App() {
   }, [currentSide, portrait.original]);
 
   return (
-    <div className="min-h-screen bg-base-200">
+    <div className="h-screen flex flex-col bg-base-200">
       <Header />
 
       {/* Hidden file input for portrait upload via preview click */}
@@ -179,7 +179,8 @@ function App() {
         onChange={handleFileChange}
       />
 
-      <main className="container mx-auto p-4 max-w-5xl">
+      <main className="flex-1 overflow-y-auto">
+        <div className="container mx-auto p-4 max-w-5xl">
         {/* Two-column layout on desktop */}
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Left column: Settings + Preview */}
@@ -192,124 +193,129 @@ function App() {
             </div>
 
             {/* Preview Card */}
-            <div ref={previewCardRef} className="card bg-base-100 shadow-xl scroll-mt-20">
+            <div ref={previewCardRef} className="card bg-base-100 shadow-xl">
               <div className="card-body">
                 <BillPreview onPortraitClick={handlePortraitClick} onFileDrop={handleFileDrop} />
 
                 {/* Contextual Controls - below preview */}
                 {(currentSide === 'back' || portrait.original) && (
-                  <div>
-                    {/* Content - collapsible only when all fields are complete */}
-                    <div
-                      ref={editAreaRef}
-                      className="overflow-hidden transition-all duration-500 ease-out"
-                      style={{
-                        maxHeight: (frontComplete && backComplete && !editAreaExpanded) ? '0' : '500px',
-                        opacity: (frontComplete && backComplete && !editAreaExpanded) ? 0 : 1,
-                      }}
-                    >
-                      <div className="pt-4 pb-4">
-                        {currentSide === 'front' ? (
-                          <PortraitUpload />
-                        ) : (
-                          <PersonalInfoForm focusField={focusField} onFocused={handleFocused} />
-                        )}
-                      </div>
-                    </div>
-                    {/* Action buttons - always visible */}
-                    <div className="flex justify-between items-center pt-4">
-                      <button
-                        className="btn btn-ghost text-error"
-                        onClick={handleResetClick}
-                      >
-                        {appLanguage === 'de' ? 'Zurücksetzen' : 'Reset'}
-                      </button>
-                      {(() => {
-                        // Determine button state: Continue, Edit, or Done
-                        const allComplete = frontComplete && backComplete;
-                        const showContinue = currentSide === 'front' && frontComplete && !backComplete;
-                        const showEdit = allComplete && !editAreaExpanded;
-                        const showDone = !showContinue && !showEdit;
-                        const doneDisabled = showDone && !allComplete;
-
-                        if (showContinue) {
-                          return (
-                            <button
-                              className="btn"
-                              onClick={() => setCurrentSide('back')}
-                            >
-                              {appLanguage === 'de' ? 'Weiter' : 'Continue'}
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-5 w-5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M9 5l7 7-7 7"
-                                />
-                              </svg>
-                            </button>
-                          );
-                        }
-
-                        if (showEdit) {
-                          return (
-                            <button
-                              className="btn"
-                              onClick={toggleEditArea}
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-5 w-5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                />
-                              </svg>
-                              {appLanguage === 'de' ? 'Bearbeiten' : 'Edit'}
-                            </button>
-                          );
-                        }
-
-                        // Done button (active or disabled)
-                        return (
-                          <button
-                            className="btn"
-                            onClick={doneDisabled ? undefined : toggleEditArea}
-                            disabled={doneDisabled}
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-5 w-5"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
-                            {appLanguage === 'de' ? 'Fertig' : 'Done'}
-                          </button>
-                        );
-                      })()}
+                  <div
+                    ref={editAreaRef}
+                    className="overflow-hidden transition-all duration-500 ease-out"
+                    style={{
+                      maxHeight: (frontComplete && backComplete && !editAreaExpanded) ? '0' : '500px',
+                      opacity: (frontComplete && backComplete && !editAreaExpanded) ? 0 : 1,
+                    }}
+                  >
+                    <div className="pt-4 pb-4">
+                      {currentSide === 'front' ? (
+                        <PortraitUpload />
+                      ) : (
+                        <PersonalInfoForm focusField={focusField} onFocused={handleFocused} />
+                      )}
                     </div>
                   </div>
                 )}
+
+                {/* Action buttons - always visible */}
+                <div className="flex justify-end items-center pt-4">
+                  {/* Reset button - only when inputs exist */}
+                  {(portrait.original || personalInfo.name || personalInfo.email || personalInfo.phone) && (
+                    <button
+                      className="btn btn-ghost text-error mr-auto"
+                      onClick={handleResetClick}
+                    >
+                      {appLanguage === 'de' ? 'Zurücksetzen' : 'Reset'}
+                    </button>
+                  )}
+                  {(() => {
+                    // Button logic:
+                    // - Front side: "Weiter" (disabled until front complete)
+                    // - Back side (incomplete): "Fertig" disabled
+                    // - All complete + expanded: "Fertig" enabled (collapses)
+                    // - All complete + collapsed: "Bearbeiten" (expands)
+                    const allComplete = frontComplete && backComplete;
+
+                    if (currentSide === 'front') {
+                      // Front side: always show "Weiter"
+                      return (
+                        <button
+                          className="btn"
+                          onClick={() => setCurrentSide('back')}
+                          disabled={!frontComplete}
+                        >
+                          {appLanguage === 'de' ? 'Weiter' : 'Continue'}
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
+                        </button>
+                      );
+                    }
+
+                    // Back side
+                    if (allComplete && !editAreaExpanded) {
+                      // All complete and collapsed: show "Bearbeiten"
+                      return (
+                        <button
+                          className="btn"
+                          onClick={toggleEditArea}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
+                          </svg>
+                          {appLanguage === 'de' ? 'Bearbeiten' : 'Edit'}
+                        </button>
+                      );
+                    }
+
+                    // Back side (incomplete or expanded): show "Fertig"
+                    return (
+                      <button
+                        className="btn"
+                        onClick={allComplete ? toggleEditArea : undefined}
+                        disabled={!allComplete}
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                        {appLanguage === 'de' ? 'Fertig' : 'Done'}
+                      </button>
+                    );
+                  })()}
+                </div>
               </div>
             </div>
           </div>
@@ -378,6 +384,7 @@ function App() {
               </div>
             </div>
           </div>
+        </div>
         </div>
       </main>
 
