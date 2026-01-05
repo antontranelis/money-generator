@@ -291,20 +291,20 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
       <div className="flex justify-between items-center">
         <div className="join border border-base-300 rounded-lg">
           <button
-            className={`join-item btn btn-md sm:btn-sm ${currentSide === 'front' ? 'btn-active btn-primary' : 'btn-ghost'}`}
+            className={`join-item btn btn-md  ${currentSide === 'front' ? 'btn-active btn-primary' : 'btn-ghost'}`}
             onClick={() => currentSide !== 'front' && handleFlip()}
           >
             {trans.preview.front}
           </button>
           <button
-            className={`join-item btn btn-md sm:btn-sm ${currentSide === 'back' ? 'btn-active btn-primary' : 'btn-ghost'}`}
+            className={`join-item btn btn-md ${currentSide === 'back' ? 'btn-active btn-primary' : 'btn-ghost'}`}
             onClick={() => currentSide !== 'back' && handleFlip()}
           >
             {trans.preview.back}
           </button>
         </div>
 
-        <button className="btn btn-ghost btn-md sm:btn-sm" onClick={handleFlip}>
+        <button className="btn btn-ghost btn-md" onClick={handleFlip}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-5 w-5"

@@ -113,7 +113,7 @@ const de: Translations = {
     success: 'Download gestartet!',
   },
   bill: {
-    descriptionText: 'Für diesen Schein erhältst du {bannerText} meiner Zeit oder ein gleichwertiges Dankeschön',
+    descriptionText: 'Für diesen Schein erhältst du {bannerText} meiner Zeit oder ein gleichwertiges Dankeschön.',
     bannerText: {
       1: 'eine Stunde',
       5: 'fünf Stunden',
@@ -174,7 +174,7 @@ const en: Translations = {
     success: 'Download started!',
   },
   bill: {
-    descriptionText: 'This voucher entitles you to {bannerText} of my time or an equivalent thank you',
+    descriptionText: 'For this voucher, you will receive {bannerText} of my time or an equivalent appreciation in return.',
     bannerText: {
       1: 'one hour',
       5: 'five hours',

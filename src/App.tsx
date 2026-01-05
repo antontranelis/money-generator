@@ -131,7 +131,7 @@ function App() {
           <div className="flex-1 lg:max-w-[65%] space-y-4">
             {/* Voucher Settings */}
             <div className="card bg-base-100 shadow-xl">
-              <div className="card-body py-4">
+              <div className="card-body">
                 <VoucherConfig />
               </div>
             </div>
@@ -159,60 +159,62 @@ function App() {
           <div className="lg:w-[35%]">
             <div className="card bg-base-100 shadow-xl">
               <div className="card-body">
-                <div className="space-y-1 mb-4">
-                  {[...checklistItems].sort((a, b) => (b.completed ? 1 : 0) - (a.completed ? 1 : 0)).map((item, i) => (
-                    <div
-                      key={i}
-                      className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
-                        item.completed
-                          ? ''
-                          : 'cursor-pointer hover:bg-base-200'
-                      }`}
-                      onClick={item.action}
-                    >
-                      {/* Checkbox */}
-                      {item.completed ? (
-                        <div className="w-5 h-5 rounded border-2 border-success bg-success flex items-center justify-center shrink-0">
+                {checklistItems.some(item => !item.completed) && (
+                  <div className="space-y-1 mb-4">
+                    {[...checklistItems].sort((a, b) => (b.completed ? 1 : 0) - (a.completed ? 1 : 0)).map((item, i) => (
+                      <div
+                        key={i}
+                        className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
+                          item.completed
+                            ? ''
+                            : 'cursor-pointer hover:bg-base-200'
+                        }`}
+                        onClick={item.action}
+                      >
+                        {/* Checkbox */}
+                        {item.completed ? (
+                          <div className="w-5 h-5 rounded border-2 border-success bg-success flex items-center justify-center shrink-0">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-3 w-3 text-success-content"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={3}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          </div>
+                        ) : (
+                          <div className="w-5 h-5 rounded border-2 border-base-content/30 shrink-0" />
+                        )}
+                        <span className="flex-1">
+                          {item.text}
+                        </span>
+                        {!item.completed && (
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            className="h-3 w-3 text-success-content"
+                            className="h-4 w-4 text-base-content/40"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
-                            strokeWidth={3}
                           >
                             <path
                               strokeLinecap="round"
                               strokeLinejoin="round"
-                              d="M5 13l4 4L19 7"
+                              strokeWidth={2}
+                              d="M9 5l7 7-7 7"
                             />
                           </svg>
-                        </div>
-                      ) : (
-                        <div className="w-5 h-5 rounded border-2 border-base-content/30 shrink-0" />
-                      )}
-                      <span className="flex-1">
-                        {item.text}
-                      </span>
-                      {!item.completed && (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4 text-base-content/40"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <ExportButton />
               </div>
             </div>

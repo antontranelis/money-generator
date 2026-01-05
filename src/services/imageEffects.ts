@@ -5,6 +5,12 @@
 // Also keeps file size under API limits (Stability AI ~4MB limit)
 const MAX_PROCESSING_SIZE = 1024;
 
+// Size for localStorage persistence
+// Portrait oval is ~1140x1210px in template at 600 DPI
+// 1200px ensures full print quality
+// Using PNG to preserve transparency for users who upload transparent images
+const STORAGE_SIZE = 1200;
+
 // Image cache to avoid reloading the same data URL
 const imageCache = new Map<string, HTMLImageElement>();
 
@@ -84,6 +90,45 @@ export async function resizeImage(imageDataUrl: string, maxSize: number = MAX_PR
 
   // Use JPEG for smaller file size (better for API uploads)
   return canvas.toDataURL('image/jpeg', 0.9);
+}
+
+/**
+ * Resize image for localStorage persistence
+ * Uses PNG to preserve transparency for users who upload transparent images
+ * @param imageDataUrl - Base64 data URL of the image
+ * @returns Resized image as PNG data URL (max 1200px, ~300-500KB)
+ */
+export async function resizeImageForStorage(imageDataUrl: string): Promise<string> {
+  const img = await loadImageCached(imageDataUrl);
+  const maxDim = Math.max(img.width, img.height);
+
+  // No resize needed if already small enough
+  if (maxDim <= STORAGE_SIZE) {
+    // Still convert to PNG to ensure consistent format
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Failed to get canvas context');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+    return canvas.toDataURL('image/png');
+  }
+
+  // Scale down proportionally
+  const scale = STORAGE_SIZE / maxDim;
+  const newWidth = Math.round(img.width * scale);
+  const newHeight = Math.round(img.height * scale);
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Failed to get canvas context');
+
+  canvas.width = newWidth;
+  canvas.height = newHeight;
+  ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+  // Use PNG to preserve transparency
+  return canvas.toDataURL('image/png');
 }
 
 /**

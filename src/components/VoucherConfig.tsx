@@ -20,15 +20,15 @@ export function VoucherConfig() {
       <div className="form-control">
         <div className="flex items-center justify-between gap-2">
           <span className="label-text font-medium">{trans.form.voucher.billLanguage}</span>
-          <div className="join border border-base-300 rounded-lg">
+          <div className="join border border-base-300 rounded-lg shadow">
             <button
-              className={`join-item btn btn-md sm:btn-sm ${billLanguage === 'de' ? 'btn-active btn-primary' : 'btn-ghost'}`}
+              className={`join-item btn btn-md  ${billLanguage === 'de' ? 'btn-active btn-primary' : 'btn-ghost'}`}
               onClick={() => setBillLanguage('de')}
             >
               {trans.form.voucher.billLanguageGerman}
             </button>
             <button
-              className={`join-item btn btn-md sm:btn-sm ${billLanguage === 'en' ? 'btn-active btn-primary' : 'btn-ghost'}`}
+              className={`join-item btn btn-md  ${billLanguage === 'en' ? 'btn-active btn-primary' : 'btn-ghost'}`}
               onClick={() => setBillLanguage('en')}
             >
               {trans.form.voucher.billLanguageEnglish}
@@ -41,11 +41,11 @@ export function VoucherConfig() {
       <div className="form-control">
         <div className="flex items-center justify-between gap-2">
           <span className="label-text font-medium">{trans.form.voucher.hours}</span>
-          <div className="join border border-base-300 rounded-lg">
+          <div className="join border border-base-300 rounded-lg shadow">
             {hourOptions.map((h) => (
               <button
                 key={h}
-                className={`join-item btn btn-md sm:btn-sm ${hours === h ? 'btn-active btn-primary' : 'btn-ghost'}`}
+                className={`join-item btn btn-md ${hours === h ? 'btn-active btn-primary' : 'btn-ghost'}`}
                 onClick={() => setHours(h)}
               >
                 {h}<span className="hidden sm:inline"> {h === 1 ? trans.form.voucher.hourLabel : trans.form.voucher.hoursLabel}</span>

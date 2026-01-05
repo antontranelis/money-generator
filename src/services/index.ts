@@ -50,4 +50,4 @@ export {
 export type { EnhanceStyle } from './stabilityAI';
 
 // Local image effects
-export { applyEngravingEffect, applyHueShift, resizeImage, compositeWithBackground, clearImageCache } from './imageEffects';
+export { applyEngravingEffect, applyHueShift, resizeImage, resizeImageForStorage, compositeWithBackground, clearImageCache } from './imageEffects';

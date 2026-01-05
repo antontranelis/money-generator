@@ -470,7 +470,18 @@ export async function generateBillPDF(options: PDFGeneratorOptions): Promise<Blo
   return new Promise((resolve, reject) => {
     const w = getWorker();
 
+    // Timeout for mobile devices (60 seconds - high-res rendering takes time)
+    const timeoutId = setTimeout(() => {
+      w.removeEventListener('message', handleMessage);
+      w.removeEventListener('error', handleError);
+      URL.revokeObjectURL(frontBlobUrl);
+      URL.revokeObjectURL(backBlobUrl);
+      if (portraitBlobUrl) URL.revokeObjectURL(portraitBlobUrl);
+      reject(new Error('PDF generation timed out. Please try again.'));
+    }, 60000);
+
     const handleMessage = (e: MessageEvent<WorkerResponse>) => {
+      clearTimeout(timeoutId);
       w.removeEventListener('message', handleMessage);
       w.removeEventListener('error', handleError);
 
@@ -493,9 +504,10 @@ export async function generateBillPDF(options: PDFGeneratorOptions): Promise<Blo
           const frontDataUrl = arrayBufferToDataUrl(frontImageData, 'image/jpeg');
           const backDataUrl = arrayBufferToDataUrl(backImageData, 'image/jpeg');
 
-          // Create PDF
-          const widthMM = (width / 96) * 25.4;
-          const heightMM = (height / 96) * 25.4;
+          // Create PDF at 600 DPI (template is 3633x1920 at 600 DPI = ~154x81mm)
+          const DPI = 600;
+          const widthMM = (width / DPI) * 25.4;
+          const heightMM = (height / DPI) * 25.4;
 
           const pdf = new jsPDF({
             orientation: widthMM > heightMM ? 'landscape' : 'portrait',

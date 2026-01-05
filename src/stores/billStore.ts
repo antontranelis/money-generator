@@ -1,6 +1,57 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { BillState, PersonalInfo, VoucherConfig, BillSide, HourValue, Language } from '../types/bill';
+import { resizeImageForStorage } from '../services/imageEffects';
+
+// Storage key for portrait image (separate from main store to handle size limits)
+const PORTRAIT_STORAGE_KEY = 'money-generator-portrait';
+
+/**
+ * Save portrait to localStorage with fallback
+ * Clears old data before saving to prevent overflow
+ */
+async function savePortraitToStorage(imageDataUrl: string | null): Promise<void> {
+  try {
+    // Always clear old portrait first to prevent overflow
+    localStorage.removeItem(PORTRAIT_STORAGE_KEY);
+
+    if (!imageDataUrl) return;
+
+    // Resize for storage (1200px max, PNG for transparency)
+    const resized = await resizeImageForStorage(imageDataUrl);
+
+    try {
+      localStorage.setItem(PORTRAIT_STORAGE_KEY, resized);
+    } catch (e) {
+      // Storage quota exceeded - silently fail, image will only be in memory
+      console.warn('Could not persist portrait to localStorage:', e);
+    }
+  } catch (e) {
+    console.warn('Error processing portrait for storage:', e);
+  }
+}
+
+/**
+ * Load portrait from localStorage
+ */
+function loadPortraitFromStorage(): string | null {
+  try {
+    return localStorage.getItem(PORTRAIT_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Clear portrait from localStorage
+ */
+function clearPortraitFromStorage(): void {
+  try {
+    localStorage.removeItem(PORTRAIT_STORAGE_KEY);
+  } catch {
+    // Ignore errors
+  }
+}
 
 // Detect browser language and return 'de' or 'en'
 function getBrowserLanguage(): Language {
@@ -82,8 +133,11 @@ export const useBillStore = create<BillState & BillActions>()(
           voucherConfig: { ...state.voucherConfig, ...config },
         })),
 
-      setPortrait: (original, enhanced = null) =>
-        set((state) => ({
+      setPortrait: (original, enhanced = null) => {
+        // Save to localStorage asynchronously (fire and forget)
+        savePortraitToStorage(original);
+
+        return set((state) => ({
           portrait: {
             ...state.portrait,
             original,
@@ -94,7 +148,8 @@ export const useBillStore = create<BillState & BillActions>()(
             panX: state.portrait.original && original ? state.portrait.panX : 0,
             panY: state.portrait.original && original ? state.portrait.panY : 0,
           },
-        })),
+        }));
+      },
 
       setEnhancedPortrait: (enhanced) =>
         set((state) => ({
@@ -199,7 +254,10 @@ export const useBillStore = create<BillState & BillActions>()(
           voucherConfig: { ...state.voucherConfig, templateHue },
         })),
 
-      reset: () => set(initialState),
+      reset: () => {
+        clearPortraitFromStorage();
+        return set(initialState);
+      },
     }),
     {
       name: 'money-generator-storage',
@@ -247,3 +305,24 @@ export const useBillStore = create<BillState & BillActions>()(
     }
   )
 );
+
+// Initialize portrait from localStorage on app start
+// This runs once when the module is loaded
+if (typeof window !== 'undefined') {
+  const storedPortrait = loadPortraitFromStorage();
+  if (storedPortrait) {
+    // Use setTimeout to ensure store is fully initialized
+    setTimeout(() => {
+      const state = useBillStore.getState();
+      // Only restore if no portrait is currently set (avoid overwriting fresh uploads)
+      if (!state.portrait.original) {
+        useBillStore.setState({
+          portrait: {
+            ...state.portrait,
+            original: storedPortrait,
+          },
+        });
+      }
+    }, 0);
+  }
+}
