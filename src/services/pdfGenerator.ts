@@ -606,10 +606,11 @@ export async function generateBillPDF(options: PDFGeneratorOptions): Promise<Blo
           const frontDataUrl = arrayBufferToDataUrl(frontImageData, 'image/jpeg');
           const backDataUrl = arrayBufferToDataUrl(backImageData, 'image/jpeg');
 
-          // Create PDF at 600 DPI (template is 3633x1920 at 600 DPI = ~154x81mm)
-          const DPI = 600;
-          const widthMM = (width / DPI) * 25.4;
-          const heightMM = (height / DPI) * 25.4;
+          // Create PDF at target size 138.6 x 72.9 mm (template is 3633x1920 pixels)
+          const TARGET_WIDTH_MM = 138.6;
+          const TARGET_HEIGHT_MM = 72.9;
+          const widthMM = TARGET_WIDTH_MM;
+          const heightMM = TARGET_HEIGHT_MM;
 
           const pdf = new jsPDF({
             orientation: widthMM > heightMM ? 'landscape' : 'portrait',

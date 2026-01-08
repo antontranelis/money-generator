@@ -334,7 +334,7 @@ export function PortraitUpload() {
           {isRemovingBg ? (
             <div className="flex flex-col items-center gap-2">
               <span className="loading loading-spinner loading-lg text-primary"></span>
-              <p className="font-medium">{appLanguage === 'de' ? 'Hintergrund wird entfernt...' : 'Removing background...'}</p>
+              <p className="font-medium">{appLanguage === 'de' ? 'Hintergrund wird entfernt ...' : 'Removing background ...'}</p>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
@@ -416,7 +416,7 @@ export function PortraitUpload() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" style={isRemovingBg ? { animation: 'sparkle3 2.4s ease-in-out infinite' } : undefined} />
                 </svg>
                 {isRemovingBg
-                  ? (appLanguage === 'de' ? 'Hintergrund wird entfernt...' : 'Removing background...')
+                  ? (appLanguage === 'de' ? 'Hintergrund wird entfernt ...' : 'Removing background ...')
                   : (appLanguage === 'de' ? 'Hintergrund entfernen' : 'Remove background')
                 }
                 {!isRemovingBg && !hasKey && <span className="badge badge-sm badge-outline">API</span>}
