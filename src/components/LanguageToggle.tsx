@@ -12,13 +12,13 @@ export function LanguageToggle() {
   return (
     <div className="join">
       <button
-        className={`join-item btn btn-sm ${appLanguage === 'de' ? 'btn-active btn-primary' : 'btn-ghost'}`}
+        className={`join-item btn btn-sm ${appLanguage === 'de' ? 'btn-primary' : 'btn-ghost'}`}
         onClick={() => handleChange('de')}
       >
         DE
       </button>
       <button
-        className={`join-item btn btn-sm ${appLanguage === 'en' ? 'btn-active btn-primary' : 'btn-ghost'}`}
+        className={`join-item btn btn-sm ${appLanguage === 'en' ? 'btn-primary' : 'btn-ghost'}`}
         onClick={() => handleChange('en')}
       >
         EN

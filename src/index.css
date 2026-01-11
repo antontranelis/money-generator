@@ -1,32 +1,27 @@
 @import "tailwindcss";
-@plugin "daisyui" {
-  themes: light --default, dark;
+@plugin "daisyui";
+@plugin "daisyui/theme" {
+  name: "currency";
+  default: true;
+  color-scheme: light;
+  --color-primary: oklch(40% 0.10 142);
+  --color-primary-content: oklch(95% 0.02 90);
+  --color-secondary: oklch(55% 0.08 55);
+  --color-secondary-content: oklch(95% 0.02 90);
+  --color-accent: oklch(75% 0.12 85);
+  --color-accent-content: oklch(20% 0.02 90);
+  --color-neutral: oklch(20% 0 0);
+  --color-neutral-content: oklch(95% 0.02 90);
+  --color-base-100: oklch(95% 0.02 90);
+  --color-base-200: oklch(90% 0.02 90);
+  --color-base-300: oklch(85% 0.02 90);
+  --color-base-content: oklch(20% 0 0);
 }
 
 @theme {
-  --color-currency-green: #2a4a2a;
+  --color-currency-green: #2d5a3d;
   --color-currency-sepia: #8b7355;
   --color-currency-gold: #c4a962;
   --color-currency-cream: #f5f5dc;
   --font-family-currency: "Playfair Display", serif;
-}
-
-/* Custom DaisyUI theme overrides */
-:root {
-  --p: 142 33% 23%;
-  --pf: 142 33% 18%;
-  --pc: 45 38% 90%;
-  --s: 30 25% 44%;
-  --sf: 30 25% 39%;
-  --sc: 45 38% 90%;
-  --a: 43 47% 58%;
-  --af: 43 47% 53%;
-  --ac: 0 0% 10%;
-  --n: 0 0% 10%;
-  --nf: 0 0% 5%;
-  --nc: 45 38% 90%;
-  --b1: 60 56% 91%;
-  --b2: 60 40% 85%;
-  --b3: 60 30% 80%;
-  --bc: 0 0% 15%;
 }
