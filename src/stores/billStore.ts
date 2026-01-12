@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { BillState, PersonalInfo, VoucherConfig, BillSide, HourValue, Language } from '../types/bill';
 import { resizeImageForStorage } from '../services/imageEffects';
 
@@ -304,6 +304,10 @@ export const useBillStore = create<BillState & BillActions>()(
     }),
     {
       name: 'money-generator-storage',
+      // Skip hydration to prevent blocking the main thread
+      // Hydration will be triggered manually after the page is interactive
+      skipHydration: true,
+      storage: createJSONStorage(() => localStorage),
       // Migrate old storage to reset values
       migrate: (persistedState: unknown) => {
         const state = persistedState as BillState;
@@ -350,15 +354,18 @@ export const useBillStore = create<BillState & BillActions>()(
   )
 );
 
-// Initialize portrait from localStorage on app start
-// This runs once when the module is loaded
+// Hydrate the store and restore portraits after the page is interactive
+// This prevents blocking the main thread during initial render
 if (typeof window !== 'undefined') {
-  const storedPortrait = loadPortraitFromStorage();
-  const storedBgRemoved = loadBgRemovedFromStorage();
+  const hydrateAndRestorePortraits = () => {
+    // First, hydrate the zustand store
+    useBillStore.persist.rehydrate();
 
-  if (storedPortrait) {
-    // Use setTimeout to ensure store is fully initialized
-    setTimeout(() => {
+    // Then restore portrait images from localStorage
+    const storedPortrait = loadPortraitFromStorage();
+    const storedBgRemoved = loadBgRemovedFromStorage();
+
+    if (storedPortrait) {
       const state = useBillStore.getState();
       // Only restore if no portrait is currently set (avoid overwriting fresh uploads)
       if (!state.portrait.original) {
@@ -380,6 +387,23 @@ if (typeof window !== 'undefined') {
           },
         });
       }
-    }, 0);
+    }
+  };
+
+  // Schedule hydration when browser is idle, after page load
+  const scheduleHydration = () => {
+    setTimeout(() => {
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(hydrateAndRestorePortraits);
+      } else {
+        hydrateAndRestorePortraits();
+      }
+    }, 1000); // Wait 1 second after page load
+  };
+
+  if (document.readyState === 'complete') {
+    scheduleHydration();
+  } else {
+    window.addEventListener('load', scheduleHydration, { once: true });
   }
 }
