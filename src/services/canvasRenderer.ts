@@ -14,6 +14,9 @@ const hueShiftedCache = new Map<string, string>();
  */
 export function clearHueShiftedCache(): void {
   hueShiftedCache.clear();
+  // Also clear the image cache to force fresh loading of templates
+  // This ensures we don't get stale hue-shifted images from the cache
+  imageCache.clear();
 }
 
 export async function loadImage(src: string): Promise<HTMLImageElement> {
