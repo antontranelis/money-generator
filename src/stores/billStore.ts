@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { BillState, PersonalInfo, VoucherConfig, BillSide, HourValue, Language } from '../types/bill';
 import { resizeImageForStorage } from '../services/imageEffects';
+import { clearHueShiftedCache } from '../services/canvasRenderer';
 
 // Storage keys for portrait images (separate from main store to handle size limits)
 const PORTRAIT_STORAGE_KEY = 'money-generator-portrait';
@@ -292,10 +293,13 @@ export const useBillStore = create<BillState & BillActions>()(
           voucherConfig: { ...state.voucherConfig, hours },
         })),
 
-      setTemplateHue: (templateHue) =>
-        set((state) => ({
+      setTemplateHue: (templateHue) => {
+        // Clear hue-shifted cache to ensure fresh rendering with new hue
+        clearHueShiftedCache();
+        return set((state) => ({
           voucherConfig: { ...state.voucherConfig, templateHue },
-        })),
+        }));
+      },
 
       reset: () => {
         clearPortraitFromStorage();

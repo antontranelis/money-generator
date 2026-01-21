@@ -8,6 +8,7 @@ export {
   drawContactInfo,
   renderFrontSide,
   renderBackSide,
+  clearHueShiftedCache,
 } from './canvasRenderer';
 
 // Template composition (dynamic template generation)

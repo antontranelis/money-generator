@@ -39,6 +39,7 @@ export {
   applyEngravingEffect,
   applyHueShift,
   resizeImage,
+  clearHueShiftedCache,
 } from './services';
 export type { EnhanceStyle } from './services';
 

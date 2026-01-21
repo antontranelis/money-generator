@@ -8,6 +8,14 @@ const imageCache = new Map<string, HTMLImageElement>();
 // Cache for hue-shifted templates: key = `${src}:${hue}`
 const hueShiftedCache = new Map<string, string>();
 
+/**
+ * Clear the hue-shifted template cache
+ * Call this when templateHue changes to ensure fresh rendering
+ */
+export function clearHueShiftedCache(): void {
+  hueShiftedCache.clear();
+}
+
 export async function loadImage(src: string): Promise<HTMLImageElement> {
   if (imageCache.has(src)) {
     return imageCache.get(src)!;
@@ -34,6 +42,10 @@ export function drawTemplate(
   ctx.drawImage(template, 0, 0, width, height);
 }
 
+// The original template color is beige at ~29° hue
+const SOURCE_HUE = 29;
+const SOURCE_HUE_TOLERANCE = 5;
+
 /**
  * Get or create a hue-shifted template image
  * Uses caching to avoid reprocessing the same hue shift
@@ -48,9 +60,8 @@ async function getHueShiftedTemplate(
   targetWidth: number,
   targetHeight: number
 ): Promise<HTMLImageElement> {
-  // No shift needed when hue is at source color (~160°)
-  // Use a small tolerance range (155-165) for "original"
-  if (hue >= 155 && hue <= 165) {
+  // No shift needed when hue is at or near source color (~29° beige)
+  if (Math.abs(hue - SOURCE_HUE) <= SOURCE_HUE_TOLERANCE) {
     return loadImage(templateSrc);
   }
 
