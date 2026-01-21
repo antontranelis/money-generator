@@ -173,21 +173,27 @@ export const useBillStore = create<BillState & BillActions>()(
         })),
 
       setPortrait: (original, enhanced = null) => {
-        // Save to localStorage asynchronously (fire and forget)
-        savePortraitToStorage(original);
+        // NOTE: Do NOT save processed images to localStorage here!
+        // Only rawImage should be persisted (via setPortraitRawImage)
+        // portrait.original is computed on-the-fly from rawImage + effects
 
-        return set((state) => ({
-          portrait: {
-            ...state.portrait,
-            original,
-            enhanced,
-            useEnhanced: false,
-            // Keep current zoom/pan if updating existing portrait, reset for new portrait
-            zoom: state.portrait.original && original ? state.portrait.zoom : 1,
-            panX: state.portrait.original && original ? state.portrait.panX : 0,
-            panY: state.portrait.original && original ? state.portrait.panY : 0,
-          },
-        }));
+        return set((state) => {
+          // Keep zoom/pan if we already have a portrait (original OR rawImage)
+          // This preserves settings during reload when original is null but rawImage exists
+          const hasExistingPortrait = state.portrait.original || state.portrait.rawImage;
+          return {
+            portrait: {
+              ...state.portrait,
+              original,
+              enhanced,
+              useEnhanced: false,
+              // Keep current zoom/pan if updating existing portrait, reset for new portrait
+              zoom: hasExistingPortrait && original ? state.portrait.zoom : 1,
+              panX: hasExistingPortrait && original ? state.portrait.panX : 0,
+              panY: hasExistingPortrait && original ? state.portrait.panY : 0,
+            },
+          };
+        });
       },
 
       setEnhancedPortrait: (enhanced) =>
@@ -224,13 +230,17 @@ export const useBillStore = create<BillState & BillActions>()(
           },
         })),
 
-      setPortraitRawImage: (rawImage) =>
-        set((state) => ({
+      setPortraitRawImage: (rawImage) => {
+        // Save rawImage to localStorage (this is the TRUE original, never processed)
+        savePortraitToStorage(rawImage);
+
+        return set((state) => ({
           portrait: {
             ...state.portrait,
             rawImage,
           },
-        })),
+        }));
+      },
 
       setPortraitBgRemoved: (bgRemoved, bgRemovedImage) => {
         // Save bg-removed image to localStorage asynchronously
@@ -361,15 +371,15 @@ export const useBillStore = create<BillState & BillActions>()(
 // Initialize portrait from localStorage on app start
 // This runs once when the module is loaded
 if (typeof window !== 'undefined') {
-  const storedPortrait = loadPortraitFromStorage();
+  const storedRawImage = loadPortraitFromStorage();
   const storedBgRemoved = loadBgRemovedFromStorage();
 
-  if (storedPortrait) {
+  if (storedRawImage) {
     // Use setTimeout to ensure store is fully initialized
     setTimeout(() => {
       const state = useBillStore.getState();
-      // Only restore if no portrait is currently set (avoid overwriting fresh uploads)
-      if (!state.portrait.original) {
+      // Only restore if no rawImage is currently set (avoid overwriting fresh uploads)
+      if (!state.portrait.rawImage) {
         // Check if we have bgRemoved state but missing image - reset if so
         const hasBgRemovedState = state.portrait.bgRemoved;
         const hasBgRemovedImage = storedBgRemoved !== null;
@@ -377,8 +387,11 @@ if (typeof window !== 'undefined') {
         useBillStore.setState({
           portrait: {
             ...state.portrait,
-            original: storedPortrait,
-            rawImage: storedPortrait, // Also restore rawImage for effects
+            // Set rawImage from storage (this is the TRUE original)
+            rawImage: storedRawImage,
+            // DON'T set portrait.original here - it will be computed by PortraitUpload
+            // when it detects rawImage exists but original is null
+            original: null,
             // Restore bg-removed image if available
             bgRemovedImage: storedBgRemoved,
             // Only keep bgRemoved state if we have the image

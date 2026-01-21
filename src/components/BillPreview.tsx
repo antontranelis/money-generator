@@ -56,8 +56,9 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
   const template = getPreviewTemplate(billLanguage, hours);
   const layout = getPreviewLayout(billLanguage);
 
+  // Use rawImage as fallback while portrait.original is being recomputed after reload
   const currentPortrait =
-    portrait.useEnhanced && portrait.enhanced ? portrait.enhanced : portrait.original;
+    portrait.useEnhanced && portrait.enhanced ? portrait.enhanced : (portrait.original || portrait.rawImage);
 
   const displayDescription = formatDescription(billLanguage, hours, description);
 

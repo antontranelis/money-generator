@@ -165,6 +165,23 @@ export function PortraitUpload() {
     setPortrait(result);
   }, [applyEngraving, setPortrait]);
 
+  // Recompute portrait after reload: rawImage exists but original is null
+  // This rebuilds portrait.original from rawImage + stored effect settings
+  const hasRecomputedRef = useRef(false);
+  useEffect(() => {
+    if (portrait.rawImage && !portrait.original && !hasRecomputedRef.current) {
+      hasRecomputedRef.current = true;
+      // Defer to next tick to ensure all state is settled
+      setTimeout(() => {
+        applyAllEffects();
+      }, 0);
+    }
+    // Reset flag when rawImage changes (new upload)
+    if (!portrait.rawImage) {
+      hasRecomputedRef.current = false;
+    }
+  }, [portrait.rawImage, portrait.original, applyAllEffects]);
+
   // Re-apply sepia effect when templateHue changes (if sepia is active)
   useEffect(() => {
     // Skip initial render and only react to actual changes
@@ -310,7 +327,7 @@ export function PortraitUpload() {
         }
       `}</style>
       {/* Upload Area */}
-      {!portrait.original ? (
+      {!portrait.original && !portrait.rawImage ? (
         <div
           className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
             isRemovingBg

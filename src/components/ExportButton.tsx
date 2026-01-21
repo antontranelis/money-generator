@@ -20,16 +20,19 @@ export function ExportButton() {
   const template = getTemplate(billLanguage, hours);
   const layout = getLayout(billLanguage);
 
+  // Use rawImage as fallback while portrait.original is being recomputed after reload
   const currentPortrait =
-    portrait.useEnhanced && portrait.enhanced ? portrait.enhanced : portrait.original;
+    portrait.useEnhanced && portrait.enhanced ? portrait.enhanced : (portrait.original || portrait.rawImage);
 
   const displayDescription = formatDescription(billLanguage, hours, description);
 
+  // Allow export if we have portrait (original or rawImage)
+  const hasPortrait = portrait.original !== null || portrait.rawImage !== null;
   const canExport =
     personalInfo.name.trim().length > 0 &&
     personalInfo.email.trim().length > 0 &&
     personalInfo.phone.trim().length > 0 &&
-    portrait.original !== null;
+    hasPortrait;
 
   const handleExport = async () => {
     if (!canExport || isExporting) return;

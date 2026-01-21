@@ -110,11 +110,12 @@ function App() {
   // Build checklist with completed and pending items
   const checklistItems: { text: string; completed: boolean; action?: () => void }[] = [];
 
-  // Photo upload
+  // Photo upload - completed if we have original OR rawImage (during reload recompute)
+  const hasPortrait = !!portrait.original || !!portrait.rawImage;
   checklistItems.push({
     text: appLanguage === 'de' ? 'Foto hochladen' : 'Upload photo',
-    completed: !!portrait.original,
-    action: !portrait.original ? () => {
+    completed: hasPortrait,
+    action: !hasPortrait ? () => {
       if (currentSide !== 'front') {
         setCurrentSide('front');
       }
@@ -147,7 +148,7 @@ function App() {
   });
 
   // Check if all fields for current side are complete
-  const frontComplete = !!portrait.original;
+  const frontComplete = hasPortrait;
   const backComplete = nameValid && emailValid && phoneValid;
 
   // Auto-collapse only when completing fields (not on side switch)
@@ -178,7 +179,7 @@ function App() {
         previewCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 350);
     }
-  }, [currentSide, portrait.original]);
+  }, [currentSide, hasPortrait]);
 
   return (
     <div className="h-dvh flex flex-col bg-base-200">
@@ -212,7 +213,7 @@ function App() {
                 <BillPreview onPortraitClick={handlePortraitClick} onFileDrop={handleFileDrop} />
 
                 {/* Contextual Controls - below preview */}
-                {(currentSide === 'back' || portrait.original) && (
+                {(currentSide === 'back' || hasPortrait) && (
                   <div
                     ref={editAreaRef}
                     className="overflow-hidden transition-all duration-500 ease-out"
@@ -234,7 +235,7 @@ function App() {
                 {/* Action buttons - always visible */}
                 <div className="flex justify-end items-center pt-4">
                   {/* Reset button - only when inputs exist */}
-                  {(portrait.original || personalInfo.name || personalInfo.email || personalInfo.phone) && (
+                  {(hasPortrait || personalInfo.name || personalInfo.email || personalInfo.phone) && (
                     <button
                       className="btn text-error mr-auto"
                       onClick={handleResetClick}
