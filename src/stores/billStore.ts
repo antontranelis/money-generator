@@ -304,11 +304,14 @@ export const useBillStore = create<BillState & BillActions>()(
     }),
     {
       name: 'money-generator-storage',
-      // Migrate old storage to reset values
+      // Migrate old storage - preserve user settings
       migrate: (persistedState: unknown) => {
         const state = persistedState as BillState;
         if (state?.voucherConfig) {
-          state.voucherConfig.templateHue = 29; // Reset to default
+          // Keep templateHue if set, otherwise use default
+          if (state.voucherConfig.templateHue === undefined) {
+            state.voucherConfig.templateHue = 29;
+          }
           state.voucherConfig.hours = 1; // Always start at 1 hour
           state.voucherConfig.language = browserLanguage; // Follow browser
         }
@@ -317,13 +320,12 @@ export const useBillStore = create<BillState & BillActions>()(
         }
         return state;
       },
-      version: 1,
+      version: 2, // Bump version to trigger migration
       partialize: (state): BillState => ({
         personalInfo: state.personalInfo,
         voucherConfig: {
           ...state.voucherConfig,
-          // Persist hours and language selections
-          templateHue: 29, // Always reset to default - hue slider is disabled
+          // Persist all voucher settings including templateHue
         },
         appLanguage: state.appLanguage, // Persist app language selection
         // Only persist small settings, NOT image data (too large for localStorage)
