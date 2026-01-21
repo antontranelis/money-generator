@@ -1,1 +1,1 @@
-export { useBillStore } from './billStore';
+export { useBillStore, initializeBillStore } from './billStore';

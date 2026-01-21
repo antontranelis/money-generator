@@ -13,7 +13,7 @@ export {
 } from './components';
 
 // Store
-export { useBillStore } from './stores';
+export { useBillStore, initializeBillStore } from './stores';
 
 // Services
 export {
