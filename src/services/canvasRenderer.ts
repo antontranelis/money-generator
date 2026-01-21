@@ -1,5 +1,5 @@
 import type { TemplateLayout, TextConfig, SignatureConfig, HourValue, Language } from '../types/bill';
-import { applyHueShift } from './imageEffects';
+import { applyHueShift, clearImageCache as clearEffectsImageCache } from './imageEffects';
 import { drawBannerText } from './templateCompositor';
 
 // Image cache to avoid reloading
@@ -17,6 +17,8 @@ export function clearHueShiftedCache(): void {
   // Also clear the image cache to force fresh loading of templates
   // This ensures we don't get stale hue-shifted images from the cache
   imageCache.clear();
+  // Clear the image cache in imageEffects.ts as well
+  clearEffectsImageCache();
 }
 
 export async function loadImage(src: string): Promise<HTMLImageElement> {
