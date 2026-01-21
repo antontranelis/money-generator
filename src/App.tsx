@@ -5,9 +5,13 @@ import { PortraitUpload } from './components/PortraitUpload';
 import { VoucherConfig } from './components/VoucherConfig';
 import { BillPreview } from './components/BillPreview';
 import { ExportButton } from './components/ExportButton';
-import { useBillStore } from './stores/billStore';
+import { useBillStore, initializeBillStore } from './stores/billStore';
 
 function App() {
+  // Initialize store hydration from IndexedDB
+  useEffect(() => {
+    initializeBillStore();
+  }, []);
   const appLanguage = useBillStore((state) => state.appLanguage);
   const currentSide = useBillStore((state) => state.currentSide);
   const portrait = useBillStore((state) => state.portrait);
