@@ -129,6 +129,81 @@ export function drawPortraitPlaceholder(
   ctx.restore();
 }
 
+/**
+ * Draw portrait as a faded watermark with radial fade effect
+ * Center is visible (~15-20% opacity), edges fade to transparent
+ */
+export function drawWatermarkPortrait(
+  ctx: CanvasRenderingContext2D,
+  portrait: HTMLImageElement,
+  centerX: number,
+  centerY: number,
+  size: number,
+  zoom: number = 1,
+  panX: number = 0,
+  panY: number = 0
+): void {
+  ctx.save();
+
+  // Create offscreen canvas for the watermark effect
+  const watermarkCanvas = document.createElement('canvas');
+  watermarkCanvas.width = size;
+  watermarkCanvas.height = size;
+  const wmCtx = watermarkCanvas.getContext('2d');
+  if (!wmCtx) {
+    ctx.restore();
+    return;
+  }
+
+  // Calculate image dimensions to cover the circle
+  const imgAspect = portrait.width / portrait.height;
+  let drawWidth: number;
+  let drawHeight: number;
+
+  if (imgAspect > 1) {
+    drawHeight = size;
+    drawWidth = size * imgAspect;
+  } else {
+    drawWidth = size;
+    drawHeight = size / imgAspect;
+  }
+
+  drawWidth *= zoom;
+  drawHeight *= zoom;
+
+  const maxPanX = Math.max(0, (drawWidth - size) / 2);
+  const maxPanY = Math.max(0, (drawHeight - size) / 2);
+
+  const drawX = (size - drawWidth) / 2 + panX * maxPanX;
+  const drawY = (size - drawHeight) / 2 + panY * maxPanY;
+
+  // Draw portrait with desaturation and brightness
+  wmCtx.filter = 'grayscale(70%) brightness(1.4) contrast(0.6)';
+  wmCtx.drawImage(portrait, drawX, drawY, drawWidth, drawHeight);
+  wmCtx.filter = 'none';
+
+  // Apply radial gradient mask (center visible, edges transparent)
+  wmCtx.globalCompositeOperation = 'destination-in';
+  const gradient = wmCtx.createRadialGradient(
+    size / 2, size / 2, 0,           // inner circle (center)
+    size / 2, size / 2, size / 2     // outer circle (edge)
+  );
+  gradient.addColorStop(0, 'rgba(0,0,0,1)');      // center: fully visible
+  gradient.addColorStop(0.5, 'rgba(0,0,0,0.8)');  // mid: mostly visible
+  gradient.addColorStop(0.8, 'rgba(0,0,0,0.3)');  // near edge: fading
+  gradient.addColorStop(1, 'rgba(0,0,0,0)');      // edge: transparent
+
+  wmCtx.fillStyle = gradient;
+  wmCtx.fillRect(0, 0, size, size);
+
+  // Draw the watermark onto main canvas with low opacity
+  ctx.globalAlpha = 0.18;
+  ctx.drawImage(watermarkCanvas, centerX - size / 2, centerY - size / 2);
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+}
+
 export function drawOvalPortrait(
   ctx: CanvasRenderingContext2D,
   portrait: HTMLImageElement,
@@ -343,11 +418,35 @@ export async function renderFrontSide(
   const background = await getHueShiftedTemplate(backgroundSrc, templateHue, width, height);
   drawTemplate(offCtx, background, width, height);
 
-  // Layer 2: Draw badges - NO hue shift (keep original colors)
+  // Layer 2: Draw watermark portrait on right side (if portrait available)
+  if (portraitSrc) {
+    try {
+      const portrait = await loadImage(portraitSrc);
+      // Position: right side of the bill, vertically centered
+      // Size: roughly 60% of height for a prominent but subtle watermark
+      const watermarkSize = height * 0.6;
+      const watermarkX = width * 0.78 + 70;  // Right side
+      const watermarkY = height * 0.5;  // Vertically centered
+      drawWatermarkPortrait(
+        offCtx,
+        portrait,
+        watermarkX,
+        watermarkY,
+        watermarkSize,
+        portraitZoom,
+        portraitPanX,
+        portraitPanY
+      );
+    } catch (e) {
+      console.error('Failed to draw watermark:', e);
+    }
+  }
+
+  // Layer 3: Draw badges - NO hue shift (keep original colors)
   const badges = await loadImage(badgesSrc);
   drawTemplate(offCtx, badges, width, height);
 
-  // Layer 3: Draw portrait if available, or placeholder (UNDER the frame)
+  // Layer 4: Draw main portrait if available, or placeholder (UNDER the frame)
   if (portraitSrc) {
     try {
       const portrait = await loadImage(portraitSrc);
@@ -377,17 +476,17 @@ export async function renderFrontSide(
     );
   }
 
-  // Layer 4: Draw frame ON TOP of portrait - NO hue shift (frame stays original)
+  // Layer 5: Draw frame ON TOP of portrait - NO hue shift (frame stays original)
   const frame = await loadImage(frameSrc);
   drawTemplate(offCtx, frame, width, height);
 
-  // Layer 5: Draw banner text ON TOP of frame
+  // Layer 6: Draw banner text ON TOP of frame
   // Calculate scale based on preview vs full resolution
   // Preview is 0.5 scale (width ~1816), full is 1.0 (width 3633)
   const scale = width / 3633;
   drawBannerText(offCtx, hours, language, scale);
 
-  // Layer 6: Draw name
+  // Layer 7: Draw name
   if (name) {
     drawText(offCtx, name, layout.namePlate);
   }
@@ -403,6 +502,7 @@ export async function renderBackSide(
   backgroundSrc: string,
   badgesSrc: string,
   frameSrc: string,
+  portraitSrc: string | null,
   name: string,
   email: string,
   phone: string,
@@ -410,6 +510,9 @@ export async function renderBackSide(
   layout: TemplateLayout,
   width: number,
   height: number,
+  portraitZoom: number = 1,
+  portraitPanX: number = 0,
+  portraitPanY: number = 0,
   templateHue: number = 0,
   hours: HourValue = 1,
   language: Language = 'de'
@@ -431,34 +534,57 @@ export async function renderBackSide(
   const background = await getHueShiftedTemplate(backgroundSrc, templateHue, width, height);
   drawTemplate(offCtx, background, width, height);
 
-  // Layer 2: Draw badges - NO hue shift (keep original colors)
+  // Layer 2: Draw watermark portrait in center (if portrait available)
+  if (portraitSrc) {
+    try {
+      const portrait = await loadImage(portraitSrc);
+      // Position: center of the bill
+      const watermarkSize = height * 0.6;
+      const watermarkX = width * 0.5;
+      const watermarkY = height * 0.5;
+      drawWatermarkPortrait(
+        offCtx,
+        portrait,
+        watermarkX,
+        watermarkY,
+        watermarkSize,
+        portraitZoom,
+        portraitPanX,
+        portraitPanY
+      );
+    } catch (e) {
+      console.error('Failed to draw watermark:', e);
+    }
+  }
+
+  // Layer 3: Draw badges - NO hue shift (keep original colors)
   const badges = await loadImage(badgesSrc);
   drawTemplate(offCtx, badges, width, height);
 
-  // Layer 3: Draw frame ON TOP - NO hue shift (frame stays original)
+  // Layer 4: Draw frame ON TOP - NO hue shift (frame stays original)
   const frame = await loadImage(frameSrc);
   drawTemplate(offCtx, frame, width, height);
 
-  // Layer 4: Draw banner text ON TOP of frame
+  // Layer 5: Draw banner text ON TOP of frame
   const scale = width / 3633;
   drawBannerText(offCtx, hours, language, scale);
 
-  // Layer 5: Draw contact info
+  // Layer 6: Draw contact info
   if (layout.contactInfo && (name || email || phone)) {
     drawContactInfo(offCtx, name, email, phone, layout.contactInfo);
   }
 
-  // Layer 6: Draw description
+  // Layer 7: Draw description
   if (layout.description && description) {
     drawMultilineText(offCtx, description, layout.description);
   }
 
-  // Layer 7: Draw name at bottom
+  // Layer 8: Draw name at bottom
   if (name) {
     drawText(offCtx, name, layout.namePlate);
   }
 
-  // Layer 8: Draw signature field
+  // Layer 9: Draw signature field
   if (layout.signature) {
     const signatureLabel = language === 'de' ? 'Unterschrift' : 'Signature';
     drawSignature(offCtx, layout.signature, signatureLabel);

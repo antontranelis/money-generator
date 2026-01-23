@@ -160,6 +160,66 @@ async function loadImageBitmap(url) {
   return createImageBitmap(blob);
 }
 
+// Draw portrait as faded watermark with radial fade effect
+function drawWatermarkPortrait(ctx, portrait, centerX, centerY, size, zoom, panX, panY) {
+  ctx.save();
+
+  // Create offscreen canvas for the watermark effect
+  const watermarkCanvas = new OffscreenCanvas(size, size);
+  const wmCtx = watermarkCanvas.getContext('2d');
+  if (!wmCtx) {
+    ctx.restore();
+    return;
+  }
+
+  // Calculate image dimensions to cover the circle
+  const imgAspect = portrait.width / portrait.height;
+  let drawWidth, drawHeight;
+
+  if (imgAspect > 1) {
+    drawHeight = size;
+    drawWidth = size * imgAspect;
+  } else {
+    drawWidth = size;
+    drawHeight = size / imgAspect;
+  }
+
+  drawWidth *= zoom;
+  drawHeight *= zoom;
+
+  const maxPanX = Math.max(0, (drawWidth - size) / 2);
+  const maxPanY = Math.max(0, (drawHeight - size) / 2);
+
+  const drawX = (size - drawWidth) / 2 + panX * maxPanX;
+  const drawY = (size - drawHeight) / 2 + panY * maxPanY;
+
+  // Draw portrait with desaturation and brightness
+  wmCtx.filter = 'grayscale(70%) brightness(1.4) contrast(0.6)';
+  wmCtx.drawImage(portrait, drawX, drawY, drawWidth, drawHeight);
+  wmCtx.filter = 'none';
+
+  // Apply radial gradient mask (center visible, edges transparent)
+  wmCtx.globalCompositeOperation = 'destination-in';
+  const gradient = wmCtx.createRadialGradient(
+    size / 2, size / 2, 0,
+    size / 2, size / 2, size / 2
+  );
+  gradient.addColorStop(0, 'rgba(0,0,0,1)');
+  gradient.addColorStop(0.5, 'rgba(0,0,0,0.8)');
+  gradient.addColorStop(0.8, 'rgba(0,0,0,0.3)');
+  gradient.addColorStop(1, 'rgba(0,0,0,0)');
+
+  wmCtx.fillStyle = gradient;
+  wmCtx.fillRect(0, 0, size, size);
+
+  // Draw the watermark onto main canvas with low opacity
+  ctx.globalAlpha = 0.18;
+  ctx.drawImage(watermarkCanvas, centerX - size / 2, centerY - size / 2);
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+}
+
 // Draw oval portrait with clipping
 function drawOvalPortrait(ctx, portrait, centerX, centerY, radiusX, radiusY, zoom, panX, panY) {
   ctx.save();
@@ -382,7 +442,24 @@ self.onmessage = async (e) => {
       frontCtx.putImageData(frontImageData, 0, 0);
     }
 
-    // Draw portrait
+    // Draw watermark portrait on right side
+    if (portrait) {
+      const watermarkSize = templateHeight * 0.6;
+      const watermarkX = templateWidth * 0.78 + 70;
+      const watermarkY = templateHeight * 0.5;
+      drawWatermarkPortrait(
+        frontCtx,
+        portrait,
+        watermarkX,
+        watermarkY,
+        watermarkSize,
+        portraitZoom,
+        portraitPanX,
+        portraitPanY
+      );
+    }
+
+    // Draw main portrait
     if (portrait) {
       drawOvalPortrait(
         frontCtx,
@@ -421,6 +498,23 @@ self.onmessage = async (e) => {
       const backImageData = backCtx.getImageData(0, 0, templateWidth, templateHeight);
       applyHueShiftToImageData(backImageData, templateHue);
       backCtx.putImageData(backImageData, 0, 0);
+    }
+
+    // Draw watermark portrait in center of back side
+    if (portrait) {
+      const watermarkSize = templateHeight * 0.6;
+      const watermarkX = templateWidth * 0.5;
+      const watermarkY = templateHeight * 0.5;
+      drawWatermarkPortrait(
+        backCtx,
+        portrait,
+        watermarkX,
+        watermarkY,
+        watermarkSize,
+        portraitZoom,
+        portraitPanX,
+        portraitPanY
+      );
     }
 
     // Draw contact info

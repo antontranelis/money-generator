@@ -128,6 +128,7 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
       backBackgroundUrl,
       backBadgesUrl,
       backFrameUrl,
+      currentPortrait,
       personalInfo.name,
       personalInfo.email,
       personalInfo.phone,
@@ -135,11 +136,14 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
       layout.back,
       template.width,
       template.height,
+      portrait.zoom,
+      portrait.panX,
+      portrait.panY,
       debouncedHue,
       hours,
       billLanguage
     );
-  }, [template, backBackgroundUrl, backBadgesUrl, backFrameUrl, personalInfo, displayDescription, layout, debouncedHue, hours, billLanguage]);
+  }, [template, backBackgroundUrl, backBadgesUrl, backFrameUrl, currentPortrait, personalInfo, displayDescription, layout, portrait.zoom, portrait.panX, portrait.panY, debouncedHue, hours, billLanguage]);
 
   const handleFlip = () => {
     // Toggle the visual flip animation
