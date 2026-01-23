@@ -27,11 +27,20 @@ export interface WorkerResponse {
   backImageData?: ArrayBuffer;
   width?: number;
   height?: number;
+  bleedPx?: number;
   error?: string;
 }
 
+// Bleed configuration (must match worker values)
+const BLEED_MM = 3;
+
 // Inline worker code as string - bundler agnostic, works with Vite, Next.js, Webpack, etc.
 const workerCode = `
+// Bleed configuration (3mm at 600 DPI = 71 pixels per side)
+const BLEED_MM = 3;
+const DPI = 600;
+const BLEED_PX = Math.round((BLEED_MM / 25.4) * DPI); // ~71 pixels
+
 // Translations for banner text
 const TRANSLATIONS = {
   de: {
@@ -480,10 +489,50 @@ self.onmessage = async (e) => {
     // Draw banner text on back
     drawBannerText(backCtx, hours, language);
 
-    // Convert canvases to blobs and then to ArrayBuffer for transfer
+    // Add bleed area by extending edge pixels
+    const bleedWidth = templateWidth + (BLEED_PX * 2);
+    const bleedHeight = templateHeight + (BLEED_PX * 2);
+
+    // Create bleed canvases
+    const frontBleedCanvas = new OffscreenCanvas(bleedWidth, bleedHeight);
+    const backBleedCanvas = new OffscreenCanvas(bleedWidth, bleedHeight);
+    const frontBleedCtx = frontBleedCanvas.getContext('2d');
+    const backBleedCtx = backBleedCanvas.getContext('2d');
+
+    // Function to add bleed to a canvas
+    function addBleedToCanvas(srcCanvas, dstCtx, width, height) {
+      // Draw the original image in the center
+      dstCtx.drawImage(srcCanvas, BLEED_PX, BLEED_PX);
+
+      // Extend edges by mirroring/repeating edge pixels
+      // Top edge - stretch top row
+      dstCtx.drawImage(srcCanvas, 0, 0, width, 1, BLEED_PX, 0, width, BLEED_PX);
+      // Bottom edge - stretch bottom row
+      dstCtx.drawImage(srcCanvas, 0, height - 1, width, 1, BLEED_PX, height + BLEED_PX, width, BLEED_PX);
+      // Left edge - stretch left column
+      dstCtx.drawImage(srcCanvas, 0, 0, 1, height, 0, BLEED_PX, BLEED_PX, height);
+      // Right edge - stretch right column
+      dstCtx.drawImage(srcCanvas, width - 1, 0, 1, height, width + BLEED_PX, BLEED_PX, BLEED_PX, height);
+
+      // Corners - fill with corner pixel colors
+      // Top-left corner
+      dstCtx.drawImage(srcCanvas, 0, 0, 1, 1, 0, 0, BLEED_PX, BLEED_PX);
+      // Top-right corner
+      dstCtx.drawImage(srcCanvas, width - 1, 0, 1, 1, width + BLEED_PX, 0, BLEED_PX, BLEED_PX);
+      // Bottom-left corner
+      dstCtx.drawImage(srcCanvas, 0, height - 1, 1, 1, 0, height + BLEED_PX, BLEED_PX, BLEED_PX);
+      // Bottom-right corner
+      dstCtx.drawImage(srcCanvas, width - 1, height - 1, 1, 1, width + BLEED_PX, height + BLEED_PX, BLEED_PX, BLEED_PX);
+    }
+
+    // Add bleed to both canvases
+    addBleedToCanvas(frontCanvas, frontBleedCtx, templateWidth, templateHeight);
+    addBleedToCanvas(backCanvas, backBleedCtx, templateWidth, templateHeight);
+
+    // Convert bleed canvases to blobs and then to ArrayBuffer for transfer
     const [frontBlob, backBlob] = await Promise.all([
-      frontCanvas.convertToBlob({ type: 'image/jpeg', quality: 0.95 }),
-      backCanvas.convertToBlob({ type: 'image/jpeg', quality: 0.95 }),
+      frontBleedCanvas.convertToBlob({ type: 'image/jpeg', quality: 0.95 }),
+      backBleedCanvas.convertToBlob({ type: 'image/jpeg', quality: 0.95 }),
     ]);
 
     const [frontBuffer, backBuffer] = await Promise.all([
@@ -492,12 +541,14 @@ self.onmessage = async (e) => {
     ]);
 
     // Transfer buffers back to main thread (zero-copy)
+    // Return the bleed dimensions so PDF knows the new size
     self.postMessage({
       type: 'success',
       frontImageData: frontBuffer,
       backImageData: backBuffer,
-      width: templateWidth,
-      height: templateHeight,
+      width: bleedWidth,
+      height: bleedHeight,
+      bleedPx: BLEED_PX,
     }, [frontBuffer, backBuffer]);
   } catch (error) {
     self.postMessage({
@@ -606,11 +657,12 @@ export async function generateBillPDF(options: PDFGeneratorOptions): Promise<Blo
           const frontDataUrl = arrayBufferToDataUrl(frontImageData, 'image/jpeg');
           const backDataUrl = arrayBufferToDataUrl(backImageData, 'image/jpeg');
 
-          // Create PDF at target size 138.6 x 72.9 mm (template is 3633x1920 pixels)
+          // Create PDF at target size with bleed
+          // Original: 138.6 x 72.9 mm, with 3mm bleed on each side: 144.6 x 78.9 mm
           const TARGET_WIDTH_MM = 138.6;
           const TARGET_HEIGHT_MM = 72.9;
-          const widthMM = TARGET_WIDTH_MM;
-          const heightMM = TARGET_HEIGHT_MM;
+          const widthMM = TARGET_WIDTH_MM + (BLEED_MM * 2);
+          const heightMM = TARGET_HEIGHT_MM + (BLEED_MM * 2);
 
           const pdf = new jsPDF({
             orientation: widthMM > heightMM ? 'landscape' : 'portrait',
