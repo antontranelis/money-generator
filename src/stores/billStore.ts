@@ -1,8 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { BillState, PersonalInfo, VoucherConfig, BillSide, HourValue, Language } from '../types/bill';
-import { clearHueShiftedCache } from '../services/canvasRenderer';
-import { clearCompositorCache } from '../services/templateCompositor';
+import { clearRendererCache } from '../templates/genericRenderer';
 import { indexedDBStorage } from './indexedDBStorage';
 
 // Detect browser language and return 'de' or 'en'
@@ -35,6 +34,7 @@ interface BillActions {
   setBillLanguage: (language: Language) => void;
   setHours: (hours: HourValue) => void;
   setTemplateHue: (hue: number) => void;
+  setTemplateId: (templateId: string) => void;
   reset: () => void;
 }
 
@@ -49,6 +49,7 @@ const initialState: BillState = {
     description: '',
     language: browserLanguage, // Bill/template language - follows browser
     templateHue: 29, // Default to original beige color (~29°)
+    templateId: 'classic-time-voucher', // Default template
   },
   portrait: {
     original: null,
@@ -206,11 +207,18 @@ export const useBillStore = create<BillState & BillActions>()(
         })),
 
       setTemplateHue: (templateHue) => {
-        // Clear all caches to ensure fresh rendering with new hue
-        clearHueShiftedCache();
-        clearCompositorCache();
+        // Clear V2 renderer cache to ensure fresh rendering with new hue
+        clearRendererCache();
         return set((state) => ({
           voucherConfig: { ...state.voucherConfig, templateHue },
+        }));
+      },
+
+      setTemplateId: (templateId) => {
+        // Clear V2 renderer cache when switching templates
+        clearRendererCache();
+        return set((state) => ({
+          voucherConfig: { ...state.voucherConfig, templateId },
         }));
       },
 
@@ -233,6 +241,10 @@ export const useBillStore = create<BillState & BillActions>()(
           if (state.voucherConfig.templateHue === undefined) {
             state.voucherConfig.templateHue = 29;
           }
+          // Set default templateId if not present
+          if (!state.voucherConfig.templateId) {
+            state.voucherConfig.templateId = 'classic-time-voucher';
+          }
           state.voucherConfig.hours = 1; // Always start at 1 hour
           state.voucherConfig.language = browserLanguage; // Follow browser
         }
@@ -241,7 +253,7 @@ export const useBillStore = create<BillState & BillActions>()(
         }
         return state;
       },
-      version: 3, // Bump version for IndexedDB migration
+      version: 4, // Bump version for templateId
       // Store everything in IndexedDB - no size limits!
       partialize: (state): BillState => ({
         personalInfo: state.personalInfo,

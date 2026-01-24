@@ -1,52 +1,103 @@
-import type { Template, TemplateProvider } from './types';
-import { staticTemplateProvider, getDefaultTemplateId } from './staticProvider';
+import type { TemplateV2, TemplateProviderV2, TemplateFilter } from './schema';
+import {
+  templateProviderV2,
+  registerTemplate,
+  unregisterTemplate,
+  clearTemplateCache,
+  hasTemplate,
+  getDefaultTemplateId,
+} from './templateLoader';
 
-// Export types
-export type { Template, TemplateProvider, TemplateField, FieldPosition } from './types';
+// =============================================================================
+// Template System v2 Exports
+// =============================================================================
 
-// Export static provider
-export { staticTemplateProvider, getDefaultTemplateId };
+// Export v2 schema types
+export type {
+  TemplateV2,
+  TemplateProviderV2,
+  TemplateFilter,
+  TemplateType,
+  TemplateStatus,
+  TemplateDesigner,
+  TemplateReview,
+  TemplateAssets,
+  TemplateSchema,
+  TemplateLayout,
+  TemplateFeatures,
+  TemplateField,
+  FieldType,
+  FieldConfig,
+  TextFieldConfig,
+  NumberFieldConfig,
+  SelectFieldConfig,
+  ImageFieldConfig,
+  SelectOption,
+  Layer,
+  BackgroundLayer,
+  FrameLayer,
+  BadgeLayer,
+  FieldLayer,
+  TextLayer,
+  DecorationLayer,
+  LayoutSide,
+  Position,
+  Size,
+  TextStyle,
+  Anchor,
+  BlendMode,
+  ValidationResult,
+  ValidationError,
+  ValidationWarning,
+  LocalizedString,
+} from './schema';
+
+// Export v2 template loader functions
+export {
+  templateProviderV2,
+  registerTemplate,
+  unregisterTemplate,
+  clearTemplateCache,
+  hasTemplate,
+  getDefaultTemplateId,
+};
 
 /**
- * Current template provider
- * Defaults to static provider, can be changed via setTemplateProvider
+ * Current v2 template provider
  */
-let currentProvider: TemplateProvider = staticTemplateProvider;
+let currentProvider: TemplateProviderV2 = templateProviderV2;
 
 /**
  * Set a custom template provider
- * Use this to switch to a CMS-based provider or other source
- *
- * @example
- * // Switch to a CMS provider
- * import { createCmsProvider, setTemplateProvider } from 'money-printer/templates';
- * setTemplateProvider(createCmsProvider('https://cms.example.com/api'));
  */
-export function setTemplateProvider(provider: TemplateProvider): void {
+export function setTemplateProvider(provider: TemplateProviderV2): void {
   currentProvider = provider;
 }
 
 /**
  * Get the current template provider
  */
-export function getTemplateProvider(): TemplateProvider {
+export function getTemplateProvider(): TemplateProviderV2 {
   return currentProvider;
 }
 
 /**
  * List available templates
  */
-export async function listTemplates(filter?: {
-  type?: string;
-  category?: string;
-  language?: 'de' | 'en';
-}): Promise<Template[]> {
+export async function listTemplatesV2(filter?: TemplateFilter): Promise<TemplateV2[]> {
   return currentProvider.listTemplates(filter);
 }
 
 /**
  * Get a specific template by ID
  */
-export async function getTemplateById(templateId: string): Promise<Template> {
+export async function getTemplateByIdV2(templateId: string): Promise<TemplateV2> {
   return currentProvider.getTemplate(templateId);
+}
+
+/**
+ * Validate a template
+ */
+export async function validateTemplate(template: TemplateV2): Promise<import('./schema').ValidationResult> {
+  return currentProvider.validateTemplate(template);
 }

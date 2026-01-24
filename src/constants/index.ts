@@ -8,4 +8,6 @@ export {
   PREVIEW_SCALE,
   getPreviewLayout,
   getPreviewTemplate,
+  TEMPLATE_WIDTH,
+  TEMPLATE_HEIGHT,
 } from './templates';

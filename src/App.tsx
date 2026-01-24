@@ -5,6 +5,7 @@ import { PortraitUpload } from './components/PortraitUpload';
 import { VoucherConfig } from './components/VoucherConfig';
 import { BillPreview } from './components/BillPreview';
 import { ExportButton } from './components/ExportButton';
+import { TemplateV2Demo } from './components/TemplateV2Demo';
 import { useBillStore, initializeBillStore } from './stores/billStore';
 
 function App() {
@@ -399,6 +400,13 @@ function App() {
                   </div>
                 )}
                 <ExportButton />
+              </div>
+            </div>
+
+            {/* Template Selection Card */}
+            <div className="card bg-base-100 shadow-xl mt-4">
+              <div className="card-body">
+                <TemplateV2Demo />
               </div>
             </div>
           </div>

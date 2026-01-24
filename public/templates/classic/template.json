@@ -1,0 +1,368 @@
+{
+  "id": "classic-time-voucher",
+  "version": "2.0.0",
+  "name": "Classic Time Voucher",
+  "type": "time-voucher",
+  "description": "Der klassische Zeitgutschein mit eleganter Ornamentik und Portraitrahmen. Unterstützt 1, 5 und 10 Stunden.",
+
+  "designer": {
+    "name": "Anton Tranelis",
+    "url": "https://antontraenlis.de"
+  },
+
+  "created": "2024-01-01T00:00:00Z",
+  "updated": "2026-01-24T00:00:00Z",
+
+  "status": "published",
+
+  "assets": {
+    "background": "/templates/classic/background.webp",
+    "frontFrame": "/templates/classic/front_frame.webp",
+    "backFrame": "/templates/classic/back_frame.webp",
+    "badges": {
+      "type": "image",
+      "variants": [
+        { "value": 1, "image": "/templates/classic/badges/1.png", "size": 320 },
+        { "value": 5, "image": "/templates/classic/badges/5.png", "size": 320 },
+        { "value": 10, "image": "/templates/classic/badges/10.png", "size": 320 }
+      ]
+    }
+  },
+
+  "schema": {
+    "languages": ["de", "en"],
+    "defaultLanguage": "de",
+    "fields": [
+      {
+        "id": "name",
+        "type": "text",
+        "label": { "de": "Name", "en": "Name" },
+        "required": true,
+        "config": {
+          "maxLength": 50
+        },
+        "validation": {
+          "required": true,
+          "min": 1,
+          "max": 50
+        },
+        "ui": {
+          "placeholder": { "de": "Max Mustermann", "en": "John Doe" },
+          "order": 1
+        }
+      },
+      {
+        "id": "hours",
+        "type": "select",
+        "label": { "de": "Stunden", "en": "Hours" },
+        "required": true,
+        "default": 1,
+        "config": {
+          "options": [
+            {
+              "value": 1,
+              "label": { "de": "1 Stunde", "en": "1 Hour" },
+              "badge": "/templates/classic/badges/1.png"
+            },
+            {
+              "value": 5,
+              "label": { "de": "5 Stunden", "en": "5 Hours" },
+              "badge": "/templates/classic/badges/5.png"
+            },
+            {
+              "value": 10,
+              "label": { "de": "10 Stunden", "en": "10 Hours" },
+              "badge": "/templates/classic/badges/10.png"
+            }
+          ]
+        },
+        "ui": {
+          "order": 2
+        }
+      },
+      {
+        "id": "portrait",
+        "type": "image",
+        "label": { "de": "Portrait", "en": "Portrait" },
+        "required": false,
+        "config": {
+          "shape": "ellipse",
+          "maxSize": 10,
+          "acceptedFormats": ["image/jpeg", "image/png", "image/webp"],
+          "features": {
+            "zoom": true,
+            "pan": true,
+            "backgroundRemoval": true,
+            "engraving": true
+          }
+        },
+        "ui": {
+          "helpText": { "de": "Lade ein Portrait-Foto hoch", "en": "Upload a portrait photo" },
+          "order": 3
+        }
+      },
+      {
+        "id": "email",
+        "type": "email",
+        "label": { "de": "E-Mail", "en": "Email" },
+        "required": false,
+        "ui": {
+          "placeholder": { "de": "max@beispiel.de", "en": "john@example.com" },
+          "order": 4,
+          "group": "contact"
+        }
+      },
+      {
+        "id": "phone",
+        "type": "tel",
+        "label": { "de": "Telefon", "en": "Phone" },
+        "required": false,
+        "config": {
+          "format": "international"
+        },
+        "ui": {
+          "placeholder": { "de": "+49 123 456789", "en": "+1 234 567890" },
+          "order": 5,
+          "group": "contact"
+        }
+      },
+      {
+        "id": "description",
+        "type": "textarea",
+        "label": { "de": "Beschreibung", "en": "Description" },
+        "required": false,
+        "config": {
+          "rows": 3,
+          "maxLength": 200
+        },
+        "ui": {
+          "placeholder": {
+            "de": "Gutschein für gemeinsame Zeit...",
+            "en": "Voucher for quality time..."
+          },
+          "order": 6
+        }
+      }
+    ],
+    "fieldGroups": [
+      {
+        "id": "contact",
+        "label": { "de": "Kontaktdaten", "en": "Contact Information" },
+        "fields": ["email", "phone"],
+        "collapsible": true
+      }
+    ]
+  },
+
+  "layout": {
+    "dimensions": {
+      "width": 3633,
+      "height": 1920,
+      "dpi": 600,
+      "physicalSize": "138.6mm x 72.9mm"
+    },
+
+    "front": {
+      "layers": [
+        {
+          "type": "background",
+          "source": "background",
+          "hueShift": true
+        },
+        {
+          "type": "badges",
+          "fieldId": "hours",
+          "positions": [
+            { "x": 286, "y": 235, "size": 320, "anchor": "center" },
+            { "x": 3340, "y": 230, "size": 320, "anchor": "center" },
+            { "x": 282, "y": 1665, "size": 335, "anchor": "center" },
+            { "x": 3345, "y": 1665, "size": 335, "anchor": "center" }
+          ]
+        },
+        {
+          "type": "frame",
+          "source": "frontFrame"
+        },
+        {
+          "type": "field",
+          "fieldId": "portrait",
+          "position": { "x": 1810, "y": 918, "anchor": "center" },
+          "clip": "ellipse",
+          "size": { "radiusX": 570, "radiusY": 605 }
+        },
+        {
+          "type": "field",
+          "fieldId": "name",
+          "position": { "x": 1816, "y": 1765, "anchor": "center" },
+          "style": {
+            "fontSize": 85,
+            "fontFamily": "Times New Roman, Georgia, serif",
+            "fontWeight": "bold",
+            "color": "#2a3a2a"
+          },
+          "maxWidth": 898,
+          "align": "center"
+        },
+        {
+          "type": "text",
+          "content": {
+            "de": "{{hours_banner_de}}",
+            "en": "{{hours_banner_en}}"
+          },
+          "position": { "x": 1816, "y": 210, "anchor": "center" },
+          "style": {
+            "fontSize": 103,
+            "fontFamily": "Times New Roman, Georgia, serif",
+            "fontWeight": 900,
+            "color": "#2a3a2a"
+          },
+          "arc": {
+            "centerX": 1816,
+            "centerY": 3820,
+            "radius": 3610
+          }
+        }
+      ]
+    },
+
+    "back": {
+      "layers": [
+        {
+          "type": "background",
+          "source": "background",
+          "hueShift": true
+        },
+        {
+          "type": "badges",
+          "fieldId": "hours",
+          "positions": [
+            { "x": 286, "y": 235, "size": 320, "anchor": "center" },
+            { "x": 3340, "y": 230, "size": 320, "anchor": "center" },
+            { "x": 282, "y": 1665, "size": 335, "anchor": "center" },
+            { "x": 3345, "y": 1665, "size": 335, "anchor": "center" }
+          ]
+        },
+        {
+          "type": "frame",
+          "source": "backFrame"
+        },
+        {
+          "type": "text",
+          "content": {
+            "de": "{{hours_banner_de}}",
+            "en": "{{hours_banner_en}}"
+          },
+          "position": { "x": 1816, "y": 210, "anchor": "center" },
+          "style": {
+            "fontSize": 103,
+            "fontFamily": "Times New Roman, Georgia, serif",
+            "fontWeight": 900,
+            "color": "#2a3a2a"
+          },
+          "arc": {
+            "centerX": 1816,
+            "centerY": 3820,
+            "radius": 3610
+          }
+        },
+        {
+          "type": "field",
+          "fieldId": "name",
+          "position": { "x": 1816, "y": 1770, "anchor": "center" },
+          "style": {
+            "fontSize": 85,
+            "fontFamily": "Times New Roman, Georgia, serif",
+            "fontWeight": "bold",
+            "color": "#2a3a2a"
+          },
+          "maxWidth": 898,
+          "align": "center"
+        },
+        {
+          "type": "field",
+          "fieldId": "name",
+          "position": { "x": 898, "y": 774, "anchor": "center" },
+          "style": {
+            "fontSize": 93,
+            "fontFamily": "Times New Roman, Georgia, serif",
+            "fontWeight": "normal",
+            "color": "#2a3a2a"
+          },
+          "align": "center",
+          "multiline": false
+        },
+        {
+          "type": "field",
+          "fieldId": "email",
+          "position": { "x": 898, "y": 939, "anchor": "center" },
+          "style": {
+            "fontSize": 93,
+            "fontFamily": "Times New Roman, Georgia, serif",
+            "fontWeight": "normal",
+            "color": "#2a3a2a"
+          },
+          "align": "center",
+          "multiline": false
+        },
+        {
+          "type": "field",
+          "fieldId": "phone",
+          "position": { "x": 898, "y": 1104, "anchor": "center" },
+          "style": {
+            "fontSize": 93,
+            "fontFamily": "Times New Roman, Georgia, serif",
+            "fontWeight": "normal",
+            "color": "#2a3a2a"
+          },
+          "align": "center",
+          "multiline": false
+        },
+        {
+          "type": "field",
+          "fieldId": "description",
+          "position": { "x": 2721, "y": 939, "anchor": "center" },
+          "style": {
+            "fontSize": 85,
+            "fontFamily": "Times New Roman, Georgia, serif",
+            "fontWeight": "normal",
+            "color": "#2a3a2a"
+          },
+          "maxWidth": 1177,
+          "lineHeight": 124,
+          "align": "center",
+          "multiline": true
+        }
+      ]
+    },
+
+    "global": {
+      "hueShift": {
+        "enabled": true,
+        "defaultHue": 0,
+        "affectedLayers": ["background"]
+      },
+      "fontFamily": "Times New Roman, Georgia, serif",
+      "textColor": "#2a3a2a"
+    }
+  },
+
+  "features": {
+    "hueShift": true,
+    "portraitEditing": {
+      "backgroundRemoval": true,
+      "engraving": true,
+      "zoom": true,
+      "pan": true
+    },
+    "signature": true
+  },
+
+  "shop": {
+    "pricing": {
+      "basePriceMultiplier": 1.0
+    },
+    "tags": ["classic", "elegant", "time-voucher", "portrait"],
+    "thumbnail": "/templates/classic/thumbnail.jpg",
+    "featured": true
+  }
+}

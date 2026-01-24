@@ -1,9 +1,9 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { useBillStore } from '../stores/billStore';
 import { t, formatDescription } from '../constants/translations';
-import { getPreviewTemplate, getPreviewLayout } from '../constants/templates';
-import { renderFrontSide, renderBackSide } from '../services/canvasRenderer';
-import { getTemplateLayers } from '../services/templateCompositor';
+import { getTemplateByIdV2 } from '../templates';
+import { renderTemplate, clearRendererCache } from '../templates/genericRenderer';
+import type { TemplateV2 } from '../templates/schema';
 
 // Debounce hook for expensive operations
 function useDebouncedValue<T>(value: T, delay: number): T {
@@ -28,6 +28,7 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
   const hours = useBillStore((state) => state.voucherConfig.hours);
   const description = useBillStore((state) => state.voucherConfig.description);
   const templateHue = useBillStore((state) => state.voucherConfig.templateHue);
+  const templateId = useBillStore((state) => state.voucherConfig.templateId);
   const personalInfo = useBillStore((state) => state.personalInfo);
   const portrait = useBillStore((state) => state.portrait);
   const currentSide = useBillStore((state) => state.currentSide);
@@ -36,6 +37,9 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
 
   // Debounce templateHue to avoid expensive recalculations on every slider move
   const debouncedHue = useDebouncedValue(templateHue, 150);
+
+  // V2 Template state - V2 is now the only renderer
+  const [templateV2, setTemplateV2] = useState<TemplateV2 | null>(null);
 
   const trans = t(appLanguage);
 
@@ -53,8 +57,9 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
   const didDragRef = useRef(false);
   const lastPanUpdateRef = useRef<number>(0);
 
-  const template = getPreviewTemplate(billLanguage, hours);
-  const layout = getPreviewLayout(billLanguage);
+  // Calculate template dimensions from v2 template (fallback to standard bill size)
+  const templateWidth = templateV2?.layout.dimensions.width ?? 3633;
+  const templateHeight = templateV2?.layout.dimensions.height ?? 1920;
 
   // Use rawImage as fallback while portrait.original is being recomputed after reload
   const currentPortrait =
@@ -62,88 +67,121 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
 
   const displayDescription = formatDescription(billLanguage, hours, description);
 
-  // State for dynamically composed template URLs
-  const [frontBackgroundUrl, setFrontBackgroundUrl] = useState<string>('');
-  const [frontBadgesUrl, setFrontBadgesUrl] = useState<string>('');
-  const [frontFrameUrl, setFrontFrameUrl] = useState<string>('');
-  const [backBackgroundUrl, setBackBackgroundUrl] = useState<string>('');
-  const [backBadgesUrl, setBackBadgesUrl] = useState<string>('');
-  const [backFrameUrl, setBackFrameUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Compose templates when hours or billLanguage changes
+  // Load v2 template when templateId changes
   useEffect(() => {
     let mounted = true;
     setIsLoading(true);
 
-    async function loadTemplates() {
-      const [frontLayers, backLayers] = await Promise.all([
-        getTemplateLayers(hours, billLanguage, 'front'),
-        getTemplateLayers(hours, billLanguage, 'back'),
-      ]);
-      if (mounted) {
-        setFrontBackgroundUrl(frontLayers.background);
-        setFrontBadgesUrl(frontLayers.badges);
-        setFrontFrameUrl(frontLayers.frame);
-        setBackBackgroundUrl(backLayers.background);
-        setBackBadgesUrl(backLayers.badges);
-        setBackFrameUrl(backLayers.frame);
-        setIsLoading(false);
+    async function loadV2Template() {
+      try {
+        clearRendererCache();
+        const tmpl = await getTemplateByIdV2(templateId);
+        if (mounted) {
+          setTemplateV2(tmpl);
+          setIsLoading(false);
+        }
+      } catch (err) {
+        console.error('[BillPreview] Failed to load template:', err);
+        if (mounted) {
+          setTemplateV2(null);
+          setIsLoading(false);
+        }
       }
     }
 
-    loadTemplates();
+    loadV2Template();
     return () => { mounted = false; };
-  }, [hours, billLanguage]);
+  }, [templateId]);
 
-  // Render front side
+  // Helper to load portrait image for v2 renderer
+  const loadPortraitImage = useCallback(async (dataUrl: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
+  }, []);
+
+  // Render front side with v2 renderer
   useEffect(() => {
-    if (!frontCanvasRef.current || !frontBackgroundUrl || !frontBadgesUrl || !frontFrameUrl) return;
+    if (!frontCanvasRef.current || !templateV2) return;
+    let cancelled = false;
 
-    renderFrontSide(
-      frontCanvasRef.current,
-      frontBackgroundUrl,
-      frontBadgesUrl,
-      frontFrameUrl,
-      currentPortrait,
-      personalInfo.name,
-      layout.front,
-      template.width,
-      template.height,
-      portrait.zoom,
-      portrait.panX,
-      portrait.panY,
-      debouncedHue,
-      hours,
-      billLanguage
-    );
-  }, [template, frontBackgroundUrl, frontBadgesUrl, frontFrameUrl, currentPortrait, personalInfo.name, layout, portrait.zoom, portrait.panX, portrait.panY, debouncedHue, hours, billLanguage]);
+    const render = async () => {
+      const renderData: Record<string, unknown> = {
+        name: personalInfo.name || '',
+        hours: hours,
+        email: personalInfo.email || '',
+        phone: personalInfo.phone || '',
+        description: displayDescription,
+      };
 
-  // Render back side
+      let portraitImage: HTMLImageElement | null = null;
+      if (currentPortrait) {
+        portraitImage = await loadPortraitImage(currentPortrait);
+      }
+
+      // Don't render if effect was cancelled (dependencies changed)
+      if (cancelled || !frontCanvasRef.current) return;
+
+      await renderTemplate(frontCanvasRef.current, templateV2, renderData, 'front', {
+        scale: 0.5,
+        hue: debouncedHue,
+        language: billLanguage,
+        portraitImage,
+        portraitTransform: {
+          scale: portrait.zoom,
+          offsetX: portrait.panX,
+          offsetY: portrait.panY,
+        },
+      });
+    };
+
+    render();
+    return () => { cancelled = true; };
+  }, [templateV2, currentPortrait, personalInfo, displayDescription, portrait.zoom, portrait.panX, portrait.panY, debouncedHue, hours, billLanguage, loadPortraitImage]);
+
+  // Render back side with v2 renderer
   useEffect(() => {
-    if (!backCanvasRef.current || !backBackgroundUrl || !backBadgesUrl || !backFrameUrl) return;
+    if (!backCanvasRef.current || !templateV2) return;
+    let cancelled = false;
 
-    renderBackSide(
-      backCanvasRef.current,
-      backBackgroundUrl,
-      backBadgesUrl,
-      backFrameUrl,
-      currentPortrait,
-      personalInfo.name,
-      personalInfo.email,
-      personalInfo.phone,
-      displayDescription,
-      layout.back,
-      template.width,
-      template.height,
-      portrait.zoom,
-      portrait.panX,
-      portrait.panY,
-      debouncedHue,
-      hours,
-      billLanguage
-    );
-  }, [template, backBackgroundUrl, backBadgesUrl, backFrameUrl, currentPortrait, personalInfo, displayDescription, layout, portrait.zoom, portrait.panX, portrait.panY, debouncedHue, hours, billLanguage]);
+    const render = async () => {
+      const renderData: Record<string, unknown> = {
+        name: personalInfo.name || '',
+        hours: hours,
+        email: personalInfo.email || '',
+        phone: personalInfo.phone || '',
+        description: displayDescription,
+      };
+
+      let portraitImage: HTMLImageElement | null = null;
+      if (currentPortrait) {
+        portraitImage = await loadPortraitImage(currentPortrait);
+      }
+
+      // Don't render if effect was cancelled (dependencies changed)
+      if (cancelled || !backCanvasRef.current) return;
+
+      await renderTemplate(backCanvasRef.current, templateV2, renderData, 'back', {
+        scale: 0.5,
+        hue: debouncedHue,
+        language: billLanguage,
+        portraitImage,
+        portraitTransform: {
+          scale: portrait.zoom,
+          offsetX: portrait.panX,
+          offsetY: portrait.panY,
+        },
+      });
+    };
+
+    render();
+    return () => { cancelled = true; };
+  }, [templateV2, currentPortrait, personalInfo, displayDescription, portrait.zoom, portrait.panX, portrait.panY, debouncedHue, hours, billLanguage, loadPortraitImage]);
 
   const handleFlip = () => {
     // Toggle the visual flip animation
@@ -162,20 +200,34 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
     if (!containerRef.current || currentSide !== 'front') return false;
 
     const rect = containerRef.current.getBoundingClientRect();
-    const scaleX = rect.width / template.width;
-    const scaleY = rect.height / template.height;
+    const scaleX = rect.width / templateWidth;
+    const scaleY = rect.height / templateHeight;
 
     // Convert click to template coordinates
     const templateX = (clientX - rect.left) / scaleX;
     const templateY = (clientY - rect.top) / scaleY;
 
-    // Check if point is inside portrait ellipse
-    const { x: cx, y: cy, radiusX, radiusY } = layout.front.portrait;
+    // Get portrait dimensions from v2 template
+    if (!templateV2) return false;
+
+    const portraitLayer = templateV2.layout.front.layers.find(
+      (layer) => layer.type === 'field' && 'fieldId' in layer && layer.fieldId === 'portrait'
+    );
+    if (!portraitLayer || !('position' in portraitLayer) || !('size' in portraitLayer)) {
+      return false;
+    }
+
+    const cx = portraitLayer.position.x;
+    const cy = portraitLayer.position.y;
+    const size = portraitLayer.size as { radiusX?: number; radiusY?: number };
+    const radiusX = size?.radiusX || 500;
+    const radiusY = size?.radiusY || 500;
+
     const dx = (templateX - cx) / radiusX;
     const dy = (templateY - cy) / radiusY;
 
     return (dx * dx + dy * dy) <= 1;
-  }, [currentSide, template.width, template.height, layout.front.portrait]);
+  }, [currentSide, templateWidth, templateHeight, templateV2]);
 
   // Drag threshold in pixels - movement below this is considered a click
   const DRAG_THRESHOLD = 5;
@@ -345,7 +397,7 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
   const canPan = currentSide === 'front' && portrait.original;
 
   // Calculate aspect ratio for responsive sizing
-  const aspectRatio = template.width / template.height;
+  const aspectRatio = templateWidth / templateHeight;
 
   return (
     <div className="space-y-2">
@@ -456,16 +508,31 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
           />
 
           {/* Portrait upload overlay - only shown when no photo exists */}
-          {currentSide === 'front' && !portrait.original && (
+          {currentSide === 'front' && !portrait.original && templateV2 && (() => {
+            // Get portrait position from v2 template
+            const portraitLayer = templateV2.layout.front.layers.find(
+              (layer) => layer.type === 'field' && 'fieldId' in layer && layer.fieldId === 'portrait'
+            );
+            if (!portraitLayer || !('position' in portraitLayer) || !('size' in portraitLayer)) {
+              return null;
+            }
+
+            const px = portraitLayer.position.x;
+            const py = portraitLayer.position.y;
+            const size = portraitLayer.size as { radiusX?: number; radiusY?: number };
+            const pRadiusX = size?.radiusX || 500;
+            const pRadiusY = size?.radiusY || 500;
+
+            return (
             <div
               className={`absolute flex flex-col items-center justify-center transition-colors duration-300 ease-in-out pointer-events-none ${
                 isDragOver ? 'bg-primary/20' : 'hover:bg-base-content/5'
               }`}
               style={{
-                left: `${((layout.front.portrait.x - layout.front.portrait.radiusX) / template.width) * 100}%`,
-                top: `${((layout.front.portrait.y - layout.front.portrait.radiusY) / template.height) * 100}%`,
-                width: `${((layout.front.portrait.radiusX * 2) / template.width) * 100}%`,
-                height: `${((layout.front.portrait.radiusY * 2) / template.height) * 100}%`,
+                left: `${((px - pRadiusX) / templateWidth) * 100}%`,
+                top: `${((py - pRadiusY) / templateHeight) * 100}%`,
+                width: `${((pRadiusX * 2) / templateWidth) * 100}%`,
+                height: `${((pRadiusY * 2) / templateHeight) * 100}%`,
                 borderRadius: '50%',
                 backfaceVisibility: 'hidden',
                 WebkitBackfaceVisibility: 'hidden',
@@ -490,7 +557,8 @@ export function BillPreview({ onPortraitClick, onFileDrop }: BillPreviewProps = 
                 <span className="text-[10px] sm:text-xs text-center leading-tight whitespace-pre-line">{appLanguage === 'de' ? 'Foto\nhochladen' : 'Upload\nphoto'}</span>
               </button>
             </div>
-          )}
+            );
+          })()}
         </div>
       </div>
     </div>

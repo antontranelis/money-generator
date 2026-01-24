@@ -1,41 +1,9 @@
-// Canvas rendering
+// PDF generation (V2)
 export {
-  loadImage,
-  drawTemplate,
-  drawOvalPortrait,
-  drawText,
-  drawMultilineText,
-  drawContactInfo,
-  renderFrontSide,
-  renderBackSide,
-  clearHueShiftedCache,
-} from './canvasRenderer';
-
-// Template composition (dynamic template generation)
-export {
-  composeTemplate,
-  composeTemplateFullRes,
-  getTemplateLayers,
-  drawBannerText,
-  getBannerText,
-  getBannerConfig,
-  preloadBaseImages,
-  getTemplateDimensions,
-  clearCompositorCache,
-  preloadAllTemplates,
-  TEMPLATE_WIDTH,
-  TEMPLATE_HEIGHT,
-  PREVIEW_WIDTH,
-  PREVIEW_HEIGHT,
-} from './templateCompositor';
-
-// PDF generation
-export {
-  generateBillPDF,
+  generateBillPdfV2,
   downloadBlob,
-  exportBillAsPDF,
-  terminateWorker,
-} from './pdfGenerator';
+  exportBillAsPdfV2,
+} from './pdfGeneratorV2';
 
 // AI enhancement (Stability AI)
 export {

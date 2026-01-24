@@ -13,6 +13,7 @@ export interface VoucherConfig {
   description: string;
   language: Language;
   templateHue: number; // 0-360, default 0 (no shift)
+  templateId: string; // Template ID (e.g., 'classic-time-voucher')
 }
 
 export interface PortraitState {

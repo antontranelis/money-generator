@@ -1,8 +1,20 @@
+import { useEffect, useState } from 'react';
 import { useBillStore } from '../stores/billStore';
 import { t, formatDescription } from '../constants/translations';
-import { getTemplate, getLayout } from '../constants/templates';
-import { exportBillAsPDF } from '../services/pdfGenerator';
-import { composeTemplateFullRes } from '../services/templateCompositor';
+import { getTemplateByIdV2 } from '../templates';
+import { renderTemplateToDataUrl } from '../templates/genericRenderer';
+import { exportBillAsPdfV2 } from '../services/pdfGeneratorV2';
+import type { TemplateV2 } from '../templates/schema';
+
+// Helper to load portrait image from data URL
+async function loadPortraitImage(dataUrl: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
 
 export function ExportButton() {
   const appLanguage = useBillStore((state) => state.appLanguage);
@@ -10,6 +22,7 @@ export function ExportButton() {
   const hours = useBillStore((state) => state.voucherConfig.hours);
   const description = useBillStore((state) => state.voucherConfig.description);
   const templateHue = useBillStore((state) => state.voucherConfig.templateHue);
+  const templateId = useBillStore((state) => state.voucherConfig.templateId);
   const personalInfo = useBillStore((state) => state.personalInfo);
   const portrait = useBillStore((state) => state.portrait);
   const isExporting = useBillStore((state) => state.isExporting);
@@ -17,8 +30,21 @@ export function ExportButton() {
 
   const trans = t(appLanguage);
 
-  const template = getTemplate(billLanguage, hours);
-  const layout = getLayout(billLanguage);
+  // Load V2 template
+  const [templateV2, setTemplateV2] = useState<TemplateV2 | null>(null);
+
+  useEffect(() => {
+    async function loadTemplate() {
+      try {
+        const idToLoad = templateId || 'classic-time-voucher';
+        const template = await getTemplateByIdV2(idToLoad);
+        setTemplateV2(template);
+      } catch (err) {
+        console.error('[ExportButton] Failed to load template:', err);
+      }
+    }
+    loadTemplate();
+  }, [templateId]);
 
   // Use rawImage as fallback while portrait.original is being recomputed after reload
   const currentPortrait =
@@ -26,46 +52,64 @@ export function ExportButton() {
 
   const displayDescription = formatDescription(billLanguage, hours, description);
 
-  // Allow export if we have portrait (original or rawImage)
+  // Allow export if we have portrait (original or rawImage) and template is loaded
   const hasPortrait = portrait.original !== null || portrait.rawImage !== null;
   const canExport =
     personalInfo.name.trim().length > 0 &&
     personalInfo.email.trim().length > 0 &&
     personalInfo.phone.trim().length > 0 &&
-    hasPortrait;
+    hasPortrait &&
+    templateV2 !== null;
 
   const handleExport = async () => {
-    if (!canExport || isExporting) return;
+    if (!canExport || isExporting || !templateV2) return;
 
     setIsExporting(true);
 
     try {
-      // Compose templates at full resolution for PDF export
-      const [frontTemplateSrc, backTemplateSrc] = await Promise.all([
-        composeTemplateFullRes(hours, billLanguage, 'front'),
-        composeTemplateFullRes(hours, billLanguage, 'back'),
+      // Load portrait image
+      let portraitImage: HTMLImageElement | null = null;
+      if (currentPortrait) {
+        portraitImage = await loadPortraitImage(currentPortrait);
+      }
+
+      // Build render data from store
+      const renderData: Record<string, unknown> = {
+        name: personalInfo.name,
+        hours: hours,
+        email: personalInfo.email,
+        phone: personalInfo.phone,
+        description: displayDescription,
+      };
+
+      // Render options for full resolution (scale = 1)
+      const renderOptions = {
+        scale: 1,
+        hue: templateHue,
+        language: billLanguage,
+        portraitImage,
+        portraitTransform: {
+          scale: portrait.zoom,
+          offsetX: portrait.panX,
+          offsetY: portrait.panY,
+        },
+      };
+
+      // Render both sides at full resolution using V2 renderer
+      const [frontDataUrl, backDataUrl] = await Promise.all([
+        renderTemplateToDataUrl(templateV2, renderData, 'front', renderOptions),
+        renderTemplateToDataUrl(templateV2, renderData, 'back', renderOptions),
       ]);
 
       const filename = `zeitgutschein-${hours}h-${personalInfo.name.replace(/\s+/g, '-').toLowerCase()}.pdf`;
 
-      await exportBillAsPDF({
-        frontTemplateSrc,
-        backTemplateSrc,
-        templateWidth: template.width,
-        templateHeight: template.height,
-        layout,
-        portrait: currentPortrait,
-        portraitZoom: portrait.zoom,
-        portraitPanX: portrait.panX,
-        portraitPanY: portrait.panY,
-        templateHue,
-        name: personalInfo.name,
-        email: personalInfo.email,
-        phone: personalInfo.phone,
-        description: displayDescription,
+      // Export using V2 PDF generator
+      await exportBillAsPdfV2({
+        frontImageDataUrl: frontDataUrl,
+        backImageDataUrl: backDataUrl,
+        templateWidth: templateV2.layout.dimensions.width,
+        templateHeight: templateV2.layout.dimensions.height,
         filename,
-        language: billLanguage,
-        hours,
       });
     } catch (err) {
       console.error('PDF export failed:', err);
