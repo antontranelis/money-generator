@@ -175,12 +175,14 @@ function getColorPalette(config: SpiritualPromptConfig, lang: PromptLanguage): s
 
 function getBackSideText(config: SpiritualPromptConfig, lang: PromptLanguage): string {
   const value = config.voucherValue || (lang === 'de' ? '1 Stunde' : '1 hour');
-  const name = config.personName || (lang === 'de' ? '{{NAME_DER_PERSON}}' : '{{PERSON_NAME}}');
+  const name = config.personName?.trim();
 
   if (lang === 'de') {
     switch (config.backSideStyle) {
       case 'erklaerung':
-        return `Dieser Schein berechtigt zum Empfang von ${value}. Einzulösen bei ${name}.`;
+        return name
+          ? `Dieser Schein berechtigt zum Empfang von ${value}. Einzulösen bei ${name}.`
+          : `Dieser Schein berechtigt zum Empfang von ${value}.`;
       case 'einladung':
         return `Für diesen Schein erhältst du ${value} oder ein gleichwertiges Dankeschön.`;
       case 'mantra':
@@ -189,13 +191,52 @@ function getBackSideText(config: SpiritualPromptConfig, lang: PromptLanguage): s
   } else {
     switch (config.backSideStyle) {
       case 'erklaerung':
-        return `This voucher entitles you to receive ${value}. Redeemable with ${name}.`;
+        return name
+          ? `This voucher entitles you to receive ${value}. Redeemable with ${name}.`
+          : `This voucher entitles you to receive ${value}.`;
       case 'einladung':
         return `For this voucher you will receive ${value} or an equivalent token of gratitude.`;
       case 'mantra':
         return `${value}. In connection. In gratitude.`;
     }
   }
+}
+
+/**
+ * Build the contact info section for the back side
+ * Only includes fields that are actually filled in
+ */
+function buildContactInfoSection(config: SpiritualPromptConfig, lang: PromptLanguage): string {
+  const lines: string[] = [];
+
+  if (config.personName?.trim()) {
+    lines.push(`  – ${config.personName.trim()}`);
+  }
+  if (config.contactEmail?.trim()) {
+    lines.push(`  – ${config.contactEmail.trim()}`);
+  }
+  if (config.contactPhone?.trim()) {
+    lines.push(`  – ${config.contactPhone.trim()}`);
+  }
+  if (config.contactWebsite?.trim()) {
+    lines.push(`  – ${config.contactWebsite.trim()}`);
+  }
+  if (config.contactSocial?.trim()) {
+    lines.push(`  – ${config.contactSocial.trim()}`);
+  }
+
+  if (lines.length === 0) {
+    return lang === 'de'
+      ? '– Linke Seite:\n  – Platz für persönliche Kontaktdaten\n  – Alle Angaben ohne erklärende Labels'
+      : '– Left side:\n  – Space for personal contact details\n  – All information without explanatory labels';
+  }
+
+  const header = lang === 'de' ? '– Linke Seite:' : '– Left side:';
+  const footer = lang === 'de'
+    ? '  – Alle Angaben ohne erklärende Labels'
+    : '  – All information without explanatory labels';
+
+  return `${header}\n${lines.join('\n')}\n${footer}`;
 }
 
 export function generateSpiritualPrompt(config: SpiritualPromptConfig): string {
@@ -206,7 +247,7 @@ export function generateSpiritualPrompt(config: SpiritualPromptConfig): string {
   const feelingsText = config.feelings.map((f) => t.feelings[f]).join(', ');
   const colorPalette = getColorPalette(config, lang);
   const backSideText = getBackSideText(config, lang);
-  const personName = config.personName || (lang === 'de' ? '{{NAME_DER_PERSON}}' : '{{PERSON_NAME}}');
+  const contactInfoSection = buildContactInfoSection(config, lang);
 
   const photoNote = config.centralMotif === 'portrait'
     ? (lang === 'de'
@@ -255,13 +296,7 @@ RÜCKSEITE (${t.backSideStyle[config.backSideStyle]}):
 – Keine Kästen, Panels oder umrahmten Flächen
 
 Layout der Rückseite:
-– Linke Seite:
-  – ${personName}
-  – ${config.contactEmail || 'E-Mail-Adresse'}
-  – ${config.contactPhone || 'Telefonnummer'}
-  – ${config.contactWebsite || 'Webseite'}
-  – ${config.contactSocial || 'Social-Media-Handle'}
-  – Alle Angaben ohne erklärende Labels
+${contactInfoSection}
 
 – Rechte Seite:
   – Der Text: „${backSideText}"
@@ -333,13 +368,7 @@ BACK SIDE (${t.backSideStyle[config.backSideStyle]}):
 – No boxes, panels or framed areas
 
 Back Side Layout:
-– Left side:
-  – ${personName}
-  – ${config.contactEmail || 'Email address'}
-  – ${config.contactPhone || 'Phone number'}
-  – ${config.contactWebsite || 'Website'}
-  – ${config.contactSocial || 'Social media handle'}
-  – All information without explanatory labels
+${contactInfoSection}
 
 – Right side:
   – The text: "${backSideText}"
