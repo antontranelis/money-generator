@@ -105,7 +105,7 @@
         "id": "email",
         "type": "email",
         "label": { "de": "E-Mail", "en": "Email" },
-        "required": false,
+        "required": true,
         "ui": {
           "placeholder": { "de": "max@beispiel.de", "en": "john@example.com" },
           "order": 4,
@@ -116,7 +116,7 @@
         "id": "phone",
         "type": "tel",
         "label": { "de": "Telefon", "en": "Phone" },
-        "required": false,
+        "required": true,
         "config": {
           "format": "international"
         },

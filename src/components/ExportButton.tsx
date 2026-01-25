@@ -32,18 +32,30 @@ export function ExportButton() {
 
   // Load V2 template
   const [templateV2, setTemplateV2] = useState<TemplateV2 | null>(null);
+  const [isTemplateLoading, setIsTemplateLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+    setIsTemplateLoading(true);
+
     async function loadTemplate() {
       try {
         const idToLoad = templateId || 'classic-time-voucher';
         const template = await getTemplateByIdV2(idToLoad);
-        setTemplateV2(template);
+        if (!cancelled) {
+          setTemplateV2(template);
+          setIsTemplateLoading(false);
+        }
       } catch (err) {
         console.error('[ExportButton] Failed to load template:', err);
+        if (!cancelled) {
+          setIsTemplateLoading(false);
+        }
       }
     }
     loadTemplate();
+
+    return () => { cancelled = true; };
   }, [templateId]);
 
   // Use rawImage as fallback while portrait.original is being recomputed after reload
@@ -52,14 +64,33 @@ export function ExportButton() {
 
   const displayDescription = formatDescription(billLanguage, hours, description);
 
-  // Allow export if we have portrait (original or rawImage) and template is loaded
+  // Check if template requires portrait based on portraitEditing features
+  const templateRequiresPortrait = templateV2?.features?.portraitEditing
+    ? Object.values(templateV2.features.portraitEditing).some(v => v === true)
+    : true; // Default to requiring portrait for backwards compatibility
+
+  // Check which fields are required by the template
+  const isFieldRequired = (fieldId: string): boolean => {
+    if (!templateV2?.schema?.fields) return true; // Default to required for backwards compatibility
+    const field = templateV2.schema.fields.find(f => f.id === fieldId);
+    return field?.required ?? true;
+  };
+
+  // Allow export if all required fields are filled and template is loaded
   const hasPortrait = portrait.original !== null || portrait.rawImage !== null;
+  const portraitValid = !templateRequiresPortrait || hasPortrait;
+  const nameValid = !isFieldRequired('name') || personalInfo.name.trim().length > 0;
+  const emailValid = !isFieldRequired('email') || personalInfo.email.trim().length > 0;
+  const phoneValid = !isFieldRequired('phone') || personalInfo.phone.trim().length > 0;
+
+  // Can export only when template is loaded and all required fields are valid
   const canExport =
-    personalInfo.name.trim().length > 0 &&
-    personalInfo.email.trim().length > 0 &&
-    personalInfo.phone.trim().length > 0 &&
-    hasPortrait &&
-    templateV2 !== null;
+    !isTemplateLoading &&
+    templateV2 !== null &&
+    nameValid &&
+    emailValid &&
+    phoneValid &&
+    portraitValid;
 
   const handleExport = async () => {
     if (!canExport || isExporting || !templateV2) return;
@@ -123,9 +154,9 @@ export function ExportButton() {
       className={`btn btn-primary w-full btn-md ${!canExport ? 'btn-disabled' : ''}`}
       onClick={handleExport}
       disabled={!canExport}
-      aria-busy={isExporting}
+      aria-busy={isExporting || isTemplateLoading}
     >
-      {isExporting ? (
+      {isExporting || isTemplateLoading ? (
         <span className="loading loading-spinner loading-sm"></span>
       ) : (
         <svg

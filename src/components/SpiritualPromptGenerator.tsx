@@ -393,8 +393,8 @@ interface ColorSchemeCardProps {
   info?: string;
   options: { value: string; label: string }[];
   tooltips?: Record<string, string>;
-  currentValue: string;
-  onChange: (value: string) => void;
+  currentValue: ColorScheme;
+  onChange: (value: ColorScheme) => void;
 }
 
 function ColorSchemeCard({ title, info, options, tooltips, currentValue, onChange }: ColorSchemeCardProps) {
@@ -408,7 +408,7 @@ function ColorSchemeCard({ title, info, options, tooltips, currentValue, onChang
             <div key={opt.value} className="tooltip" data-tip={tooltips?.[opt.value]}>
               <button
                 className={`btn btn-sm gap-2 ${currentValue === opt.value ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => onChange(opt.value)}
+                onClick={() => onChange(opt.value as ColorScheme)}
               >
                 <div className="flex gap-0.5">
                   {colorSwatches[opt.value]?.slice(0, 4).map((color, i) => (
