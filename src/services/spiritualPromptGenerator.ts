@@ -255,8 +255,14 @@ export function generateSpiritualPrompt(config: SpiritualPromptConfig): string {
       : '\n\nNOTE: A reference photo is attached to this prompt. Use this photo as the basis for the portrait on the voucher.')
     : '';
 
+  const qrCodeNote = config.qrCodeEnabled === 'yes' && config.qrCodeUrl?.trim()
+    ? (lang === 'de'
+      ? '\n\nHINWEIS: Ein QR-Code-Bild ist beigefügt. Integriere diesen QR-Code dezent in das Design der Rückseite, z.B. in einer Ecke oder neben den Kontaktdaten. Der QR-Code muss exakt wie im Referenzbild aussehen und scannbar bleiben.'
+      : '\n\nNOTE: A QR code image is attached. Integrate this QR code subtly into the back side design, e.g. in a corner or next to the contact details. The QR code must look exactly like the reference image and remain scannable.')
+    : '';
+
   if (lang === 'de') {
-    return `Erzeuge einen spirituellen, rahmenlosen Schein als zusammengehörige Vorder- und Rückseite, dargestellt nebeneinander als vollständige, professionelle Druckvorlage.${photoNote}
+    return `Erzeuge einen spirituellen, rahmenlosen Schein als zusammengehörige Vorder- und Rückseite, dargestellt nebeneinander als vollständige, professionelle Druckvorlage.${photoNote}${qrCodeNote}
 
 Beide Seiten gehören eindeutig zum gleichen Schein und teilen Farbwelt, Typografie und grafische DNA. Der Schein soll beim Anfassen folgende Gefühle vermitteln: ${feelingsText}.
 
@@ -328,7 +334,7 @@ QUALITÄT:
 – Professionelles, vertrauenswürdiges Erscheinungsbild
 – 4K-Auflösung, gestochen scharf`;
   } else {
-    return `Create a spiritual, frameless voucher as a connected front and back side, displayed side by side as a complete, professional print template.
+    return `Create a spiritual, frameless voucher as a connected front and back side, displayed side by side as a complete, professional print template.${photoNote}${qrCodeNote}
 
 Both sides clearly belong to the same voucher and share color palette, typography and graphic DNA. The voucher should convey the following feelings when held: ${feelingsText}.
 

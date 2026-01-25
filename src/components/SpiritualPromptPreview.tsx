@@ -56,6 +56,8 @@ export function SpiritualPromptPreview() {
   const contactPhone = useSpiritualPromptStore((state) => state.contactPhone);
   const contactWebsite = useSpiritualPromptStore((state) => state.contactWebsite);
   const contactSocial = useSpiritualPromptStore((state) => state.contactSocial);
+  const qrCodeEnabled = useSpiritualPromptStore((state) => state.qrCodeEnabled);
+  const qrCodeUrl = useSpiritualPromptStore((state) => state.qrCodeUrl);
 
   // Memoize the config object
   const config: SpiritualPromptConfig = useMemo(() => ({
@@ -80,7 +82,9 @@ export function SpiritualPromptPreview() {
     contactPhone,
     contactWebsite,
     contactSocial,
-  }), [mood, energy, style, sources, valueDisplay, valuePosition, customValueText, centralMotif, textStyle, textClarity, backSideStyle, feelings, personName, voucherValue, promptLanguage, photoAttachment, colorScheme, contactEmail, contactPhone, contactWebsite, contactSocial]);
+    qrCodeEnabled,
+    qrCodeUrl,
+  }), [mood, energy, style, sources, valueDisplay, valuePosition, customValueText, centralMotif, textStyle, textClarity, backSideStyle, feelings, personName, voucherValue, promptLanguage, photoAttachment, colorScheme, contactEmail, contactPhone, contactWebsite, contactSocial, qrCodeEnabled, qrCodeUrl]);
 
   const prompt = generateSpiritualPrompt(config);
   const negativePrompt = generateNegativePrompt(config);

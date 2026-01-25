@@ -30,6 +30,7 @@ const labels = {
       gefuehl: 'Gefühl beim Anfassen',
       personalisierung: 'Personalisierung',
       kontakt: 'Kontaktdaten',
+      qrCode: 'QR-Code',
       sprache: 'Prompt-Sprache',
       farben: 'Farbschema',
     },
@@ -191,9 +192,12 @@ const labels = {
       phone: 'Telefonnummer',
       website: 'Webseite',
       social: 'Social Media (@handle)',
+      qrCodeUrl: 'URL für QR-Code (z.B. https://example.com)',
     },
-    hints: {
-      portraitPhoto: 'Füge dem Prompt ein Foto der Person bei, damit das Portrait erstellt werden kann.',
+    qrCode: {
+      enabled: 'QR-Code aktivieren',
+      description: 'Ein QR-Code wird dezent auf der Rückseite des Scheins integriert',
+      invalidUrl: 'Bitte gib eine gültige URL ein',
     },
     reset: 'Zurücksetzen',
   },
@@ -208,6 +212,7 @@ const labels = {
       gefuehl: 'Feeling When Held',
       personalisierung: 'Personalization',
       kontakt: 'Contact Details',
+      qrCode: 'QR Code',
       sprache: 'Prompt Language',
       farben: 'Color Scheme',
     },
@@ -369,9 +374,12 @@ const labels = {
       phone: 'Phone number',
       website: 'Website',
       social: 'Social media (@handle)',
+      qrCodeUrl: 'URL for QR code (e.g. https://example.com)',
     },
-    hints: {
-      portraitPhoto: 'Attach a photo of the person to the prompt so the portrait can be created.',
+    qrCode: {
+      enabled: 'Enable QR code',
+      description: 'A QR code will be subtly integrated on the back of the voucher',
+      invalidUrl: 'Please enter a valid URL',
     },
     reset: 'Reset',
   },
@@ -560,6 +568,8 @@ export function SpiritualPromptGenerator() {
   const contactPhone = useSpiritualPromptStore((state) => state.contactPhone);
   const contactWebsite = useSpiritualPromptStore((state) => state.contactWebsite);
   const contactSocial = useSpiritualPromptStore((state) => state.contactSocial);
+  const qrCodeEnabled = useSpiritualPromptStore((state) => state.qrCodeEnabled);
+  const qrCodeUrl = useSpiritualPromptStore((state) => state.qrCodeUrl);
 
   // Store actions
   const setMood = useSpiritualPromptStore((state) => state.setMood);
@@ -582,11 +592,24 @@ export function SpiritualPromptGenerator() {
   const setContactPhone = useSpiritualPromptStore((state) => state.setContactPhone);
   const setContactWebsite = useSpiritualPromptStore((state) => state.setContactWebsite);
   const setContactSocial = useSpiritualPromptStore((state) => state.setContactSocial);
+  const setQrCodeEnabled = useSpiritualPromptStore((state) => state.setQrCodeEnabled);
+  const setQrCodeUrl = useSpiritualPromptStore((state) => state.setQrCodeUrl);
   const reset = useSpiritualPromptStore((state) => state.reset);
 
   // Helper to convert label objects to option arrays
   const toOptions = <T extends string>(labelObj: Record<T, string>) =>
     (Object.entries(labelObj) as [T, string][]).map(([value, label]) => ({ value, label }));
+
+  // Helper to validate QR code URL
+  const isValidQrUrl = (url: string): boolean => {
+    if (!url.trim()) return false;
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -683,26 +706,7 @@ export function SpiritualPromptGenerator() {
         tooltips={t.centralMotifTooltip}
         currentValue={centralMotif}
         onChange={setCentralMotif}
-      >
-        {centralMotif === 'portrait' && (
-          <div className="alert alert-info mt-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              className="stroke-current shrink-0 w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span>{t.hints.portraitPhoto}</span>
-          </div>
-        )}
-      </SingleSelectCard>
+      />
 
       {/* 5. Sprache & Textgefühl - Text Style */}
       <SingleSelectCard<TextStyle>
@@ -818,6 +822,41 @@ export function SpiritualPromptGenerator() {
               onChange={(e) => setContactSocial(e.target.value)}
             />
           </div>
+        </div>
+      </div>
+
+      {/* 10. QR-Code */}
+      <div className="card bg-base-100 shadow-xl">
+        <div className="card-body">
+          <h3 className="card-title text-sm">{t.sections.qrCode}</h3>
+          <p className="text-xs text-base-content/60 -mt-1">{t.qrCode.description}</p>
+
+          <div className="form-control">
+            <label className="label cursor-pointer justify-start gap-3">
+              <input
+                type="checkbox"
+                className="toggle toggle-primary"
+                checked={qrCodeEnabled === 'yes'}
+                onChange={(e) => setQrCodeEnabled(e.target.checked ? 'yes' : 'no')}
+              />
+              <span className="label-text">{t.qrCode.enabled}</span>
+            </label>
+          </div>
+
+          {qrCodeEnabled === 'yes' && (
+            <div className="space-y-2">
+              <input
+                type="url"
+                className={`input input-bordered w-full ${qrCodeUrl && !isValidQrUrl(qrCodeUrl) ? 'input-error' : ''}`}
+                placeholder={t.placeholders.qrCodeUrl}
+                value={qrCodeUrl}
+                onChange={(e) => setQrCodeUrl(e.target.value)}
+              />
+              {qrCodeUrl && !isValidQrUrl(qrCodeUrl) && (
+                <p className="text-xs text-error">{t.qrCode.invalidUrl}</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

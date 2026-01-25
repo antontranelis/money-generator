@@ -1,5 +1,6 @@
 import type { SpiritualPromptConfig } from '../types/spiritualPrompt';
 import { generateSpiritualPrompt, generateNegativePrompt } from './spiritualPromptGenerator';
+import { generateQrCodeBase64, isValidUrl } from './qrCodeGenerator';
 
 const GEMINI_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -58,6 +59,21 @@ export async function generateImageWithGemini(
           data: referenceImage
         }
       });
+    }
+
+    // Add QR code if enabled and URL is valid
+    if (config.qrCodeEnabled === 'yes' && config.qrCodeUrl && isValidUrl(config.qrCodeUrl)) {
+      try {
+        const qrCodeBase64 = await generateQrCodeBase64(config.qrCodeUrl);
+        parts.push({
+          inline_data: {
+            mime_type: 'image/png',
+            data: qrCodeBase64
+          }
+        });
+      } catch (error) {
+        console.warn('Failed to generate QR code:', error);
+      }
     }
 
     const requestBody = {

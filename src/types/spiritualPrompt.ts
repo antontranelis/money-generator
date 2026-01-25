@@ -38,6 +38,8 @@ export type PromptLanguage = 'de' | 'en';
 
 export type PhotoAttachment = 'yes' | 'no';
 
+export type QrCodeEnabled = 'yes' | 'no';
+
 export type ColorScheme =
   | 'gold-gruen'      // Gold & gedämpftes Grün
   | 'blau-silber'     // Tiefblau & Silber
@@ -91,6 +93,10 @@ export interface SpiritualPromptConfig {
 
   // Farbschema
   colorScheme: ColorScheme;
+
+  // QR-Code
+  qrCodeEnabled: QrCodeEnabled;
+  qrCodeUrl: string;
 }
 
 export const DEFAULT_SPIRITUAL_PROMPT_CONFIG: SpiritualPromptConfig = {
@@ -115,6 +121,8 @@ export const DEFAULT_SPIRITUAL_PROMPT_CONFIG: SpiritualPromptConfig = {
   promptLanguage: 'de',
   photoAttachment: 'no',
   colorScheme: 'gold-gruen',
+  qrCodeEnabled: 'no',
+  qrCodeUrl: '',
 };
 
 export const VOUCHER_VALUE_PRESETS = [
@@ -152,5 +160,7 @@ export interface SpiritualPromptState extends SpiritualPromptConfig {
   setPromptLanguage: (lang: PromptLanguage) => void;
   setPhotoAttachment: (photo: PhotoAttachment) => void;
   setColorScheme: (colorScheme: ColorScheme) => void;
+  setQrCodeEnabled: (enabled: QrCodeEnabled) => void;
+  setQrCodeUrl: (url: string) => void;
   reset: () => void;
 }

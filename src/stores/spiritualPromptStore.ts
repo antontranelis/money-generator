@@ -17,6 +17,7 @@ import {
   type PromptLanguage,
   type PhotoAttachment,
   type ColorScheme,
+  type QrCodeEnabled,
   DEFAULT_SPIRITUAL_PROMPT_CONFIG,
 } from '../types/spiritualPrompt';
 import { indexedDBStorage } from './indexedDBStorage';
@@ -82,6 +83,10 @@ export const useSpiritualPromptStore = create<SpiritualPromptState>()(
 
       setColorScheme: (colorScheme: ColorScheme) => set({ colorScheme }),
 
+      setQrCodeEnabled: (qrCodeEnabled: QrCodeEnabled) => set({ qrCodeEnabled }),
+
+      setQrCodeUrl: (qrCodeUrl: string) => set({ qrCodeUrl }),
+
       reset: () => set(DEFAULT_SPIRITUAL_PROMPT_CONFIG),
     }),
     {
@@ -111,6 +116,8 @@ export const useSpiritualPromptStore = create<SpiritualPromptState>()(
         promptLanguage: state.promptLanguage,
         photoAttachment: state.photoAttachment,
         colorScheme: state.colorScheme,
+        qrCodeEnabled: state.qrCodeEnabled,
+        qrCodeUrl: state.qrCodeUrl,
       }),
     }
   )

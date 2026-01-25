@@ -78,6 +78,8 @@ export function GeminiImageGenerator() {
   const contactPhone = useSpiritualPromptStore((state) => state.contactPhone);
   const contactWebsite = useSpiritualPromptStore((state) => state.contactWebsite);
   const contactSocial = useSpiritualPromptStore((state) => state.contactSocial);
+  const qrCodeEnabled = useSpiritualPromptStore((state) => state.qrCodeEnabled);
+  const qrCodeUrl = useSpiritualPromptStore((state) => state.qrCodeUrl);
 
   const config: SpiritualPromptConfig = useMemo(() => ({
     mood,
@@ -101,7 +103,9 @@ export function GeminiImageGenerator() {
     contactPhone,
     contactWebsite,
     contactSocial,
-  }), [mood, energy, style, sources, valueDisplay, valuePosition, customValueText, centralMotif, textStyle, textClarity, backSideStyle, feelings, personName, voucherValue, promptLanguage, photoAttachment, colorScheme, contactEmail, contactPhone, contactWebsite, contactSocial]);
+    qrCodeEnabled,
+    qrCodeUrl,
+  }), [mood, energy, style, sources, valueDisplay, valuePosition, customValueText, centralMotif, textStyle, textClarity, backSideStyle, feelings, personName, voucherValue, promptLanguage, photoAttachment, colorScheme, contactEmail, contactPhone, contactWebsite, contactSocial, qrCodeEnabled, qrCodeUrl]);
 
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
