@@ -59,6 +59,8 @@ export interface RenderOptions {
   hue?: number;
   /** Aktuelle Sprache */
   language?: string;
+  /** Welche Seite wird gerendert */
+  side?: 'front' | 'back';
   /** Portrait-Bild (bereits verarbeitet) */
   portraitImage?: HTMLImageElement | null;
   /** Portrait-Transform (zoom, pan) */
@@ -238,6 +240,34 @@ function processTemplateFunction(
 // =============================================================================
 
 /**
+ * Resolve asset source - supports both legacy (background/frontFrame/backFrame)
+ * and new format (front/back)
+ */
+function resolveAssetSource(template: TemplateV2, source: string, side: 'front' | 'back'): string | undefined {
+  const assets = template.assets;
+
+  // Direct source mapping (e.g., "front", "back", "background", etc.)
+  if (source === 'front' && assets.front) return assets.front;
+  if (source === 'back' && assets.back) return assets.back;
+  if (source === 'background' && assets.background) return assets.background;
+  if (source === 'frontFrame' && assets.frontFrame) return assets.frontFrame;
+  if (source === 'backFrame' && assets.backFrame) return assets.backFrame;
+
+  // Fallback: if source is "background" but template uses new format, use front/back based on side
+  if (source === 'background') {
+    if (side === 'front' && assets.front) return assets.front;
+    if (side === 'back' && assets.back) return assets.back;
+  }
+
+  // Check decorations
+  if (assets.decorations && assets.decorations[source]) {
+    return assets.decorations[source];
+  }
+
+  return undefined;
+}
+
+/**
  * Render Background Layer
  */
 async function renderBackgroundLayer(
@@ -246,8 +276,10 @@ async function renderBackgroundLayer(
   template: TemplateV2,
   options: RenderOptions
 ): Promise<void> {
-  const { scale = 1, hue = 0 } = options;
-  const src = template.assets.background;
+  const { scale = 1, hue = 0, side = 'front' } = options;
+  const src = resolveAssetSource(template, layer.source, side);
+
+  if (!src) return;
 
   const img = layer.hueShift ? await applyHueShiftCached(src, hue) : await loadCachedImage(src);
 
@@ -815,6 +847,9 @@ export async function renderTemplate(
   const { scale = 1, portraitImage, portraitTransform } = options;
   const { width, height } = template.layout.dimensions;
 
+  // Merge side into options for layer renderers
+  const renderOptions: RenderOptions = { ...options, side };
+
   // Canvas-Größe setzen
   canvas.width = width * scale;
   canvas.height = height * scale;
@@ -849,7 +884,7 @@ export async function renderTemplate(
       }
     }
 
-    await renderLayer(ctx, layer, template, data, options);
+    await renderLayer(ctx, layer, template, data, renderOptions);
   }
 }
 

@@ -140,12 +140,16 @@ export interface FontAsset {
  * Alle Template-Assets
  */
 export interface TemplateAssets {
-  /** Hintergrundbild (WebP/PNG) */
-  background: string;
-  /** Frame für Vorderseite (optional) */
+  /** Hintergrundbild (WebP/PNG) - Legacy Format */
+  background?: string;
+  /** Frame für Vorderseite (optional) - Legacy Format */
   frontFrame?: string;
-  /** Frame für Rückseite (optional) */
+  /** Frame für Rückseite (optional) - Legacy Format */
   backFrame?: string;
+  /** Vollbild für Vorderseite (WebP/PNG) - Neues Format */
+  front?: string;
+  /** Vollbild für Rückseite (WebP/PNG) - Neues Format */
+  back?: string;
   /** Badge-System */
   badges?: BadgeAssets;
   /** Dekorative Elemente */
