@@ -13,6 +13,7 @@ const labels = {
     negativePrompt: 'Negativer Prompt',
     showNegative: 'Negativen Prompt anzeigen',
     hideNegative: 'Negativen Prompt verbergen',
+    portraitHint: 'Füge dem Prompt ein Foto der Person bei, damit das Portrait erstellt werden kann.',
   },
   en: {
     title: 'Generated Prompt',
@@ -21,6 +22,7 @@ const labels = {
     negativePrompt: 'Negative Prompt',
     showNegative: 'Show negative prompt',
     hideNegative: 'Hide negative prompt',
+    portraitHint: 'Attach a photo of the person to the prompt so the portrait can be created.',
   },
 };
 
@@ -153,6 +155,15 @@ export function SpiritualPromptPreview() {
               )}
             </button>
           </div>
+
+          {centralMotif === 'portrait' && (
+            <div className="alert alert-info mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <span>{t.portraitHint}</span>
+            </div>
+          )}
 
           <div className="bg-base-200 rounded-lg p-4 max-h-96 overflow-y-auto">
             <pre className="whitespace-pre-wrap text-sm font-mono">{prompt}</pre>
