@@ -76,6 +76,8 @@ function resolveAssetPaths(
   return {
     ...assets,
     background: resolvePath(assets.background) || assets.background,
+    front: resolvePath(assets.front),
+    back: resolvePath(assets.back),
     frontFrame: resolvePath(assets.frontFrame),
     backFrame: resolvePath(assets.backFrame),
     badges: assets.badges
