@@ -226,7 +226,7 @@ export function GeminiImageGenerator() {
 
         {/* Generate Button */}
         <button
-          className={`btn btn-primary w-full ${isGenerating ? 'loading' : ''}`}
+          className="btn btn-primary w-full"
           onClick={handleGenerate}
           disabled={isGenerating || !apiKey || (centralMotif === 'portrait' && !referenceImage)}
         >
