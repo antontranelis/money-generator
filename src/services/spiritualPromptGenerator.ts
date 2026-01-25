@@ -301,7 +301,7 @@ ${contactInfoSection}
 – Rechte Seite:
   – Der Text: „${backSideText}"
   – Frei im Layout platziert, organisch eingebettet
-  – Darunter ein leeres Unterschriftenfeld (keine vorgedruckte Unterschrift, damit der Nutzer nach dem Druck selbst signieren kann)
+  – Darunter freier Bereich für handschriftliche Unterschrift (Unterschriftenfeld leer lassen, keine vorgedruckte Unterschrift)
 
 FARBWELT:
 – ${colorPalette}
@@ -373,7 +373,7 @@ ${contactInfoSection}
 – Right side:
   – The text: "${backSideText}"
   – Freely placed in layout, organically embedded
-  – Below: an empty signature field (no pre-printed signature, so the user can sign themselves after printing)
+  – Below: free area for handwritten signature (leave signature field empty, no pre-printed signature)
 
 COLOR PALETTE:
 – ${colorPalette}
