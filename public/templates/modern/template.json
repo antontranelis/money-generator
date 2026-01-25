@@ -122,10 +122,10 @@
 
   "layout": {
     "dimensions": {
-      "width": 2840,
-      "height": 1337,
+      "width": 3707,
+      "height": 1920,
       "dpi": 600,
-      "physicalSize": "138.6mm x 72.9mm"
+      "physicalSize": "157mm x 81mm"
     },
 
     "front": {
@@ -148,9 +148,9 @@
         {
           "type": "field",
           "fieldId": "name",
-          "position": { "x": 480, "y": 560, "anchor": "left" },
+          "position": { "x": 627, "y": 804, "anchor": "left" },
           "style": {
-            "fontSize": 80,
+            "fontSize": 105,
             "fontFamily": "Georgia, Times New Roman, serif",
             "fontWeight": "bold",
             "color": "#5a4a3a"
@@ -161,9 +161,9 @@
         {
           "type": "field",
           "fieldId": "email",
-          "position": { "x": 480, "y": 690, "anchor": "left" },
+          "position": { "x": 627, "y": 991, "anchor": "left" },
           "style": {
-            "fontSize": 65,
+            "fontSize": 85,
             "fontFamily": "Georgia, Times New Roman, serif",
             "fontWeight": "normal",
             "color": "#6a5a4a"
@@ -174,9 +174,9 @@
         {
           "type": "field",
           "fieldId": "phone",
-          "position": { "x": 480, "y": 800, "anchor": "left" },
+          "position": { "x": 627, "y": 1149, "anchor": "left" },
           "style": {
-            "fontSize": 65,
+            "fontSize": 85,
             "fontFamily": "Georgia, Times New Roman, serif",
             "fontWeight": "normal",
             "color": "#6a5a4a"
@@ -187,9 +187,9 @@
         {
           "type": "field",
           "fieldId": "website",
-          "position": { "x": 680, "y": 970, "anchor": "left" },
+          "position": { "x": 888, "y": 1393, "anchor": "left" },
           "style": {
-            "fontSize": 65,
+            "fontSize": 85,
             "fontFamily": "Georgia, Times New Roman, serif",
             "fontWeight": "normal",
             "color": "#6a5a4a"
@@ -200,9 +200,9 @@
         {
           "type": "field",
           "fieldId": "social",
-          "position": { "x": 680, "y": 1080, "anchor": "left" },
+          "position": { "x": 888, "y": 1551, "anchor": "left" },
           "style": {
-            "fontSize": 65,
+            "fontSize": 85,
             "fontFamily": "Georgia, Times New Roman, serif",
             "fontWeight": "normal",
             "color": "#6a5a4a"
@@ -213,16 +213,16 @@
         {
           "type": "field",
           "fieldId": "description",
-          "position": { "x": 2120, "y": 660, "anchor": "right" },
+          "position": { "x": 2767, "y": 948, "anchor": "right" },
           "style": {
-            "fontSize": 60,
+            "fontSize": 78,
             "fontFamily": "Georgia, Times New Roman, serif",
             "fontWeight": "normal",
             "fontStyle": "italic",
             "color": "#5a4a3a"
           },
-          "maxWidth": 900,
-          "lineHeight": 85,
+          "maxWidth": 1175,
+          "lineHeight": 110,
           "align": "center",
           "multiline": true
         }
