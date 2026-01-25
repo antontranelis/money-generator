@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { useSpiritualPromptStore } from '../stores/spiritualPromptStore';
+import { usePrintGeneratorStore } from '../stores/printGeneratorStore';
 import { useGeminiStore } from '../stores/geminiStore';
 import { useBillStore } from '../stores/billStore';
 import { generateImageWithGemini } from '../services/geminiImageGenerator';
@@ -9,7 +9,7 @@ import {
   downloadBlob,
   downloadBase64Image,
 } from '../services/voucherImageProcessor';
-import type { SpiritualPromptConfig } from '../types/spiritualPrompt';
+import type { PrintGeneratorConfig } from '../types/printGenerator';
 
 const labels = {
   de: {
@@ -77,76 +77,86 @@ export function GeminiImageGenerator() {
   const setResult = useGeminiStore((state) => state.setGenerationResult);
   const processedImages = useGeminiStore((state) => state.processedImages);
   const setProcessedImages = useGeminiStore((state) => state.setProcessedImages);
-  const referenceImage = useGeminiStore((state) => state.referenceImage);
-  const setReferenceImage = useGeminiStore((state) => state.setReferenceImage);
 
   // Local UI state (doesn't need persistence)
   const [isGenerating, setIsGenerating] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
 
-  // Get config from store
-  const mood = useSpiritualPromptStore((state) => state.mood);
-  const energy = useSpiritualPromptStore((state) => state.energy);
-  const style = useSpiritualPromptStore((state) => state.style);
-  const sources = useSpiritualPromptStore((state) => state.sources);
-  const valueDisplay = useSpiritualPromptStore((state) => state.valueDisplay);
-  const valuePosition = useSpiritualPromptStore((state) => state.valuePosition);
-  const customValueText = useSpiritualPromptStore((state) => state.customValueText);
-  const centralMotif = useSpiritualPromptStore((state) => state.centralMotif);
-  const textStyle = useSpiritualPromptStore((state) => state.textStyle);
-  const textClarity = useSpiritualPromptStore((state) => state.textClarity);
-  const backSideStyle = useSpiritualPromptStore((state) => state.backSideStyle);
-  const feelings = useSpiritualPromptStore((state) => state.feelings);
-  const personName = useSpiritualPromptStore((state) => state.personName);
-  const voucherValue = useSpiritualPromptStore((state) => state.voucherValue);
-  const promptLanguage = useSpiritualPromptStore((state) => state.promptLanguage);
-  const photoAttachment = useSpiritualPromptStore((state) => state.photoAttachment);
-  const colorScheme = useSpiritualPromptStore((state) => state.colorScheme);
-  const contactEmail = useSpiritualPromptStore((state) => state.contactEmail);
-  const contactPhone = useSpiritualPromptStore((state) => state.contactPhone);
-  const contactWebsite = useSpiritualPromptStore((state) => state.contactWebsite);
-  const contactSocial = useSpiritualPromptStore((state) => state.contactSocial);
-  const qrCodeEnabled = useSpiritualPromptStore((state) => state.qrCodeEnabled);
-  const qrCodeUrl = useSpiritualPromptStore((state) => state.qrCodeUrl);
+  // Get config from printGeneratorStore
+  const styleContext = usePrintGeneratorStore((state) => state.styleContext);
+  const promptLanguage = usePrintGeneratorStore((state) => state.promptLanguage);
+  const colorScheme = usePrintGeneratorStore((state) => state.colorScheme);
+  const centralMotif = usePrintGeneratorStore((state) => state.centralMotif);
+  const mood = usePrintGeneratorStore((state) => state.mood);
+  const energy = usePrintGeneratorStore((state) => state.energy);
+  const visualStyle = usePrintGeneratorStore((state) => state.visualStyle);
+  const sources = usePrintGeneratorStore((state) => state.sources);
+  const textStyle = usePrintGeneratorStore((state) => state.textStyle);
+  const textClarity = usePrintGeneratorStore((state) => state.textClarity);
+  const feelings = usePrintGeneratorStore((state) => state.feelings);
+  const industry = usePrintGeneratorStore((state) => state.industry);
+  const tone = usePrintGeneratorStore((state) => state.tone);
+  const ctaStyle = usePrintGeneratorStore((state) => state.ctaStyle);
+  const businessValues = usePrintGeneratorStore((state) => state.businessValues);
+  const logoImage = usePrintGeneratorStore((state) => state.logoImage);
+  const portraitImage = usePrintGeneratorStore((state) => state.portraitImage);
+  const valueDisplay = usePrintGeneratorStore((state) => state.valueDisplay);
+  const valuePosition = usePrintGeneratorStore((state) => state.valuePosition);
+  const customValueText = usePrintGeneratorStore((state) => state.customValueText);
+  const voucherValue = usePrintGeneratorStore((state) => state.voucherValue);
+  const backSideStyle = usePrintGeneratorStore((state) => state.backSideStyle);
+  const backSideText = usePrintGeneratorStore((state) => state.backSideText);
+  const personName = usePrintGeneratorStore((state) => state.personName);
+  const contactEmail = usePrintGeneratorStore((state) => state.contactEmail);
+  const contactPhone = usePrintGeneratorStore((state) => state.contactPhone);
+  const contactWebsite = usePrintGeneratorStore((state) => state.contactWebsite);
+  const qrCodeEnabled = usePrintGeneratorStore((state) => state.qrCodeEnabled);
+  const qrCodeUrl = usePrintGeneratorStore((state) => state.qrCodeUrl);
 
-  const config: SpiritualPromptConfig = useMemo(() => ({
+  const config: PrintGeneratorConfig = useMemo(() => ({
+    styleContext,
+    promptLanguage,
+    colorScheme,
+    centralMotif,
     mood,
     energy,
-    style,
+    visualStyle,
     sources,
+    textStyle,
+    textClarity,
+    feelings,
+    industry,
+    tone,
+    ctaStyle,
+    businessValues,
+    logoImage,
+    portraitImage,
     valueDisplay,
     valuePosition,
     customValueText,
-    centralMotif,
-    textStyle,
-    textClarity,
-    backSideStyle,
-    feelings,
-    personName,
     voucherValue,
-    promptLanguage,
-    photoAttachment,
-    colorScheme,
+    backSideStyle,
+    backSideText,
+    personName,
     contactEmail,
     contactPhone,
     contactWebsite,
-    contactSocial,
     qrCodeEnabled,
     qrCodeUrl,
-  }), [mood, energy, style, sources, valueDisplay, valuePosition, customValueText, centralMotif, textStyle, textClarity, backSideStyle, feelings, personName, voucherValue, promptLanguage, photoAttachment, colorScheme, contactEmail, contactPhone, contactWebsite, contactSocial, qrCodeEnabled, qrCodeUrl]);
+  }), [
+    styleContext, promptLanguage, colorScheme, centralMotif,
+    mood, energy, visualStyle, sources, textStyle, textClarity, feelings,
+    industry, tone, ctaStyle, businessValues, logoImage, portraitImage,
+    valueDisplay, valuePosition, customValueText, voucherValue, backSideStyle, backSideText,
+    personName, contactEmail, contactPhone, contactWebsite,
+    qrCodeEnabled, qrCodeUrl
+  ]);
 
-  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64 = (reader.result as string).split(',')[1];
-        setReferenceImage(base64);
-      };
-      reader.readAsDataURL(file);
-    }
-  }, []);
+  // Check if portrait mode is selected (any style with portrait motif)
+  const isPortraitMode = centralMotif === 'portrait';
+  // Check if logo-zentral mode is selected (business style with logo as central element)
+  const isLogoCentralMode = styleContext === 'business' && centralMotif === 'logo-zentral';
 
   const handleGenerate = useCallback(async () => {
     if (!apiKey) {
@@ -158,10 +168,16 @@ export function GeminiImageGenerator() {
     setResult(null);
     setProcessedImages(null);
 
+    // Use portraitImage from printGeneratorStore for portrait mode
+    const portraitImageBase64 = portraitImage
+      ? (portraitImage.includes(',') ? portraitImage.split(',')[1] : portraitImage)
+      : undefined;
+
     const generationResult = await generateImageWithGemini({
       apiKey,
       config,
-      referenceImage: referenceImage || undefined,
+      referenceImage: portraitImageBase64,
+      logoImage: logoImage || undefined,
     });
 
     setResult(generationResult);
@@ -173,7 +189,7 @@ export function GeminiImageGenerator() {
       try {
         const processed = await processVoucherImage({
           imageBase64: generationResult.imageBase64,
-          qrCodeUrl: qrCodeEnabled === 'yes' ? qrCodeUrl : undefined,
+          qrCodeUrl: qrCodeEnabled ? qrCodeUrl : undefined,
         });
         setProcessedImages(processed);
       } catch (error) {
@@ -181,7 +197,7 @@ export function GeminiImageGenerator() {
       }
       setIsProcessing(false);
     }
-  }, [apiKey, config, referenceImage, t.noApiKey, qrCodeEnabled, qrCodeUrl]);
+  }, [apiKey, config, portraitImage, t.noApiKey, qrCodeEnabled, qrCodeUrl, logoImage]);
 
   const handleDownloadFront = useCallback(() => {
     if (processedImages?.frontBase64) {
@@ -220,7 +236,7 @@ export function GeminiImageGenerator() {
     try {
       const processed = await processVoucherImage({
         imageBase64: result.imageBase64,
-        qrCodeUrl: qrCodeEnabled === 'yes' ? qrCodeUrl : undefined,
+        qrCodeUrl: qrCodeEnabled ? qrCodeUrl : undefined,
       });
       setProcessedImages(processed);
     } catch (error) {
@@ -278,37 +294,23 @@ export function GeminiImageGenerator() {
           </div>
         )}
 
-        {/* Reference Image Upload (for portrait mode) */}
-        {centralMotif === 'portrait' && (
-          <div className="form-control w-full">
-            <label className="label">
-              <span className="label-text">{t.referenceImage}</span>
-            </label>
-            {referenceImage ? (
-              <div className="flex items-center gap-4">
-                <img
-                  src={`data:image/png;base64,${referenceImage}`}
-                  alt="Reference"
-                  className="w-20 h-20 object-cover rounded-lg"
-                />
-                <button
-                  className="btn btn-sm btn-ghost text-error"
-                  onClick={() => setReferenceImage(null)}
-                >
-                  {t.removeImage}
-                </button>
-              </div>
-            ) : (
-              <input
-                type="file"
-                accept="image/*"
-                className="file-input file-input-bordered w-full"
-                onChange={handleFileUpload}
-              />
-            )}
-            <label className="label">
-              <span className="label-text-alt text-base-content/60">{t.referenceImageHint}</span>
-            </label>
+        {/* Portrait mode hint - portrait is now uploaded via PrintGenerator */}
+        {isPortraitMode && !portraitImage && (
+          <div className="alert alert-warning">
+            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span className="text-sm">{t.referenceImageHint}</span>
+          </div>
+        )}
+
+        {/* Logo-zentral mode hint - logo is required when logo is central motif */}
+        {isLogoCentralMode && !logoImage && (
+          <div className="alert alert-warning">
+            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span className="text-sm">{appLanguage === 'de' ? 'Bitte lade ein Firmenlogo hoch – es wird als zentrales Element verwendet.' : 'Please upload a company logo – it will be used as the central element.'}</span>
           </div>
         )}
 
@@ -316,7 +318,7 @@ export function GeminiImageGenerator() {
         <button
           className="btn btn-primary w-full"
           onClick={handleGenerate}
-          disabled={isGenerating || !apiKey || (centralMotif === 'portrait' && !referenceImage)}
+          disabled={isGenerating || !apiKey || (isPortraitMode && !portraitImage) || (isLogoCentralMode && !logoImage)}
         >
           {isGenerating ? (
             <>
@@ -362,13 +364,6 @@ export function GeminiImageGenerator() {
         {/* Generated Images - Split View */}
         {result?.success && processedImages && (
           <div className="space-y-4">
-            <div className="alert alert-success">
-              <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span>{t.success}</span>
-            </div>
-
             {/* Front Side */}
             <div className="space-y-2">
               <h4 className="font-medium text-sm">{t.frontSide}</h4>

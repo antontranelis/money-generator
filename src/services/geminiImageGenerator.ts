@@ -1,5 +1,5 @@
-import type { SpiritualPromptConfig } from '../types/spiritualPrompt';
-import { generateSpiritualPrompt, generateNegativePrompt } from './spiritualPromptGenerator';
+import type { PrintGeneratorConfig } from '../types/printGenerator';
+import { generatePrintPrompt, generatePrintNegativePrompt } from './printPromptGenerator';
 
 const GEMINI_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -18,8 +18,9 @@ export interface GeminiGenerationResult {
 
 export interface GeminiGenerationOptions {
   apiKey: string;
-  config: SpiritualPromptConfig;
+  config: PrintGeneratorConfig;
   referenceImage?: string; // Base64 encoded image for portrait mode
+  logoImage?: string; // Base64 encoded logo for business mode
 }
 
 /**
@@ -28,14 +29,14 @@ export interface GeminiGenerationOptions {
 export async function generateImageWithGemini(
   options: GeminiGenerationOptions
 ): Promise<GeminiGenerationResult> {
-  const { apiKey, config, referenceImage } = options;
+  const { apiKey, config, referenceImage, logoImage } = options;
 
   if (!apiKey) {
     return { success: false, error: 'API Key is required' };
   }
 
-  const prompt = generateSpiritualPrompt(config);
-  const negativePrompt = generateNegativePrompt(config);
+  const prompt = generatePrintPrompt(config);
+  const negativePrompt = generatePrintNegativePrompt(config);
 
   // Add image format instructions at the beginning
   const formatInstructions = config.promptLanguage === 'de'
@@ -52,10 +53,27 @@ export async function generateImageWithGemini(
 
     // Add reference image if provided (for portrait mode)
     if (referenceImage && config.centralMotif === 'portrait') {
+      // referenceImage should already be pure base64 (extracted in component)
       parts.push({
         inline_data: {
           mime_type: 'image/png',
           data: referenceImage
+        }
+      });
+    }
+
+    // Add logo image if provided (for business mode - always send if available)
+    if (logoImage && config.styleContext === 'business') {
+      // logoImage may be a data URL (data:image/...;base64,...) - extract pure base64
+      const logoBase64 = logoImage.includes(',') ? logoImage.split(',')[1] : logoImage;
+      // Detect mime type from data URL or default to png
+      const logoMimeType = logoImage.startsWith('data:')
+        ? logoImage.split(';')[0].split(':')[1]
+        : 'image/png';
+      parts.push({
+        inline_data: {
+          mime_type: logoMimeType,
+          data: logoBase64
         }
       });
     }

@@ -1,9 +1,9 @@
 import { useState, useCallback, useMemo } from 'react';
-import { useSpiritualPromptStore } from '../stores/spiritualPromptStore';
+import { usePrintGeneratorStore } from '../stores/printGeneratorStore';
 import { useBillStore } from '../stores/billStore';
-import { generateSpiritualPrompt, generateNegativePrompt } from '../services/spiritualPromptGenerator';
+import { generatePrintPrompt, generatePrintNegativePrompt } from '../services/printPromptGenerator';
 import { GeminiImageGenerator } from './GeminiImageGenerator';
-import type { SpiritualPromptConfig } from '../types/spiritualPrompt';
+import type { PrintGeneratorConfig } from '../types/printGenerator';
 
 const labels = {
   de: {
@@ -14,6 +14,7 @@ const labels = {
     showNegative: 'Negativen Prompt anzeigen',
     hideNegative: 'Negativen Prompt verbergen',
     portraitHint: 'Füge dem Prompt ein Foto der Person bei, damit das Portrait erstellt werden kann.',
+    logoHint: 'Füge dem Prompt das Firmenlogo bei, damit es im Design integriert werden kann.',
   },
   en: {
     title: 'Generated Prompt',
@@ -23,6 +24,7 @@ const labels = {
     showNegative: 'Show negative prompt',
     hideNegative: 'Hide negative prompt',
     portraitHint: 'Attach a photo of the person to the prompt so the portrait can be created.',
+    logoHint: 'Attach the company logo to the prompt so it can be integrated into the design.',
   },
 };
 
@@ -42,60 +44,83 @@ export function SpiritualPromptPreview() {
   const [showNegative, setShowNegative] = useState(false);
   const showPromptCard = useMemo(() => shouldShowPromptCard(), []);
 
-  // Get individual config values from store to avoid object reference issues
-  const mood = useSpiritualPromptStore((state) => state.mood);
-  const energy = useSpiritualPromptStore((state) => state.energy);
-  const style = useSpiritualPromptStore((state) => state.style);
-  const sources = useSpiritualPromptStore((state) => state.sources);
-  const valueDisplay = useSpiritualPromptStore((state) => state.valueDisplay);
-  const valuePosition = useSpiritualPromptStore((state) => state.valuePosition);
-  const customValueText = useSpiritualPromptStore((state) => state.customValueText);
-  const centralMotif = useSpiritualPromptStore((state) => state.centralMotif);
-  const textStyle = useSpiritualPromptStore((state) => state.textStyle);
-  const textClarity = useSpiritualPromptStore((state) => state.textClarity);
-  const backSideStyle = useSpiritualPromptStore((state) => state.backSideStyle);
-  const feelings = useSpiritualPromptStore((state) => state.feelings);
-  const personName = useSpiritualPromptStore((state) => state.personName);
-  const voucherValue = useSpiritualPromptStore((state) => state.voucherValue);
-  const promptLanguage = useSpiritualPromptStore((state) => state.promptLanguage);
-  const photoAttachment = useSpiritualPromptStore((state) => state.photoAttachment);
-  const colorScheme = useSpiritualPromptStore((state) => state.colorScheme);
-  const contactEmail = useSpiritualPromptStore((state) => state.contactEmail);
-  const contactPhone = useSpiritualPromptStore((state) => state.contactPhone);
-  const contactWebsite = useSpiritualPromptStore((state) => state.contactWebsite);
-  const contactSocial = useSpiritualPromptStore((state) => state.contactSocial);
-  const qrCodeEnabled = useSpiritualPromptStore((state) => state.qrCodeEnabled);
-  const qrCodeUrl = useSpiritualPromptStore((state) => state.qrCodeUrl);
+  // Get individual config values from printGeneratorStore
+  const styleContext = usePrintGeneratorStore((state) => state.styleContext);
+  const promptLanguage = usePrintGeneratorStore((state) => state.promptLanguage);
+  const colorScheme = usePrintGeneratorStore((state) => state.colorScheme);
+  const centralMotif = usePrintGeneratorStore((state) => state.centralMotif);
+  const mood = usePrintGeneratorStore((state) => state.mood);
+  const energy = usePrintGeneratorStore((state) => state.energy);
+  const visualStyle = usePrintGeneratorStore((state) => state.visualStyle);
+  const sources = usePrintGeneratorStore((state) => state.sources);
+  const textStyle = usePrintGeneratorStore((state) => state.textStyle);
+  const textClarity = usePrintGeneratorStore((state) => state.textClarity);
+  const feelings = usePrintGeneratorStore((state) => state.feelings);
+  const industry = usePrintGeneratorStore((state) => state.industry);
+  const tone = usePrintGeneratorStore((state) => state.tone);
+  const ctaStyle = usePrintGeneratorStore((state) => state.ctaStyle);
+  const businessValues = usePrintGeneratorStore((state) => state.businessValues);
+  const logoImage = usePrintGeneratorStore((state) => state.logoImage);
+  const portraitImage = usePrintGeneratorStore((state) => state.portraitImage);
+  const valueDisplay = usePrintGeneratorStore((state) => state.valueDisplay);
+  const valuePosition = usePrintGeneratorStore((state) => state.valuePosition);
+  const customValueText = usePrintGeneratorStore((state) => state.customValueText);
+  const voucherValue = usePrintGeneratorStore((state) => state.voucherValue);
+  const backSideStyle = usePrintGeneratorStore((state) => state.backSideStyle);
+  const backSideText = usePrintGeneratorStore((state) => state.backSideText);
+  const personName = usePrintGeneratorStore((state) => state.personName);
+  const contactEmail = usePrintGeneratorStore((state) => state.contactEmail);
+  const contactPhone = usePrintGeneratorStore((state) => state.contactPhone);
+  const contactWebsite = usePrintGeneratorStore((state) => state.contactWebsite);
+  const qrCodeEnabled = usePrintGeneratorStore((state) => state.qrCodeEnabled);
+  const qrCodeUrl = usePrintGeneratorStore((state) => state.qrCodeUrl);
 
   // Memoize the config object
-  const config: SpiritualPromptConfig = useMemo(() => ({
+  const config: PrintGeneratorConfig = useMemo(() => ({
+    styleContext,
+    promptLanguage,
+    colorScheme,
+    centralMotif,
     mood,
     energy,
-    style,
+    visualStyle,
     sources,
+    textStyle,
+    textClarity,
+    feelings,
+    industry,
+    tone,
+    ctaStyle,
+    businessValues,
+    logoImage,
+    portraitImage,
     valueDisplay,
     valuePosition,
     customValueText,
-    centralMotif,
-    textStyle,
-    textClarity,
-    backSideStyle,
-    feelings,
-    personName,
     voucherValue,
-    promptLanguage,
-    photoAttachment,
-    colorScheme,
+    backSideStyle,
+    backSideText,
+    personName,
     contactEmail,
     contactPhone,
     contactWebsite,
-    contactSocial,
     qrCodeEnabled,
     qrCodeUrl,
-  }), [mood, energy, style, sources, valueDisplay, valuePosition, customValueText, centralMotif, textStyle, textClarity, backSideStyle, feelings, personName, voucherValue, promptLanguage, photoAttachment, colorScheme, contactEmail, contactPhone, contactWebsite, contactSocial, qrCodeEnabled, qrCodeUrl]);
+  }), [
+    styleContext, promptLanguage, colorScheme, centralMotif,
+    mood, energy, visualStyle, sources, textStyle, textClarity, feelings,
+    industry, tone, ctaStyle, businessValues, logoImage, portraitImage,
+    valueDisplay, valuePosition, customValueText, voucherValue, backSideStyle, backSideText,
+    personName, contactEmail, contactPhone, contactWebsite,
+    qrCodeEnabled, qrCodeUrl
+  ]);
 
-  const prompt = generateSpiritualPrompt(config);
-  const negativePrompt = generateNegativePrompt(config);
+  const prompt = generatePrintPrompt(config);
+  const negativePrompt = generatePrintNegativePrompt(config);
+
+  // Determine which hint to show
+  const showPortraitHint = centralMotif === 'portrait' && !portraitImage;
+  const showLogoHint = styleContext === 'business' && centralMotif === 'logo-zentral' && !logoImage;
 
   const handleCopy = useCallback(async () => {
     try {
@@ -170,12 +195,21 @@ export function SpiritualPromptPreview() {
                 </button>
               </div>
 
-              {centralMotif === 'portrait' && (
+              {showPortraitHint && (
                 <div className="alert alert-info mb-3">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
                   <span>{t.portraitHint}</span>
+                </div>
+              )}
+
+              {showLogoHint && (
+                <div className="alert alert-info mb-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  <span>{t.logoHint}</span>
                 </div>
               )}
 
