@@ -255,16 +255,10 @@ export function generateSpiritualPrompt(config: SpiritualPromptConfig): string {
       : '\n\nNOTE: A reference photo is attached to this prompt. Use this photo as the basis for the portrait on the voucher.')
     : '';
 
-  const qrCodeNote = config.qrCodeEnabled === 'yes' && config.qrCodeUrl?.trim()
-    ? (lang === 'de'
-      ? '\n\nHINWEIS: Ein QR-Code-Bild ist beigefügt. Integriere diesen QR-Code dezent in das Design der Rückseite, z.B. in einer Ecke oder neben den Kontaktdaten. Der QR-Code muss exakt wie im Referenzbild aussehen und scannbar bleiben.'
-      : '\n\nNOTE: A QR code image is attached. Integrate this QR code subtly into the back side design, e.g. in a corner or next to the contact details. The QR code must look exactly like the reference image and remain scannable.')
-    : '';
-
   if (lang === 'de') {
-    return `Erzeuge einen spirituellen, rahmenlosen Schein als zusammengehörige Vorder- und Rückseite, dargestellt nebeneinander als vollständige, professionelle Druckvorlage.${photoNote}${qrCodeNote}
+    return `Erzeuge einen spirituellen, rahmenlosen Gutschein als zwei zusammengehörige Bilder übereinander, dargestellt als vollständige, professionelle Druckvorlage.${photoNote}
 
-Beide Seiten gehören eindeutig zum gleichen Schein und teilen Farbwelt, Typografie und grafische DNA. Der Schein soll beim Anfassen folgende Gefühle vermitteln: ${feelingsText}.
+Beide Bilder gehören eindeutig zum gleichen Gutschein und teilen Farbwelt, Typografie und grafische DNA. Der Gutschein soll beim Anfassen folgende Gefühle vermitteln: ${feelingsText}.
 
 GRUNDHALTUNG & STIL:
 – ${t.mood[config.mood]}
@@ -275,10 +269,11 @@ SPIRITUELLE QUELLEN & SYMBOLIK:
 – Inspiriert von: ${sourcesText}
 – Diese Einflüsse sollen subtil in Ornamenten, Mustern und Symbolen spürbar sein
 
-VORDERSEITE (Nennwert-Seite):
-– Querformat im Seitenverhältnis moderner Banknoten
+OBERES BILD (zeigt den Wert):
+– Querformat im Seitenverhältnis moderner Banknoten (ca. 2.5:1)
 – Kein grafischer Rahmen
-– Außenbereich bewusst weiß / sehr hell als ruhiger Rand (Quiet Zone)
+– SYMMETRISCHE RÄNDER: Der weiße/helle Rand muss an allen vier Seiten EXAKT GLEICH breit sein (ca. 3% der Bildbreite)
+– Inhalt ist ZENTRIERT im Bild - gleicher Abstand links und rechts, gleicher Abstand oben und unten
 – Gestaltung wirkt schwebend und wertig
 
 Zentrales Motiv:
@@ -287,7 +282,7 @@ Zentrales Motiv:
 Wertdarstellung:
 – ${t.valueDisplay[config.valueDisplay]}
 – ${t.valuePosition[config.valuePosition]}
-${config.valueDisplay !== 'symbolisch' ? `– Der Wert lautet: „${config.voucherValue}"` : '– Kein expliziter Werttext auf der Vorderseite'}
+${config.valueDisplay !== 'symbolisch' ? `– Der Wert lautet: „${config.voucherValue}"` : '– Kein expliziter Werttext'}
 
 Designmerkmale:
 – Feine Linien, organische Muster, spirituelle Geometrie
@@ -295,19 +290,27 @@ Designmerkmale:
 – ${t.textClarity[config.textClarity]}
 – Seriennummer und Ausgabedatum optional
 
-RÜCKSEITE (${t.backSideStyle[config.backSideStyle]}):
-– Reduziertes Design im gleichen Stil wie die Vorderseite
+UNTERES BILD (zeigt Kontaktdaten, ${t.backSideStyle[config.backSideStyle]}):
+– Reduziertes Design im gleichen Stil wie das obere Bild
+– EXAKT GLEICHE Abmessungen und Randbreiten wie das obere Bild
+– SYMMETRISCHE RÄNDER: Gleiche Randbreite an allen vier Seiten
 – Gleiche Farbwelt, Typografie und grafische Sprache
 – Organisch, offen, funktional
 – Keine Kästen, Panels oder umrahmten Flächen
 
-Layout der Rückseite:
+Layout des unteren Bildes:
 ${contactInfoSection}
 
 – Rechte Seite:
   – Der Text: „${backSideText}"
   – Frei im Layout platziert, organisch eingebettet
-  – Darunter freier Bereich für handschriftliche Unterschrift mit dezenter Beschriftung „Unterschrift" in kleiner, heller Schrift als Platzhalter (Feld selbst leer lassen, keine vorgedruckte Unterschrift)
+  – UNTERSCHRIFTSBEREICH - KRITISCH:
+    • Unter dem Text ein leerer Bereich für die Unterschrift
+    • Das Wort „Unterschrift" in sehr kleiner, dezenter, heller Schrift als Label
+    • Eine dezente horizontale Linie für die Unterschrift ist erlaubt und erwünscht
+    • ABER: KEINE vorgedruckte Handschrift, KEINE Signatur, KEINE Schnörkel, KEINE Initialen
+    • Der Empfänger wird auf dem GEDRUCKTEN PHYSISCHEN Schein selbst unterschreiben
+    • Das Feld über/auf der Linie muss LEER bleiben - nur Linie + Label, sonst nichts
 
 FARBWELT:
 – ${colorPalette}
@@ -315,11 +318,15 @@ FARBWELT:
 – Gute Lesbarkeit auf hellem Rand
 
 FORMAT & DRUCK:
-– Beide Seiten vollständig sichtbar
+– Vertikales Layout: Wert-Bild oben, Kontakt-Bild unten
+– Beide Bilder vollständig sichtbar und IDENTISCH in Größe und Form
+– KRITISCH - SYMMETRIE: Beide Gutscheine müssen PERFEKT ZENTRIERT sein mit EXAKT GLEICHEN Rändern an allen vier Seiten
+– Der Inhalt jedes Gutscheins ist mittig platziert - NICHT nach links, rechts, oben oder unten verschoben
 – Keine abgeschnittenen Ränder
 – Kein Rahmen
-– Gestaltungselemente enden vor dem Rand
-– Neutraler Hintergrund außerhalb der Scheine
+– Gestaltungselemente enden gleichmäßig vor dem Rand (nicht näher an einer Seite als an der anderen)
+– WICHTIG: Der Hintergrund AUSSERHALB der Gutscheine muss rein schwarz sein (#000000) - kein Grau, kein Schatten, nur reines Schwarz
+– ABSOLUT KEINE Beschriftungen oder Labels im Bild! Keine Texte wie "Vorderseite", "Rückseite", "Front", "Back", "Nennwert-Seite", "Kontakt-Seite" oder ähnliche Bezeichnungen irgendwo im Bild!
 
 WICHTIG – AUSSCHLÜSSE:
 – Keine staatlichen Hoheitszeichen
@@ -334,9 +341,9 @@ QUALITÄT:
 – Professionelles, vertrauenswürdiges Erscheinungsbild
 – 4K-Auflösung, gestochen scharf`;
   } else {
-    return `Create a spiritual, frameless voucher as a connected front and back side, displayed side by side as a complete, professional print template.${photoNote}${qrCodeNote}
+    return `Create a spiritual, frameless voucher as two connected images stacked vertically, displayed as a complete, professional print template.${photoNote}
 
-Both sides clearly belong to the same voucher and share color palette, typography and graphic DNA. The voucher should convey the following feelings when held: ${feelingsText}.
+Both images clearly belong to the same voucher and share color palette, typography and graphic DNA. The voucher should convey the following feelings when held: ${feelingsText}.
 
 BASIC ATTITUDE & STYLE:
 – ${t.mood[config.mood]}
@@ -347,10 +354,11 @@ SPIRITUAL SOURCES & SYMBOLISM:
 – Inspired by: ${sourcesText}
 – These influences should be subtly perceptible in ornaments, patterns and symbols
 
-FRONT SIDE (Value Side):
-– Landscape format in the aspect ratio of modern banknotes
+TOP IMAGE (shows the value):
+– Landscape format in the aspect ratio of modern banknotes (approx. 2.5:1)
 – No graphic frame
-– Outer area deliberately white / very light as a quiet margin (Quiet Zone)
+– SYMMETRICAL MARGINS: The white/light margin must be EXACTLY THE SAME width on all four sides (approx. 3% of image width)
+– Content is CENTERED in the image - equal distance left and right, equal distance top and bottom
 – Design appears floating and valuable
 
 Central Motif:
@@ -359,7 +367,7 @@ Central Motif:
 Value Display:
 – ${t.valueDisplay[config.valueDisplay]}
 – ${t.valuePosition[config.valuePosition]}
-${config.valueDisplay !== 'symbolisch' ? `– The value reads: "${config.voucherValue}"` : '– No explicit value text on front'}
+${config.valueDisplay !== 'symbolisch' ? `– The value reads: "${config.voucherValue}"` : '– No explicit value text'}
 
 Design Features:
 – Fine lines, organic patterns, spiritual geometry
@@ -367,19 +375,27 @@ Design Features:
 – ${t.textClarity[config.textClarity]}
 – Serial number and issue date optional
 
-BACK SIDE (${t.backSideStyle[config.backSideStyle]}):
-– Reduced design in the same style as the front
+BOTTOM IMAGE (shows contact details, ${t.backSideStyle[config.backSideStyle]}):
+– Reduced design in the same style as the top image
+– EXACTLY SAME dimensions and margin widths as the top image
+– SYMMETRICAL MARGINS: Same margin width on all four sides
 – Same color palette, typography and graphic language
 – Organic, open, functional
 – No boxes, panels or framed areas
 
-Back Side Layout:
+Bottom Image Layout:
 ${contactInfoSection}
 
 – Right side:
   – The text: "${backSideText}"
   – Freely placed in layout, organically embedded
-  – Below: free area for handwritten signature with subtle label "Signature" in small, light text as placeholder (leave field itself empty, no pre-printed signature)
+  – SIGNATURE AREA - CRITICAL:
+    • Below the text an empty area for the signature
+    • The word "Signature" in very small, subtle, light text as label
+    • A subtle horizontal line for the signature is allowed and desired
+    • BUT: NO pre-printed handwriting, NO signature, NO flourishes, NO initials
+    • The recipient will sign on the PRINTED PHYSICAL voucher themselves
+    • The area above/on the line must remain EMPTY - only line + label, nothing else
 
 COLOR PALETTE:
 – ${colorPalette}
@@ -387,11 +403,15 @@ COLOR PALETTE:
 – Good readability on light margin
 
 FORMAT & PRINT:
-– Both sides fully visible
+– Vertical layout: Value image on top, contact image on bottom
+– Both images fully visible and IDENTICAL in size and shape
+– CRITICAL - SYMMETRY: Both vouchers must be PERFECTLY CENTERED with EXACTLY EQUAL margins on all four sides
+– The content of each voucher is centered - NOT shifted to the left, right, top or bottom
 – No cropped edges
 – No frame
-– Design elements end before the margin
-– Neutral background outside the vouchers
+– Design elements end evenly before the margin (not closer to one side than another)
+– IMPORTANT: The background OUTSIDE the vouchers must be pure black (#000000) - no gray, no shadows, only pure black
+– ABSOLUTELY NO labels or text annotations in the image! No text like "Front", "Back", "Vorderseite", "Rückseite", "Value Side", "Contact Side" or similar labels anywhere in the image!
 
 IMPORTANT – EXCLUSIONS:
 – No state emblems
@@ -404,7 +424,7 @@ QUALITY:
 – Very high level of detail
 – High-quality, spiritual print appearance
 – Professional, trustworthy look
-– 4K resolution, razor sharp${photoNote}`;
+– 4K resolution, razor sharp`;
   }
 }
 
@@ -413,9 +433,9 @@ export function generateNegativePrompt(config: SpiritualPromptConfig): string {
 
   if (lang === 'de') {
     return `Negativer Prompt:
-collage, gemischte Stile, inkonsistentes Design, verschiedene Farbschemata, unpassende Typografie, abgeschnittene Ränder, Kästen, Textboxen, Panels, UI-Elemente, Formularfelder, Labels, religiöse Symbole, Kreuze, Davidsterne, Halbmonde, staatliche Symbole, Wappen, Flaggen, Münzen, echte Währungen, Euro, Dollar, fotorealistisch, Stockfoto-Ästhetik`;
+collage, gemischte Stile, inkonsistentes Design, verschiedene Farbschemata, unpassende Typografie, abgeschnittene Ränder, Kästen, Textboxen, Panels, UI-Elemente, Formularfelder, Labels, religiöse Symbole, Kreuze, Davidsterne, Halbmonde, staatliche Symbole, Wappen, Flaggen, Münzen, echte Währungen, Euro, Dollar, fotorealistisch, Stockfoto-Ästhetik, Beschriftungen, Seitenbezeichnungen, "Vorderseite", "Rückseite", "Front", "Back", "Nennwert-Seite", "Kontakt-Seite", "Value Side", "Contact Side", Überschriften die Seiten benennen, vorgedruckte Unterschrift, Handschrift im Unterschriftsfeld, Signatur-Schnörkel, ausgefüllte Unterschrift, Initialen im Unterschriftsfeld`;
   } else {
     return `Negative Prompt:
-collage, mixed styles, inconsistent design, different color schemes, mismatched typography, cropped edges, boxes, text boxes, panels, UI elements, form fields, labels, religious symbols, crosses, Star of David, crescents, state symbols, coats of arms, flags, coins, real currencies, Euro, Dollar, photorealistic, stock photo aesthetic`;
+collage, mixed styles, inconsistent design, different color schemes, mismatched typography, cropped edges, boxes, text boxes, panels, UI elements, form fields, labels, religious symbols, crosses, Star of David, crescents, state symbols, coats of arms, flags, coins, real currencies, Euro, Dollar, photorealistic, stock photo aesthetic, annotations, side labels, "Front", "Back", "Vorderseite", "Rückseite", "Value Side", "Contact Side", "Nennwert-Seite", "Kontakt-Seite", headers naming sides, pre-printed signature, handwriting in signature field, signature flourishes, filled signature, initials in signature field`;
   }
 }

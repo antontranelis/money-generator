@@ -5,6 +5,7 @@ import { SpiritualPromptGenerator } from './components/SpiritualPromptGenerator'
 import { SpiritualPromptPreview } from './components/SpiritualPromptPreview';
 import { initializeBillStore } from './stores/billStore';
 import { initializeSpiritualPromptStore } from './stores/spiritualPromptStore';
+import { initializeGeminiStore } from './stores/geminiStore';
 
 function App() {
   const [currentView, setCurrentView] = useState<AppView>('voucher');
@@ -13,6 +14,7 @@ function App() {
   useEffect(() => {
     initializeBillStore();
     initializeSpiritualPromptStore();
+    initializeGeminiStore();
   }, []);
 
   return (
