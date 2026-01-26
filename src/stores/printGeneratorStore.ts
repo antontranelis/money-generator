@@ -6,6 +6,7 @@ import {
   type StyleContext,
   type PromptLanguage,
   type ColorScheme,
+  type ExtendedColorScheme,
   type CentralMotif,
   type Mood,
   type Energy,
@@ -38,7 +39,7 @@ interface PrintGeneratorState extends PrintGeneratorConfig {
   setPromptLanguage: (lang: PromptLanguage) => void;
 
   // Design
-  setColorScheme: (scheme: ColorScheme) => void;
+  setColorScheme: (scheme: ColorScheme | ExtendedColorScheme) => void;
   setCentralMotif: (motif: CentralMotif) => void;
 
   // Spiritual

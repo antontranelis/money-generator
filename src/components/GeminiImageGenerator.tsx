@@ -3,6 +3,7 @@ import { usePrintGeneratorStore } from '../stores/printGeneratorStore';
 import { useGeminiStore } from '../stores/geminiStore';
 import { useBillStore } from '../stores/billStore';
 import { useVoucherGalleryStore } from '../stores/voucherGalleryStore';
+import { useCustomColorStore } from '../stores/customColorStore';
 import { generateImageWithGemini, refineImageWithGemini } from '../services/geminiImageGenerator';
 import { generatePrintPrompt } from '../services/printPromptGenerator';
 import {
@@ -11,7 +12,6 @@ import {
   downloadBlob,
   downloadBase64Image,
   validateVoucherImage,
-  type VoucherValidationResult,
 } from '../services/voucherImageProcessor';
 import type { PrintGeneratorConfig } from '../types/printGenerator';
 
@@ -56,6 +56,11 @@ const labels = {
     refinementSend: 'Änderung anwenden',
     refinementRefining: 'Ändere Bild...',
     refinementHint: 'z.B. "Mache den Hintergrund blauer" oder "Ändere die Schriftfarbe zu Gold"',
+    promptTitle: 'Prompt',
+    promptHint: 'Der Prompt wird aus deinen Einstellungen generiert. Du kannst ihn vor dem Generieren bearbeiten.',
+    showPrompt: 'Prompt anzeigen',
+    hidePrompt: 'Prompt verbergen',
+    resetPrompt: 'Zurücksetzen',
   },
   en: {
     title: 'Generate Image',
@@ -97,6 +102,11 @@ const labels = {
     refinementSend: 'Apply Change',
     refinementRefining: 'Refining image...',
     refinementHint: 'e.g. "Make the background more blue" or "Change the text color to gold"',
+    promptTitle: 'Prompt',
+    promptHint: 'The prompt is generated from your settings. You can edit it before generating.',
+    showPrompt: 'Show prompt',
+    hidePrompt: 'Hide prompt',
+    resetPrompt: 'Reset',
   },
 };
 
@@ -111,6 +121,8 @@ export function GeminiImageGenerator() {
   const setResult = useGeminiStore((state) => state.setGenerationResult);
   const processedImages = useGeminiStore((state) => state.processedImages);
   const setProcessedImages = useGeminiStore((state) => state.setProcessedImages);
+  const validationResult = useGeminiStore((state) => state.validationResult);
+  const setValidationResult = useGeminiStore((state) => state.setValidationResult);
 
   // Gallery store for auto-save
   const addVoucher = useVoucherGalleryStore((state) => state.addVoucher);
@@ -122,9 +134,11 @@ export function GeminiImageGenerator() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
-  const [validationResult, setValidationResult] = useState<VoucherValidationResult | null>(null);
   const [refinementPrompt, setRefinementPrompt] = useState('');
   const [isRefining, setIsRefining] = useState(false);
+  // Editable prompt state
+  const [showPromptEditor, setShowPromptEditor] = useState(false);
+  const [editedPrompt, setEditedPrompt] = useState<string | null>(null);
 
   // Get config from printGeneratorStore
   const styleContext = usePrintGeneratorStore((state) => state.styleContext);
@@ -159,11 +173,32 @@ export function GeminiImageGenerator() {
   const qrCodeEnabled = usePrintGeneratorStore((state) => state.qrCodeEnabled);
   const qrCodeUrl = usePrintGeneratorStore((state) => state.qrCodeUrl);
 
+  // Get custom color info if using a custom scheme
+  const customSchemes = useCustomColorStore((state) => state.customSchemes);
+  const builtInOverrides = useCustomColorStore((state) => state.builtInOverrides);
+
+  // Compute custom color info for the prompt generator
+  const customColorInfo = useMemo(() => {
+    // Check if it's a custom scheme (starts with 'custom-')
+    if (colorScheme.startsWith('custom-')) {
+      const scheme = customSchemes.find((s) => s.id === colorScheme);
+      if (scheme) {
+        return { name: scheme.name, colors: scheme.colors };
+      }
+    }
+    // Check if it's an overridden built-in scheme
+    if (builtInOverrides[colorScheme]) {
+      return { name: colorScheme, colors: builtInOverrides[colorScheme] };
+    }
+    return undefined;
+  }, [colorScheme, customSchemes, builtInOverrides]);
+
   const config: PrintGeneratorConfig = useMemo(() => ({
     styleContext,
     promptLanguage,
     colorScheme,
     centralMotif,
+    customColorInfo,
     mood,
     energy,
     visualStyle,
@@ -192,7 +227,7 @@ export function GeminiImageGenerator() {
     qrCodeEnabled,
     qrCodeUrl,
   }), [
-    styleContext, promptLanguage, colorScheme, centralMotif,
+    styleContext, promptLanguage, colorScheme, centralMotif, customColorInfo,
     mood, energy, visualStyle, sources, textStyle, textClarity, feelings,
     industry, tone, ctaStyle, businessDesignStyle, businessValues, logoImage, logoColors, portraitImage,
     valueDisplay, valuePosition, customValueText, voucherValue, backSideStyle, backSideText,
@@ -209,6 +244,17 @@ export function GeminiImageGenerator() {
   // Logo is required if either logo-zentral motif OR from-logo color scheme
   const isLogoRequired = isLogoCentralMode || isFromLogoColorMode;
 
+  // Generated prompt from config (for display and editing)
+  const generatedPrompt = useMemo(() => generatePrintPrompt(config), [config]);
+
+  // The actual prompt to use (edited or generated)
+  const activePrompt = editedPrompt !== null ? editedPrompt : generatedPrompt;
+
+  // Reset edited prompt when config changes significantly
+  const handleResetPrompt = useCallback(() => {
+    setEditedPrompt(null);
+  }, []);
+
   const handleGenerate = useCallback(async () => {
     if (!apiKey) {
       setResult({ success: false, error: t.noApiKey });
@@ -220,9 +266,6 @@ export function GeminiImageGenerator() {
     setProcessedImages(null);
     setValidationResult(null);
 
-    // Generate the prompt text for saving
-    const generatedPrompt = generatePrintPrompt(config);
-
     // Use portraitImage from printGeneratorStore for portrait mode
     const portraitImageBase64 = portraitImage
       ? (portraitImage.includes(',') ? portraitImage.split(',')[1] : portraitImage)
@@ -233,6 +276,7 @@ export function GeminiImageGenerator() {
       config,
       referenceImage: portraitImageBase64,
       logoImage: logoImage || undefined,
+      customPrompt: editedPrompt || undefined, // Use edited prompt if available
     });
 
     if (!generationResult.success || !generationResult.imageBase64) {
@@ -260,9 +304,11 @@ export function GeminiImageGenerator() {
         qrCodeUrl: qrCodeEnabled ? qrCodeUrl : undefined,
       });
       setProcessedImages(processed);
+      setIsProcessing(false); // Show images immediately
 
-      // Auto-save to gallery with complete configuration (excluding binary data)
+      // Auto-save to gallery in background (don't block UI)
       const { logoImage: _logo, portraitImage: _portrait, ...configWithoutImages } = config;
+      const promptToSave = editedPrompt || generatePrintPrompt(config);
       const voucherToSave = {
         originalBase64: generationResult.imageBase64,
         frontBase64: processed.frontBase64,
@@ -271,17 +317,19 @@ export function GeminiImageGenerator() {
         voucherValue: voucherValue || undefined,
         personName: personName || undefined,
         colorScheme: colorScheme || undefined,
-        originalPrompt: generatedPrompt,
+        originalPrompt: promptToSave,
         refinementHistory: [],
         generationConfig: configWithoutImages,
       };
-      console.log('[GeminiImageGenerator] Saving voucher with originalPrompt:', !!voucherToSave.originalPrompt, 'length:', voucherToSave.originalPrompt?.length);
-      await addVoucher(voucherToSave);
+      // Don't await - let it save in background
+      addVoucher(voucherToSave).catch((error) => {
+        console.error('Failed to save voucher to gallery:', error);
+      });
     } catch (error) {
       console.error('Failed to process voucher image:', error);
+      setIsProcessing(false);
     }
-    setIsProcessing(false);
-  }, [apiKey, config, portraitImage, t.noApiKey, qrCodeEnabled, qrCodeUrl, logoImage, addVoucher, styleContext, voucherValue, personName, colorScheme]);
+  }, [apiKey, config, portraitImage, t.noApiKey, qrCodeEnabled, qrCodeUrl, logoImage, addVoucher, styleContext, voucherValue, personName, colorScheme, editedPrompt, setResult, setProcessedImages, setValidationResult]);
 
   const handleDownloadFront = useCallback(() => {
     if (processedImages?.frontBase64) {
@@ -358,19 +406,22 @@ export function GeminiImageGenerator() {
         qrCodeUrl: qrCodeEnabled ? qrCodeUrl : undefined,
       });
       setProcessedImages(processed);
+      setIsProcessing(false); // Show images immediately
 
-      // Add as new version to existing voucher (instead of creating new gallery entry)
-      await addVersionToVoucher(activeVoucherId, {
+      // Add as new version to existing voucher in background (don't block UI)
+      addVersionToVoucher(activeVoucherId, {
         prompt: trimmedPrompt,
         originalBase64: refinementResult.imageBase64,
         frontBase64: processed.frontBase64,
         backBase64: processed.backBase64,
+      }).catch((error) => {
+        console.error('Failed to save version to gallery:', error);
       });
     } catch (error) {
       console.error('Failed to process refined voucher image:', error);
+      setIsProcessing(false);
     }
-    setIsProcessing(false);
-  }, [apiKey, result, refinementPrompt, promptLanguage, qrCodeEnabled, qrCodeUrl, addVersionToVoucher, activeVoucherId]);
+  }, [apiKey, result, refinementPrompt, promptLanguage, qrCodeEnabled, qrCodeUrl, addVersionToVoucher, activeVoucherId, setResult, setProcessedImages, setValidationResult]);
 
   // Reprocess the original image without calling Gemini API again
   const handleReprocess = useCallback(async () => {
@@ -466,6 +517,42 @@ export function GeminiImageGenerator() {
           </div>
         )}
 
+        {/* Prompt Editor Toggle */}
+        <div className="collapse collapse-arrow bg-base-200 rounded-lg">
+          <input
+            type="checkbox"
+            checked={showPromptEditor}
+            onChange={(e) => setShowPromptEditor(e.target.checked)}
+          />
+          <div className="collapse-title font-medium text-sm py-2">
+            {t.promptTitle}
+            {editedPrompt !== null && (
+              <span className="badge badge-warning badge-sm ml-2">
+                {appLanguage === 'de' ? 'Bearbeitet' : 'Edited'}
+              </span>
+            )}
+          </div>
+          <div className="collapse-content">
+            <p className="text-xs text-base-content/60 mb-2">{t.promptHint}</p>
+            <textarea
+              className="textarea textarea-bordered w-full min-h-[200px] text-xs font-mono"
+              value={activePrompt}
+              onChange={(e) => setEditedPrompt(e.target.value)}
+            />
+            {editedPrompt !== null && (
+              <button
+                className="btn btn-ghost btn-xs mt-2"
+                onClick={handleResetPrompt}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {t.resetPrompt}
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Generate Button */}
         <button
           className="btn btn-primary w-full"
@@ -483,62 +570,6 @@ export function GeminiImageGenerator() {
             t.generate
           )}
         </button>
-
-        {/* Validation Result Display */}
-        {validationResult && (
-          <div className={`alert ${validationResult.isValid ? 'alert-success' : 'alert-warning'}`}>
-            <div className="w-full">
-              <div className="flex items-center gap-2 mb-2">
-                {validationResult.isValid ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                )}
-                <span className="font-semibold">
-                  {t.validationTitle}: {validationResult.isValid ? t.validationPassed : t.validationFailed}
-                </span>
-              </div>
-              <div className="text-sm space-y-1 ml-8">
-                {/* Black Background Check */}
-                <div className="flex items-center gap-2">
-                  {validationResult.hasBlackBackground ? (
-                    <span className="text-success">✓</span>
-                  ) : (
-                    <span className="text-error">✗</span>
-                  )}
-                  <span>{t.checkBlackBackground}</span>
-                </div>
-                {/* Equal Size Check */}
-                <div className="flex items-center gap-2">
-                  {validationResult.sidesAreEqualSize ? (
-                    <span className="text-success">✓</span>
-                  ) : (
-                    <span className="text-error">✗</span>
-                  )}
-                  <span>{t.checkEqualSize}</span>
-                  {!validationResult.sidesAreEqualSize && (
-                    <span className="opacity-70">
-                      ({t.frontHeight}: {validationResult.frontDimensions.height}px, {t.backHeight}: {validationResult.backDimensions.height}px)
-                    </span>
-                  )}
-                </div>
-                {/* No Black Borders Check */}
-                <div className="flex items-center gap-2">
-                  {validationResult.hasNoBlackBorders ? (
-                    <span className="text-success">✓</span>
-                  ) : (
-                    <span className="text-error">✗</span>
-                  )}
-                  <span>{t.checkNoBlackBorders}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Error Display */}
         {result && !result.success && (
@@ -595,6 +626,61 @@ export function GeminiImageGenerator() {
                 />
               </div>
             </div>
+
+            {/* Validation Result Display - Collapsible */}
+            {validationResult && (
+              <div className={`collapse collapse-arrow rounded-lg ${validationResult.isValid ? 'bg-success/10' : 'bg-warning/10'}`}>
+                <input type="checkbox" />
+                <div className="collapse-title font-medium text-sm py-2 flex items-center gap-2">
+                  {validationResult.isValid ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="stroke-success shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="stroke-warning shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  )}
+                  <span>{t.validationTitle}: {validationResult.isValid ? t.validationPassed : t.validationFailed}</span>
+                </div>
+                <div className="collapse-content">
+                  <div className="text-sm space-y-1">
+                    {/* Black Background Check */}
+                    <div className="flex items-center gap-2">
+                      {validationResult.hasBlackBackground ? (
+                        <span className="text-success">✓</span>
+                      ) : (
+                        <span className="text-error">✗</span>
+                      )}
+                      <span>{t.checkBlackBackground}</span>
+                    </div>
+                    {/* Equal Size Check */}
+                    <div className="flex items-center gap-2">
+                      {validationResult.sidesAreEqualSize ? (
+                        <span className="text-success">✓</span>
+                      ) : (
+                        <span className="text-error">✗</span>
+                      )}
+                      <span>{t.checkEqualSize}</span>
+                      {!validationResult.sidesAreEqualSize && (
+                        <span className="opacity-70">
+                          ({t.frontHeight}: {validationResult.frontDimensions.height}px, {t.backHeight}: {validationResult.backDimensions.height}px)
+                        </span>
+                      )}
+                    </div>
+                    {/* No Black Borders Check */}
+                    <div className="flex items-center gap-2">
+                      {validationResult.hasNoBlackBorders ? (
+                        <span className="text-success">✓</span>
+                      ) : (
+                        <span className="text-error">✗</span>
+                      )}
+                      <span>{t.checkNoBlackBorders}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Download Buttons */}
             <div className="grid grid-cols-2 gap-2">

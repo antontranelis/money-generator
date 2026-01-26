@@ -5,11 +5,13 @@
  * Uses same UI patterns as original SpiritualPromptGenerator.
  */
 
-import { Fragment, useCallback, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePrintGeneratorStore, useHasHydrated } from '../../stores/printGeneratorStore';
 import { useBillStore } from '../../stores/billStore';
+import { useCustomColorStore } from '../../stores/customColorStore';
 import { generateDefaultBackSideText } from '../../services/printPromptGenerator';
 import { extractColorsFromImage } from '../../services/colorExtractor';
+import { ColorSchemeEditor } from './ColorSchemeEditor';
 import {
   type StyleContext,
   type SpiritualColorScheme,
@@ -25,6 +27,8 @@ import {
   type BusinessValue,
   type ValuePosition,
   type PromptLanguage,
+  type ColorScheme,
+  type CustomColorScheme,
   SPIRITUAL_COLOR_SWATCHES,
   BUSINESS_COLOR_SWATCHES,
   VOUCHER_VALUE_PRESETS,
@@ -609,18 +613,38 @@ interface ColorSelectProps<T extends string> {
   label?: string;
   options: { value: T; label: string }[];
   tooltips?: Record<string, string>;
-  swatches: Record<T, string[]>;
+  swatches: Record<string, string[]>;
   currentValue: T;
   onChange: (value: T) => void;
+  /** Custom schemes to display at the end */
+  customSchemes?: CustomColorScheme[];
+  /** Callback when edit button is clicked */
+  onEditScheme?: (schemeKey: string, isBuiltIn: boolean) => void;
+  /** Callback when add new scheme button is clicked */
+  onAddScheme?: () => void;
+  /** Keys that have been overridden */
+  overriddenKeys?: Set<string>;
 }
 
-function ColorSelect<T extends string>({ label, options, tooltips, swatches, currentValue, onChange }: ColorSelectProps<T>) {
+function ColorSelect<T extends string>({
+  label,
+  options,
+  tooltips,
+  swatches,
+  currentValue,
+  onChange,
+  customSchemes,
+  onEditScheme,
+  onAddScheme,
+  overriddenKeys,
+}: ColorSelectProps<T>) {
   return (
     <div className="space-y-1">
       {label && <p className="text-xs text-base-content/70 font-medium">{label}</p>}
       <div className="flex flex-wrap gap-2">
+        {/* Built-in schemes */}
         {options.map((opt) => (
-          <div key={opt.value} className="tooltip" data-tip={tooltips?.[opt.value]}>
+          <div key={opt.value} className="tooltip group relative" data-tip={tooltips?.[opt.value]}>
             <button
               type="button"
               className={`btn btn-sm gap-2 ${currentValue === opt.value ? 'btn-primary' : 'btn-ghost'}`}
@@ -636,9 +660,78 @@ function ColorSelect<T extends string>({ label, options, tooltips, swatches, cur
                 ))}
               </div>
               {opt.label}
+              {overriddenKeys?.has(opt.value) && (
+                <span className="badge badge-xs badge-warning">*</span>
+              )}
             </button>
+            {onEditScheme && (
+              <button
+                type="button"
+                className="absolute -top-1 -right-1 btn btn-xs btn-circle btn-ghost opacity-0 group-hover:opacity-100 transition-opacity bg-base-100 shadow-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditScheme(opt.value, true);
+                }}
+                title="Edit"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                </svg>
+              </button>
+            )}
           </div>
         ))}
+
+        {/* Custom schemes */}
+        {customSchemes?.map((scheme) => (
+          <div key={scheme.id} className="tooltip group relative" data-tip={scheme.name}>
+            <button
+              type="button"
+              className={`btn btn-sm gap-2 ${currentValue === scheme.id ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => onChange(scheme.id as T)}
+            >
+              <div className="flex gap-0.5">
+                {scheme.colors.slice(0, 4).map((color, i) => (
+                  <div
+                    key={i}
+                    className="w-3 h-3 rounded-sm"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+              {scheme.name}
+              <span className="badge badge-xs badge-secondary">+</span>
+            </button>
+            {onEditScheme && (
+              <button
+                type="button"
+                className="absolute -top-1 -right-1 btn btn-xs btn-circle btn-ghost opacity-0 group-hover:opacity-100 transition-opacity bg-base-100 shadow-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditScheme(scheme.id, false);
+                }}
+                title="Edit"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                </svg>
+              </button>
+            )}
+          </div>
+        ))}
+
+        {/* Add new scheme button */}
+        {onAddScheme && (
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost gap-1"
+            onClick={onAddScheme}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );
@@ -853,6 +946,39 @@ export function PrintGenerator() {
   const t = labels[appLanguage];
   const hasHydrated = useHasHydrated();
 
+  // Custom color store
+  const customColorStore = useCustomColorStore();
+  const {
+    customSchemes,
+    builtInOverrides,
+    isInitialized: customColorsInitialized,
+    initialize: initializeCustomColors,
+    addCustomScheme,
+    updateCustomScheme,
+    deleteCustomScheme,
+    setBuiltInOverride,
+    resetBuiltInOverride,
+    getEffectiveSwatches,
+  } = customColorStore;
+
+  // Initialize custom color store
+  useEffect(() => {
+    if (!customColorsInitialized) {
+      initializeCustomColors();
+    }
+  }, [customColorsInitialized, initializeCustomColors]);
+
+  // Color scheme editor state
+  const [isColorEditorOpen, setIsColorEditorOpen] = useState(false);
+  const [editingSchemeData, setEditingSchemeData] = useState<{
+    key: string;
+    name: string;
+    colors: string[];
+    isBuiltIn: boolean;
+    context: 'spiritual' | 'business' | 'both';
+  } | null>(null);
+  const [editingOriginalColors, setEditingOriginalColors] = useState<string[] | undefined>(undefined);
+
   // Store selectors
   const styleContext = usePrintGeneratorStore((state) => state.styleContext);
   const promptLanguage = usePrintGeneratorStore((state) => state.promptLanguage);
@@ -954,6 +1080,143 @@ export function PrintGenerator() {
     }
   }, [setLogoImage, setLogoColors, setColorScheme, styleContext, colorScheme]);
 
+  // Compute effective swatches (built-in + overrides)
+  const effectiveSpiritualSwatches = useMemo(() => {
+    const result: Record<string, string[]> = {};
+    for (const key of Object.keys(SPIRITUAL_COLOR_SWATCHES)) {
+      result[key] = getEffectiveSwatches(key, SPIRITUAL_COLOR_SWATCHES);
+    }
+    // Add custom schemes for spiritual context
+    for (const scheme of customSchemes.filter(s => s.context === 'spiritual' || s.context === 'both')) {
+      result[scheme.id] = scheme.colors;
+    }
+    return result;
+  }, [customSchemes, builtInOverrides, getEffectiveSwatches]);
+
+  const effectiveBusinessSwatches = useMemo(() => {
+    const result: Record<string, string[]> = {
+      ...businessColorSwatches,
+    };
+    for (const key of Object.keys(BUSINESS_COLOR_SWATCHES)) {
+      if (key !== 'from-logo') {
+        result[key] = getEffectiveSwatches(key, BUSINESS_COLOR_SWATCHES);
+      }
+    }
+    // Add custom schemes for business context
+    for (const scheme of customSchemes.filter(s => s.context === 'business' || s.context === 'both')) {
+      result[scheme.id] = scheme.colors;
+    }
+    return result;
+  }, [customSchemes, builtInOverrides, businessColorSwatches, getEffectiveSwatches]);
+
+  // Get sets of overridden built-in keys
+  const overriddenSpiritualKeys = useMemo(() => new Set(
+    Object.keys(builtInOverrides).filter(k => k in SPIRITUAL_COLOR_SWATCHES)
+  ), [builtInOverrides]);
+
+  const overriddenBusinessKeys = useMemo(() => new Set(
+    Object.keys(builtInOverrides).filter(k => k in BUSINESS_COLOR_SWATCHES)
+  ), [builtInOverrides]);
+
+  // Filter custom schemes by context
+  const spiritualCustomSchemes = useMemo(() =>
+    customSchemes.filter(s => s.context === 'spiritual' || s.context === 'both'),
+    [customSchemes]
+  );
+
+  const businessCustomSchemes = useMemo(() =>
+    customSchemes.filter(s => s.context === 'business' || s.context === 'both'),
+    [customSchemes]
+  );
+
+  // Color scheme editor handlers
+  const handleEditScheme = useCallback((schemeKey: string, isBuiltIn: boolean, context: 'spiritual' | 'business') => {
+    if (isBuiltIn) {
+      // Special handling for "from-logo": Create a new custom scheme with logo colors
+      if (schemeKey === 'from-logo') {
+        const logoColorsForScheme = logoColors.length > 0
+          ? ['#FFFFFF', ...logoColors]
+          : ['#FFFFFF', '#888888', '#AAAAAA', '#CCCCCC'];
+
+        setEditingSchemeData({
+          key: '', // Empty key indicates new scheme
+          name: appLanguage === 'de' ? 'Logo-Farben' : 'Logo Colors',
+          colors: logoColorsForScheme,
+          isBuiltIn: false, // Treat as new custom scheme
+          context: 'business',
+        });
+        setEditingOriginalColors(undefined);
+        setIsColorEditorOpen(true);
+        return;
+      }
+
+      // Editing a built-in scheme
+      const originalSwatches = context === 'spiritual' ? SPIRITUAL_COLOR_SWATCHES : BUSINESS_COLOR_SWATCHES;
+      const original = originalSwatches[schemeKey as keyof typeof originalSwatches];
+      const effective = getEffectiveSwatches(schemeKey, originalSwatches);
+      const labelKey = context === 'spiritual' ? 'spiritualColorScheme' : 'businessColorScheme';
+      const name = t[labelKey][schemeKey as keyof typeof t[typeof labelKey]] || schemeKey;
+
+      setEditingSchemeData({
+        key: schemeKey,
+        name,
+        colors: effective,
+        isBuiltIn: true,
+        context,
+      });
+      setEditingOriginalColors(original);
+    } else {
+      // Editing a custom scheme
+      const scheme = customSchemes.find(s => s.id === schemeKey);
+      if (scheme) {
+        setEditingSchemeData({
+          key: scheme.id,
+          name: scheme.name,
+          colors: scheme.colors,
+          isBuiltIn: false,
+          context: scheme.context,
+        });
+        setEditingOriginalColors(undefined);
+      }
+    }
+    setIsColorEditorOpen(true);
+  }, [customSchemes, getEffectiveSwatches, t, logoColors, appLanguage]);
+
+  const handleAddScheme = useCallback((_context: 'spiritual' | 'business') => {
+    setEditingSchemeData(null);
+    setEditingOriginalColors(undefined);
+    setIsColorEditorOpen(true);
+  }, []);
+
+  const handleSaveBuiltInOverride = useCallback((key: ColorScheme, colors: string[]) => {
+    setBuiltInOverride(key, colors);
+  }, [setBuiltInOverride]);
+
+  const handleResetBuiltInOverride = useCallback((key: ColorScheme) => {
+    resetBuiltInOverride(key);
+  }, [resetBuiltInOverride]);
+
+  const handleSaveCustomScheme = useCallback((scheme: Omit<CustomColorScheme, 'id' | 'isBuiltIn'>) => {
+    const newId = addCustomScheme({
+      ...scheme,
+      context: styleContext,
+    });
+    // Auto-select the new scheme
+    setColorScheme(newId);
+  }, [addCustomScheme, setColorScheme, styleContext]);
+
+  const handleUpdateCustomScheme = useCallback((id: string, updates: Partial<Omit<CustomColorScheme, 'id' | 'isBuiltIn'>>) => {
+    updateCustomScheme(id, updates);
+  }, [updateCustomScheme]);
+
+  const handleDeleteCustomScheme = useCallback((id: string) => {
+    // If the deleted scheme was selected, switch to default
+    if (colorScheme === id) {
+      setColorScheme(styleContext === 'spiritual' ? 'gold-gruen' : 'navy-gold');
+    }
+    deleteCustomScheme(id);
+  }, [colorScheme, deleteCustomScheme, setColorScheme, styleContext]);
+
   // Generate default back side text based on current config
   const defaultBackSideText = useMemo(() => {
     return generateDefaultBackSideText({
@@ -1044,17 +1307,25 @@ export function PrintGenerator() {
             <ColorSelect<SpiritualColorScheme>
               options={toOptions(t.spiritualColorScheme)}
               tooltips={t.spiritualColorSchemeTooltip}
-              swatches={SPIRITUAL_COLOR_SWATCHES}
+              swatches={effectiveSpiritualSwatches}
               currentValue={colorScheme as SpiritualColorScheme}
               onChange={(v) => setColorScheme(v)}
+              customSchemes={spiritualCustomSchemes}
+              onEditScheme={(key, isBuiltIn) => handleEditScheme(key, isBuiltIn, 'spiritual')}
+              onAddScheme={() => handleAddScheme('spiritual')}
+              overriddenKeys={overriddenSpiritualKeys}
             />
           ) : (
             <ColorSelect<BusinessColorScheme>
               options={toOptions(t.businessColorScheme)}
               tooltips={t.businessColorSchemeTooltip}
-              swatches={businessColorSwatches}
+              swatches={effectiveBusinessSwatches}
               currentValue={colorScheme as BusinessColorScheme}
               onChange={(v) => setColorScheme(v)}
+              customSchemes={businessCustomSchemes}
+              onEditScheme={(key, isBuiltIn) => handleEditScheme(key, isBuiltIn, 'business')}
+              onAddScheme={() => handleAddScheme('business')}
+              overriddenKeys={overriddenBusinessKeys}
             />
           )}
 
@@ -1354,6 +1625,21 @@ export function PrintGenerator() {
           {t.reset}
         </button>
       </div>
+
+      {/* ====== COLOR SCHEME EDITOR MODAL ====== */}
+      <ColorSchemeEditor
+        isOpen={isColorEditorOpen}
+        onClose={() => setIsColorEditorOpen(false)}
+        editingScheme={editingSchemeData}
+        onSaveBuiltInOverride={handleSaveBuiltInOverride}
+        onResetBuiltInOverride={handleResetBuiltInOverride}
+        onSaveCustomScheme={handleSaveCustomScheme}
+        onUpdateCustomScheme={handleUpdateCustomScheme}
+        onDeleteCustomScheme={handleDeleteCustomScheme}
+        originalColors={editingOriginalColors}
+        hasOverride={editingSchemeData?.isBuiltIn && editingSchemeData?.key ? builtInOverrides[editingSchemeData.key] !== undefined : false}
+        language={appLanguage}
+      />
     </div>
   );
 }

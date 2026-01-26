@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { GeminiGenerationResult } from '../services/geminiImageGenerator';
-import type { ProcessedVoucherImages } from '../services/voucherImageProcessor';
+import type { ProcessedVoucherImages, VoucherValidationResult } from '../services/voucherImageProcessor';
 import { indexedDBStorage } from './indexedDBStorage';
 
 interface GeminiState {
@@ -9,12 +9,14 @@ interface GeminiState {
   // Generated image state (persisted in IndexedDB)
   generationResult: GeminiGenerationResult | null;
   processedImages: ProcessedVoucherImages | null;
+  validationResult: VoucherValidationResult | null;
   referenceImage: string | null;
   // Actions
   setApiKey: (apiKey: string) => void;
   clearApiKey: () => void;
   setGenerationResult: (result: GeminiGenerationResult | null) => void;
   setProcessedImages: (images: ProcessedVoucherImages | null) => void;
+  setValidationResult: (result: VoucherValidationResult | null) => void;
   setReferenceImage: (image: string | null) => void;
   clearGeneratedImages: () => void;
 }
@@ -29,15 +31,18 @@ export const useGeminiStore = create<GeminiState>()(
       apiKey: '',
       generationResult: null,
       processedImages: null,
+      validationResult: null,
       referenceImage: null,
       setApiKey: (apiKey: string) => set({ apiKey }),
       clearApiKey: () => set({ apiKey: '' }),
       setGenerationResult: (generationResult) => set({ generationResult }),
       setProcessedImages: (processedImages) => set({ processedImages }),
+      setValidationResult: (validationResult) => set({ validationResult }),
       setReferenceImage: (referenceImage) => set({ referenceImage }),
       clearGeneratedImages: () => set({
         generationResult: null,
-        processedImages: null
+        processedImages: null,
+        validationResult: null,
       }),
     }),
     {

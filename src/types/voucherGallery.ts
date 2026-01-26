@@ -1,5 +1,13 @@
 import type { PrintGeneratorConfig } from './printGenerator';
 
+/** Stored validation result for a voucher */
+export interface StoredValidationResult {
+  isValid: boolean;
+  hasBlackBackground: boolean;
+  sidesAreEqualSize: boolean;
+  hasNoBlackBorders: boolean;
+}
+
 /** A single version in the voucher's history */
 export interface VoucherVersion {
   /** Timestamp when this version was created */
@@ -49,4 +57,6 @@ export interface SavedVoucher {
   generationConfig?: Omit<PrintGeneratorConfig, 'logoImage' | 'portraitImage'>;
   /** Version history with all image versions */
   versions?: VoucherVersion[];
+  /** Cached validation result (computed on save/update) */
+  validationResult?: StoredValidationResult;
 }

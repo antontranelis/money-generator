@@ -437,7 +437,17 @@ function generateSpiritualPrompt(config: PrintGeneratorConfig): string {
 
   const sourcesText = config.sources.map((s) => t.sources[s]).join(', ');
   const feelingsText = config.feelings.map((f) => t.feelings[f]).join(', ');
-  const colorPalette = t.colorScheme[config.colorScheme as SpiritualColorScheme];
+
+  // Build color palette - use custom colors if provided, otherwise use built-in
+  let colorPalette: string;
+  if (config.customColorInfo) {
+    const colorList = config.customColorInfo.colors.join(', ');
+    colorPalette = lang === 'de'
+      ? `Benutzerdefinierte Farbpalette "${config.customColorInfo.name}": ${colorList}`
+      : `Custom color palette "${config.customColorInfo.name}": ${colorList}`;
+  } else {
+    colorPalette = t.colorScheme[config.colorScheme as SpiritualColorScheme] || t.colorScheme['gold-gruen'];
+  }
   const backSideText = getBackSideText(config, lang);
   const contactInfoSection = buildContactInfoSection(config, lang);
   const motif = t.motif[config.centralMotif as SpiritualMotif];
@@ -639,9 +649,14 @@ function generateBusinessPrompt(config: PrintGeneratorConfig): string {
   const lang = config.promptLanguage;
   const t = businessTranslations[lang];
 
-  // Build color palette - use logoColors if "from-logo" is selected
+  // Build color palette - use custom colors if provided, or logoColors if "from-logo" is selected
   let colorPalette: string;
-  if (config.colorScheme === 'from-logo' && config.logoColors && config.logoColors.length > 0) {
+  if (config.customColorInfo) {
+    const colorList = config.customColorInfo.colors.join(', ');
+    colorPalette = lang === 'de'
+      ? `Benutzerdefinierte Farbpalette "${config.customColorInfo.name}": ${colorList}`
+      : `Custom color palette "${config.customColorInfo.name}": ${colorList}`;
+  } else if (config.colorScheme === 'from-logo' && config.logoColors && config.logoColors.length > 0) {
     const colorList = config.logoColors.join(', ');
     colorPalette = lang === 'de'
       ? `Weiß als primäre Hintergrundfarbe, Akzentfarben aus dem Firmenlogo: ${colorList}. Nutze einen hellen, weißen Hintergrund mit den Logo-Farben als Akzente für Text, Ornamente und Details.`

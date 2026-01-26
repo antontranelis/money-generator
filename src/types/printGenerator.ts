@@ -136,8 +136,13 @@ export interface PrintGeneratorConfig {
   promptLanguage: PromptLanguage;
 
   // Design
-  colorScheme: ColorScheme;
+  colorScheme: ColorScheme | ExtendedColorScheme;
   centralMotif: CentralMotif;
+  /** Custom color info when using a custom scheme (for prompt generation) */
+  customColorInfo?: {
+    name: string;
+    colors: string[];
+  };
 
   // Spiritual-specific
   mood: Mood;
@@ -264,3 +269,26 @@ export const COLOR_SWATCHES: Record<ColorScheme, string[]> = {
   ...SPIRITUAL_COLOR_SWATCHES,
   ...BUSINESS_COLOR_SWATCHES,
 };
+
+// ============================================
+// CUSTOM COLOR SCHEMES
+// ============================================
+
+/** User-defined or modified color scheme */
+export interface CustomColorScheme {
+  /** Unique ID (e.g., custom-1234567890-abc123) */
+  id: string;
+  /** Display name for the color scheme */
+  name: string;
+  /** HEX color values (4-6 colors) */
+  colors: string[];
+  /** Which style context this scheme is for */
+  context: 'spiritual' | 'business' | 'both';
+  /** Whether this is a built-in scheme (false for user-created) */
+  isBuiltIn: boolean;
+  /** If this is an override of a built-in, the original key */
+  builtInKey?: ColorScheme;
+}
+
+/** Extended color scheme type that includes custom schemes */
+export type ExtendedColorScheme = ColorScheme | `custom-${string}`;

@@ -21,6 +21,7 @@ export interface GeminiGenerationOptions {
   config: PrintGeneratorConfig;
   referenceImage?: string; // Base64 encoded image for portrait mode
   logoImage?: string; // Base64 encoded logo for business mode
+  customPrompt?: string; // Optional custom prompt (overrides generated prompt)
 }
 
 /**
@@ -29,13 +30,14 @@ export interface GeminiGenerationOptions {
 export async function generateImageWithGemini(
   options: GeminiGenerationOptions
 ): Promise<GeminiGenerationResult> {
-  const { apiKey, config, referenceImage, logoImage } = options;
+  const { apiKey, config, referenceImage, logoImage, customPrompt } = options;
 
   if (!apiKey) {
     return { success: false, error: 'API Key is required' };
   }
 
-  const prompt = generatePrintPrompt(config);
+  // Use custom prompt if provided, otherwise generate from config
+  const prompt = customPrompt || generatePrintPrompt(config);
   const negativePrompt = generatePrintNegativePrompt(config);
 
   // Add image format instructions at the beginning

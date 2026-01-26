@@ -38,10 +38,10 @@ function findOuterEdges(
   };
 
   // Threshold: anything brighter than this is considered "not black/gray background"
-  // Black background is ~0, gray artifacts can be up to ~140
-  // Voucher content is typically much brighter (180+)
-  // Using 150 to very aggressively cut off any gray edges/artifacts
-  const brightnessThreshold = 150;
+  // Black background is ~0, gray artifacts can be up to ~50
+  // Voucher borders (including dark blue borders) are typically 60+
+  // Using 40 to detect voucher edges including dark-colored borders
+  const brightnessThreshold = 40;
 
   // Number of sample lines to scan for each edge
   const sampleLines = 20;
@@ -125,9 +125,9 @@ function findOuterEdges(
     }
   }
 
-  // Add extra padding to aggressively cut off any gray artifacts at edges
-  // This ensures we cut a few pixels beyond the detected edge
-  const extraPadding = 3;
+  // Small padding to clean up any edge artifacts
+  // Reduced from 3 to 1 to avoid cutting into voucher content
+  const extraPadding = 1;
   left = Math.min(left + extraPadding, width - 1);
   right = Math.max(right - extraPadding, 0);
   top = Math.min(top + extraPadding, height - 1);
@@ -158,7 +158,7 @@ function cropCanvas(
   croppedCanvas.width = bounds.width;
   croppedCanvas.height = bounds.height;
 
-  const ctx = croppedCanvas.getContext('2d');
+  const ctx = croppedCanvas.getContext('2d', { willReadFrequently: true });
   if (ctx) {
     ctx.drawImage(
       sourceCanvas,
@@ -246,7 +246,7 @@ function findVerticalEdges(
  * Trim black from top and bottom of a canvas
  */
 function trimVerticalBlack(canvas: HTMLCanvasElement): HTMLCanvasElement {
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) return canvas;
 
   const { top, bottom } = findVerticalEdges(ctx, canvas.width, canvas.height);
@@ -407,7 +407,7 @@ export async function validateVoucherImage(
       const canvas = document.createElement('canvas');
       canvas.width = img.width;
       canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
       if (!ctx) {
         resolve({
@@ -483,12 +483,12 @@ export async function validateVoucherImage(
       const frontCanvas = document.createElement('canvas');
       frontCanvas.width = fullBounds.width;
       frontCanvas.height = sideHeight;
-      const frontCtx = frontCanvas.getContext('2d');
+      const frontCtx = frontCanvas.getContext('2d', { willReadFrequently: true });
 
       const backCanvas = document.createElement('canvas');
       backCanvas.width = fullBounds.width;
       backCanvas.height = croppedHeight - sideHeight; // Use remaining height for back
-      const backCtx = backCanvas.getContext('2d');
+      const backCtx = backCanvas.getContext('2d', { willReadFrequently: true });
 
       if (!frontCtx || !backCtx) {
         resolve({
@@ -617,7 +617,7 @@ export async function processVoucherImage(
         const fullCanvas = document.createElement('canvas');
         fullCanvas.width = fullWidth;
         fullCanvas.height = fullHeight;
-        const fullCtx = fullCanvas.getContext('2d');
+        const fullCtx = fullCanvas.getContext('2d', { willReadFrequently: true });
 
         if (!fullCtx) {
           reject(new Error('Could not create full canvas context'));
@@ -643,7 +643,7 @@ export async function processVoucherImage(
         let frontCanvasRaw = document.createElement('canvas');
         frontCanvasRaw.width = croppedWidth;
         frontCanvasRaw.height = sideHeight;
-        const frontCtxRaw = frontCanvasRaw.getContext('2d');
+        const frontCtxRaw = frontCanvasRaw.getContext('2d', { willReadFrequently: true });
 
         if (!frontCtxRaw) {
           reject(new Error('Could not create front canvas context'));
@@ -660,7 +660,7 @@ export async function processVoucherImage(
         let backCanvasRaw = document.createElement('canvas');
         backCanvasRaw.width = croppedWidth;
         backCanvasRaw.height = sideHeight;
-        const backCtxRaw = backCanvasRaw.getContext('2d');
+        const backCtxRaw = backCanvasRaw.getContext('2d', { willReadFrequently: true });
 
         if (!backCtxRaw) {
           reject(new Error('Could not create back canvas context'));
