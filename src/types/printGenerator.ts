@@ -165,6 +165,9 @@ export interface PrintGeneratorConfig {
   // Portrait image (for portrait motif in both spiritual and business)
   portraitImage: string | null;
 
+  // Additional motif/reference images (sent to Gemini for design inspiration)
+  motifImages: string[];
+
   // Value configuration
   valueDisplay: ValueDisplay;
   valuePosition: ValuePosition;
@@ -209,6 +212,7 @@ export const DEFAULT_CONFIG: PrintGeneratorConfig = {
   logoImage: null,
   logoColors: [],
   portraitImage: null,
+  motifImages: [],
 
   // Value
   valueDisplay: 'beides',

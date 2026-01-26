@@ -458,6 +458,13 @@ function generateSpiritualPrompt(config: PrintGeneratorConfig): string {
       : '\n\nNOTE: A reference photo is attached to this prompt. Use this photo as the basis for the portrait on the voucher.')
     : '';
 
+  // Motif images note - inform about additional reference images
+  const motifImagesNote = config.motifImages && config.motifImages.length > 0
+    ? (lang === 'de'
+      ? `\n\nZUSÄTZLICHE REFERENZBILDER: Diesem Prompt sind ${config.motifImages.length} zusätzliche Motivbilder beigefügt. Integriere Elemente, Farben, Stile oder Motive aus diesen Bildern in das Gutschein-Design. Die Bilder dienen als visuelle Inspiration und sollen das Design bereichern.`
+      : `\n\nADDITIONAL REFERENCE IMAGES: ${config.motifImages.length} additional motif images are attached to this prompt. Integrate elements, colors, styles or motifs from these images into the voucher design. The images serve as visual inspiration and should enrich the design.`)
+    : '';
+
   const qrCodeNote = config.qrCodeEnabled && config.qrCodeUrl
     ? (lang === 'de'
       ? `\n– Ein dezenter QR-Code wird auf der Rückseite integriert (URL: ${config.qrCodeUrl})`
@@ -469,7 +476,7 @@ function generateSpiritualPrompt(config: PrintGeneratorConfig): string {
 
 Erzeuge einen spirituellen, rahmenlosen Gutschein als zwei zusammengehörige Bilder übereinander, dargestellt als vollständige, professionelle Druckvorlage.
 
-Beide Bilder gehören eindeutig zum gleichen Gutschein und teilen Farbwelt, Typografie und grafische DNA. Der Gutschein soll beim Anfassen folgende Gefühle vermitteln: ${feelingsText}.${photoNote}
+Beide Bilder gehören eindeutig zum gleichen Gutschein und teilen Farbwelt, Typografie und grafische DNA. Der Gutschein soll beim Anfassen folgende Gefühle vermitteln: ${feelingsText}.${photoNote}${motifImagesNote}
 
 GRUNDHALTUNG & STIL:
 – ${t.mood[config.mood]}
@@ -556,7 +563,7 @@ Der Hintergrund AUSSERHALB der beiden Gutschein-Karten MUSS reines Schwarz sein 
 
 Create a spiritual, frameless voucher as two connected images stacked vertically, displayed as a complete, professional print template.
 
-Both images clearly belong to the same voucher and share color palette, typography and graphic DNA. The voucher should convey the following feelings when held: ${feelingsText}.${photoNote}
+Both images clearly belong to the same voucher and share color palette, typography and graphic DNA. The voucher should convey the following feelings when held: ${feelingsText}.${photoNote}${motifImagesNote}
 
 BASIC ATTITUDE & STYLE:
 – ${t.mood[config.mood]}
@@ -687,6 +694,13 @@ function generateBusinessPrompt(config: PrintGeneratorConfig): string {
         : '\n\nNOTE: A company logo is attached and should be prominently integrated into the design.'))
     : '';
 
+  // Motif images note - inform about additional reference images
+  const motifImagesNote = config.motifImages && config.motifImages.length > 0
+    ? (lang === 'de'
+      ? `\n\nZUSÄTZLICHE REFERENZBILDER: Diesem Prompt sind ${config.motifImages.length} zusätzliche Motivbilder beigefügt. Integriere Elemente, Farben, Stile oder Motive aus diesen Bildern in das Gutschein-Design. Die Bilder dienen als visuelle Inspiration und sollen das Design bereichern.`
+      : `\n\nADDITIONAL REFERENCE IMAGES: ${config.motifImages.length} additional motif images are attached to this prompt. Integrate elements, colors, styles or motifs from these images into the voucher design. The images serve as visual inspiration and should enrich the design.`)
+    : '';
+
   const qrCodeNote = config.qrCodeEnabled && config.qrCodeUrl
     ? (lang === 'de'
       ? `\n– Ein dezenter QR-Code wird auf der Rückseite integriert (URL: ${config.qrCodeUrl})`
@@ -701,7 +715,7 @@ function generateBusinessPrompt(config: PrintGeneratorConfig): string {
 
 Erzeuge einen ${designStyle.atmosphere.toLowerCase()}en, rahmenlosen Business-Gutschein als zwei zusammengehörige Bilder übereinander, dargestellt als vollständige, hochwertige Druckvorlage.
 
-Beide Bilder gehören eindeutig zum gleichen Gutschein und teilen Farbwelt, Typografie und grafische DNA. Der Gutschein soll beim Anfassen folgende Werte vermitteln: ${businessValuesText}.${photoNote}${logoNote}
+Beide Bilder gehören eindeutig zum gleichen Gutschein und teilen Farbwelt, Typografie und grafische DNA. Der Gutschein soll beim Anfassen folgende Werte vermitteln: ${businessValuesText}.${photoNote}${logoNote}${motifImagesNote}
 
 DESIGN-STIL & AUSSTRAHLUNG:
 – Inspiriert von: ${designStyle.inspiration}
@@ -782,7 +796,7 @@ Der Hintergrund AUSSERHALB der beiden Gutschein-Karten MUSS reines Schwarz sein 
 
 Create a ${designStyle.atmosphere.toLowerCase()}, frameless business voucher as two connected images stacked vertically, displayed as a complete, high-quality print template.
 
-Both images clearly belong to the same voucher and share color palette, typography and graphic DNA. The voucher should convey the following values when held: ${businessValuesText}.${photoNote}${logoNote}
+Both images clearly belong to the same voucher and share color palette, typography and graphic DNA. The voucher should convey the following values when held: ${businessValuesText}.${photoNote}${logoNote}${motifImagesNote}
 
 DESIGN STYLE & IMPRESSION:
 – Inspired by: ${designStyle.inspiration}

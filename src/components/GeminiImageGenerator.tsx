@@ -160,6 +160,7 @@ export function GeminiImageGenerator() {
   const logoImage = usePrintGeneratorStore((state) => state.logoImage);
   const logoColors = usePrintGeneratorStore((state) => state.logoColors);
   const portraitImage = usePrintGeneratorStore((state) => state.portraitImage);
+  const motifImages = usePrintGeneratorStore((state) => state.motifImages);
   const valueDisplay = usePrintGeneratorStore((state) => state.valueDisplay);
   const valuePosition = usePrintGeneratorStore((state) => state.valuePosition);
   const customValueText = usePrintGeneratorStore((state) => state.customValueText);
@@ -214,6 +215,7 @@ export function GeminiImageGenerator() {
     logoImage,
     logoColors,
     portraitImage,
+    motifImages,
     valueDisplay,
     valuePosition,
     customValueText,
@@ -229,7 +231,7 @@ export function GeminiImageGenerator() {
   }), [
     styleContext, promptLanguage, colorScheme, centralMotif, customColorInfo,
     mood, energy, visualStyle, sources, textStyle, textClarity, feelings,
-    industry, tone, ctaStyle, businessDesignStyle, businessValues, logoImage, logoColors, portraitImage,
+    industry, tone, ctaStyle, businessDesignStyle, businessValues, logoImage, logoColors, portraitImage, motifImages,
     valueDisplay, valuePosition, customValueText, voucherValue, backSideStyle, backSideText,
     personName, contactEmail, contactPhone, contactWebsite,
     qrCodeEnabled, qrCodeUrl
@@ -276,6 +278,7 @@ export function GeminiImageGenerator() {
       config,
       referenceImage: portraitImageBase64,
       logoImage: logoImage || undefined,
+      motifImages: motifImages.length > 0 ? motifImages : undefined,
       customPrompt: editedPrompt || undefined, // Use edited prompt if available
     });
 

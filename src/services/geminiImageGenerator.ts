@@ -21,6 +21,7 @@ export interface GeminiGenerationOptions {
   config: PrintGeneratorConfig;
   referenceImage?: string; // Base64 encoded image for portrait mode
   logoImage?: string; // Base64 encoded logo for business mode
+  motifImages?: string[]; // Additional reference/motif images for design inspiration
   customPrompt?: string; // Optional custom prompt (overrides generated prompt)
 }
 
@@ -30,7 +31,7 @@ export interface GeminiGenerationOptions {
 export async function generateImageWithGemini(
   options: GeminiGenerationOptions
 ): Promise<GeminiGenerationResult> {
-  const { apiKey, config, referenceImage, logoImage, customPrompt } = options;
+  const { apiKey, config, referenceImage, logoImage, motifImages, customPrompt } = options;
 
   if (!apiKey) {
     return { success: false, error: 'API Key is required' };
@@ -54,8 +55,12 @@ export async function generateImageWithGemini(
     ];
 
     // Add reference image if provided (for portrait mode)
+    // Include a text label so Gemini knows what the image represents
     if (referenceImage && config.centralMotif === 'portrait') {
-      // referenceImage should already be pure base64 (extracted in component)
+      const portraitLabel = config.promptLanguage === 'de'
+        ? '\n\n[PORTRAIT-REFERENZBILD] Das folgende Bild zeigt die Person, deren Portrait im Zentrum des Gutscheins erscheinen soll. Verwende dieses Gesicht/diese Person als Vorlage für das zentrale Portrait-Motiv:'
+        : '\n\n[PORTRAIT REFERENCE IMAGE] The following image shows the person whose portrait should appear in the center of the voucher. Use this face/person as the template for the central portrait motif:';
+      parts.push({ text: portraitLabel });
       parts.push({
         inline_data: {
           mime_type: 'image/png',
@@ -65,7 +70,13 @@ export async function generateImageWithGemini(
     }
 
     // Add logo image if provided (for business mode - always send if available)
+    // Include a text label so Gemini knows what the image represents
     if (logoImage && config.styleContext === 'business') {
+      const logoLabel = config.promptLanguage === 'de'
+        ? '\n\n[FIRMENLOGO] Das folgende Bild ist das Firmenlogo, das im Gutschein-Design integriert werden soll:'
+        : '\n\n[COMPANY LOGO] The following image is the company logo that should be integrated into the voucher design:';
+      parts.push({ text: logoLabel });
+
       // logoImage may be a data URL (data:image/...;base64,...) - extract pure base64
       const logoBase64 = logoImage.includes(',') ? logoImage.split(',')[1] : logoImage;
       // Detect mime type from data URL or default to png
@@ -78,6 +89,36 @@ export async function generateImageWithGemini(
           data: logoBase64
         }
       });
+    }
+
+    // Add motif images if provided (additional design inspiration)
+    // Include text labels so Gemini knows these are reference/inspiration images
+    if (motifImages && motifImages.length > 0) {
+      const motifIntroLabel = config.promptLanguage === 'de'
+        ? '\n\n[ZUSÄTZLICHE MOTIV-/INSPIRATIONSBILDER] Die folgenden Bilder sind zusätzliche Referenzen und Inspirationsquellen für das Design. Integriere Elemente, Farben oder Stile aus diesen Bildern in das Gutschein-Design:'
+        : '\n\n[ADDITIONAL MOTIF/INSPIRATION IMAGES] The following images are additional references and inspiration sources for the design. Integrate elements, colors, or styles from these images into the voucher design:';
+      parts.push({ text: motifIntroLabel });
+
+      for (let i = 0; i < motifImages.length; i++) {
+        const motifImage = motifImages[i];
+        const motifLabel = config.promptLanguage === 'de'
+          ? `\n[Motivbild ${i + 1}]:`
+          : `\n[Motif image ${i + 1}]:`;
+        parts.push({ text: motifLabel });
+
+        // motifImage may be a data URL - extract pure base64
+        const motifBase64 = motifImage.includes(',') ? motifImage.split(',')[1] : motifImage;
+        // Detect mime type from data URL or default to png
+        const motifMimeType = motifImage.startsWith('data:')
+          ? motifImage.split(';')[0].split(':')[1]
+          : 'image/png';
+        parts.push({
+          inline_data: {
+            mime_type: motifMimeType,
+            data: motifBase64
+          }
+        });
+      }
     }
 
     // Note: QR code is no longer sent to Gemini as it cannot reproduce it accurately.

@@ -267,6 +267,18 @@ const labels = {
       remove: 'Entfernen',
       hint: 'Ein Foto der Person für das zentrale Motiv',
     },
+    motifImages: {
+      title: 'Weitere Motive',
+      upload: 'Motiv hochladen',
+      dragDrop: 'oder hierher ziehen',
+      remove: 'Entfernen',
+      hint: 'Zusätzliche Bilder als Inspiration für das Design (max. 3)',
+      addMore: 'Weiteres Motiv hinzufügen',
+    },
+    uploads: {
+      title: 'Bilder & Uploads',
+      description: 'Lade Bilder hoch, die im Gutschein-Design verwendet werden sollen',
+    },
     reset: 'Zurücksetzen',
   },
   en: {
@@ -496,6 +508,18 @@ const labels = {
       dragDrop: 'or drag here',
       remove: 'Remove',
       hint: 'A photo of the person for the central motif',
+    },
+    motifImages: {
+      title: 'Additional Motifs',
+      upload: 'Upload motif',
+      dragDrop: 'or drag here',
+      remove: 'Remove',
+      hint: 'Additional images as inspiration for the design (max. 3)',
+      addMore: 'Add another motif',
+    },
+    uploads: {
+      title: 'Images & Uploads',
+      description: 'Upload images to be used in the voucher design',
     },
     reset: 'Reset',
   },
@@ -738,33 +762,110 @@ function ColorSelect<T extends string>({
 }
 
 // ============================================
-// LOGO UPLOAD COMPONENT (no Card wrapper)
+// IMAGE UPLOAD ITEM (compact thumbnail with remove)
 // ============================================
 
-interface LogoUploadProps {
-  label?: string;
-  uploadLabel: string;
-  dragDropLabel: string;
-  removeLabel: string;
-  hintLabel: string;
-  logoImage: string | null;
-  onLogoChange: (image: string | null) => void;
+interface ImageUploadItemProps {
+  image: string;
+  onRemove: () => void;
+  alt: string;
 }
 
-function LogoUpload({
-  label,
-  uploadLabel,
-  dragDropLabel,
-  removeLabel,
-  hintLabel,
+function ImageUploadItem({ image, onRemove, alt }: ImageUploadItemProps) {
+  return (
+    <div className="relative group">
+      <div className="w-16 h-16 rounded-lg border border-base-300 flex items-center justify-center bg-base-200 p-1 overflow-hidden">
+        <img
+          src={image}
+          alt={alt}
+          className="max-w-full max-h-full object-contain"
+        />
+      </div>
+      <button
+        type="button"
+        className="absolute -top-1 -right-1 btn btn-xs btn-circle btn-error opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={onRemove}
+        title="Remove"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+// ============================================
+// UNIFIED IMAGE UPLOADS CARD
+// ============================================
+
+interface ImageUploadsCardProps {
+  // Labels
+  cardTitle: string;
+  cardDescription: string;
+  // Portrait
+  showPortrait: boolean;
+  portraitTitle: string;
+  portraitUploadLabel: string;
+  portraitDragDropLabel: string;
+  portraitHintLabel: string;
+  portraitImage: string | null;
+  onPortraitChange: (image: string | null) => void;
+  // Logo
+  showLogo: boolean;
+  logoTitle: string;
+  logoUploadLabel: string;
+  logoDragDropLabel: string;
+  logoHintLabel: string;
+  logoImage: string | null;
+  onLogoChange: (image: string | null) => void;
+  // Motif Images
+  motifTitle: string;
+  motifUploadLabel: string;
+  motifDragDropLabel: string;
+  motifHintLabel: string;
+  motifAddMoreLabel: string;
+  motifImages: string[];
+  onAddMotifImage: (image: string) => void;
+  onRemoveMotifImage: (index: number) => void;
+}
+
+function ImageUploadsCard({
+  cardTitle,
+  cardDescription,
+  showPortrait,
+  portraitTitle,
+  portraitUploadLabel,
+  portraitDragDropLabel,
+  portraitHintLabel,
+  portraitImage,
+  onPortraitChange,
+  showLogo,
+  logoTitle,
+  logoUploadLabel,
+  logoDragDropLabel,
+  logoHintLabel,
   logoImage,
   onLogoChange,
-}: LogoUploadProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
+  motifTitle,
+  motifUploadLabel,
+  motifDragDropLabel,
+  motifHintLabel,
+  motifAddMoreLabel,
+  motifImages,
+  onAddMotifImage,
+  onRemoveMotifImage,
+}: ImageUploadsCardProps) {
+  const portraitInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const motifInputRef = useRef<HTMLInputElement>(null);
+  const [isDragOverPortrait, setIsDragOverPortrait] = useState(false);
+  const [isDragOverLogo, setIsDragOverLogo] = useState(false);
+  const [isDragOverMotif, setIsDragOverMotif] = useState(false);
 
+  // Generic file handler that converts SVG to PNG
   const handleFile = useCallback(
-    (file: File) => {
+    (file: File, callback: (dataUrl: string) => void) => {
       if (!file.type.startsWith('image/')) return;
 
       // SVG files need to be converted to PNG for Gemini API compatibility
@@ -774,18 +875,13 @@ function LogoUpload({
           const svgDataUrl = e.target?.result as string;
           const img = new Image();
           img.onload = () => {
-            // Use a high resolution for the PNG (1024px max dimension)
             const maxSize = 1024;
             let width = img.width || 512;
             let height = img.height || 512;
-
-            // SVGs often report 0 dimensions, use default
             if (width === 0 || height === 0) {
               width = 512;
               height = 512;
             }
-
-            // Scale to max size while maintaining aspect ratio
             if (width > height) {
               if (width > maxSize) {
                 height = Math.round((height * maxSize) / width);
@@ -797,142 +893,198 @@ function LogoUpload({
                 height = maxSize;
               }
             }
-
             const canvas = document.createElement('canvas');
             canvas.width = width;
             canvas.height = height;
             const ctx = canvas.getContext('2d');
             if (ctx) {
-              // Keep transparency - don't fill background
               ctx.drawImage(img, 0, 0, width, height);
               const pngDataUrl = canvas.toDataURL('image/png', 1.0);
-              onLogoChange(pngDataUrl);
+              callback(pngDataUrl);
             }
           };
-          img.onerror = () => {
-            console.error('Failed to load SVG for conversion');
-          };
+          img.onerror = () => console.error('Failed to load SVG for conversion');
           img.src = svgDataUrl;
         };
         reader.readAsDataURL(file);
       } else {
-        // Non-SVG images: read directly
         const reader = new FileReader();
         reader.onload = (e) => {
           const dataUrl = e.target?.result as string;
-          onLogoChange(dataUrl);
+          callback(dataUrl);
         };
         reader.readAsDataURL(file);
       }
     },
-    [onLogoChange]
+    []
   );
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragOver(false);
-      const file = e.dataTransfer.files[0];
-      if (file) handleFile(file);
-    },
-    [handleFile]
+  // Upload zone component
+  const UploadZone = ({
+    isDragOver,
+    setIsDragOver,
+    onFile,
+    inputRef,
+    uploadLabel,
+    dragDropLabel,
+  }: {
+    isDragOver: boolean;
+    setIsDragOver: (v: boolean) => void;
+    onFile: (file: File) => void;
+    inputRef: React.RefObject<HTMLInputElement | null>;
+    uploadLabel: string;
+    dragDropLabel: string;
+  }) => (
+    <div
+      className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+        isDragOver
+          ? 'border-primary bg-primary/10'
+          : 'border-base-300 hover:border-primary hover:bg-base-200'
+      }`}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        const file = e.dataTransfer.files[0];
+        if (file) onFile(file);
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setIsDragOver(true);
+      }}
+      onDragLeave={(e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+      }}
+      onClick={() => inputRef.current?.click()}
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) onFile(file);
+        }}
+      />
+      <div className="flex flex-col items-center gap-1">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-6 w-6 text-base-content/50"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
+        </svg>
+        <p className="font-medium text-xs">{uploadLabel}</p>
+        <p className="text-xs text-base-content/60">{dragDropLabel}</p>
+      </div>
+    </div>
   );
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  }, []);
-
-  const handleClick = () => fileInputRef.current?.click();
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleFile(file);
-  };
 
   return (
-    <div className="space-y-2">
-      {label && <p className="text-xs text-base-content/70 font-medium">{label}</p>}
+    <div className="card bg-base-100 shadow-sm">
+      <div className="card-body p-4 space-y-4">
+        <div>
+          <h3 className="font-semibold text-sm">{cardTitle}</h3>
+          <p className="text-xs text-base-content/60">{cardDescription}</p>
+        </div>
 
-      {!logoImage ? (
-        <div
-          className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-            isDragOver
-              ? 'border-primary bg-primary/10'
-              : 'border-base-300 hover:border-primary hover:bg-base-200'
-          }`}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onClick={handleClick}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleInputChange}
-          />
-          <div className="flex flex-col items-center gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-10 w-10 text-base-content/50"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+        {/* Portrait Upload */}
+        {showPortrait && (
+          <div className="space-y-2">
+            <p className="text-xs text-base-content/70 font-medium">{portraitTitle}</p>
+            {!portraitImage ? (
+              <UploadZone
+                isDragOver={isDragOverPortrait}
+                setIsDragOver={setIsDragOverPortrait}
+                onFile={(file) => handleFile(file, onPortraitChange)}
+                inputRef={portraitInputRef}
+                uploadLabel={portraitUploadLabel}
+                dragDropLabel={portraitDragDropLabel}
               />
-            </svg>
-            <p className="font-medium text-sm">{uploadLabel}</p>
-            <p className="text-xs text-base-content/60">{dragDropLabel}</p>
+            ) : (
+              <div className="flex items-center gap-3">
+                <ImageUploadItem
+                  image={portraitImage}
+                  onRemove={() => onPortraitChange(null)}
+                  alt="Portrait"
+                />
+                <p className="text-xs text-base-content/60">{portraitHintLabel}</p>
+              </div>
+            )}
           </div>
-        </div>
-      ) : (
-        <div className="flex items-center gap-4">
-          <div className="w-20 h-20 rounded-lg border border-base-300 flex items-center justify-center bg-base-200 p-2">
-            <img
-              src={logoImage}
-              alt="Logo"
-              className="max-w-full max-h-full object-contain"
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              className="btn btn-sm btn-ghost"
-              onClick={handleClick}
-            >
-              {uploadLabel}
-            </button>
-            <button
-              type="button"
-              className="btn btn-sm btn-ghost text-error"
-              onClick={() => onLogoChange(null)}
-            >
-              {removeLabel}
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleInputChange}
-            />
-          </div>
-        </div>
-      )}
+        )}
 
-      <p className="text-xs text-base-content/60">{hintLabel}</p>
+        {/* Logo Upload */}
+        {showLogo && (
+          <>
+            {showPortrait && <div className="divider my-0" />}
+            <div className="space-y-2">
+              <p className="text-xs text-base-content/70 font-medium">{logoTitle}</p>
+              {!logoImage ? (
+                <UploadZone
+                  isDragOver={isDragOverLogo}
+                  setIsDragOver={setIsDragOverLogo}
+                  onFile={(file) => handleFile(file, onLogoChange)}
+                  inputRef={logoInputRef}
+                  uploadLabel={logoUploadLabel}
+                  dragDropLabel={logoDragDropLabel}
+                />
+              ) : (
+                <div className="flex items-center gap-3">
+                  <ImageUploadItem
+                    image={logoImage}
+                    onRemove={() => onLogoChange(null)}
+                    alt="Logo"
+                  />
+                  <p className="text-xs text-base-content/60">{logoHintLabel}</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Motif Images */}
+        {(showPortrait || showLogo) && <div className="divider my-0" />}
+        <div className="space-y-2">
+          <p className="text-xs text-base-content/70 font-medium">{motifTitle}</p>
+
+          {/* Existing motif images */}
+          {motifImages.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-2">
+              {motifImages.map((img, index) => (
+                <ImageUploadItem
+                  key={index}
+                  image={img}
+                  onRemove={() => onRemoveMotifImage(index)}
+                  alt={`Motif ${index + 1}`}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Add more motif images (max 3) */}
+          {motifImages.length < 3 && (
+            <UploadZone
+              isDragOver={isDragOverMotif}
+              setIsDragOver={setIsDragOverMotif}
+              onFile={(file) => handleFile(file, onAddMotifImage)}
+              inputRef={motifInputRef}
+              uploadLabel={motifImages.length > 0 ? motifAddMoreLabel : motifUploadLabel}
+              dragDropLabel={motifDragDropLabel}
+            />
+          )}
+
+          <p className="text-xs text-base-content/60">{motifHintLabel}</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -993,6 +1145,7 @@ export function PrintGenerator() {
   const businessValues = usePrintGeneratorStore((state) => state.businessValues);
   const logoImage = usePrintGeneratorStore((state) => state.logoImage);
   const portraitImage = usePrintGeneratorStore((state) => state.portraitImage);
+  const motifImages = usePrintGeneratorStore((state) => state.motifImages);
   const valueDisplay = usePrintGeneratorStore((state) => state.valueDisplay);
   const valuePosition = usePrintGeneratorStore((state) => state.valuePosition);
   const customValueText = usePrintGeneratorStore((state) => state.customValueText);
@@ -1021,6 +1174,8 @@ export function PrintGenerator() {
   const setLogoColors = usePrintGeneratorStore((state) => state.setLogoColors);
   const logoColors = usePrintGeneratorStore((state) => state.logoColors);
   const setPortraitImage = usePrintGeneratorStore((state) => state.setPortraitImage);
+  const addMotifImage = usePrintGeneratorStore((state) => state.addMotifImage);
+  const removeMotifImage = usePrintGeneratorStore((state) => state.removeMotifImage);
   const setValuePosition = usePrintGeneratorStore((state) => state.setValuePosition);
   const setVoucherValue = usePrintGeneratorStore((state) => state.setVoucherValue);
   const setBackSideText = usePrintGeneratorStore((state) => state.setBackSideText);
@@ -1239,6 +1394,7 @@ export function PrintGenerator() {
       logoImage,
       logoColors,
       portraitImage,
+      motifImages,
       valueDisplay,
       valuePosition,
       customValueText,
@@ -1353,22 +1509,36 @@ export function PrintGenerator() {
         </div>
       </div>
 
-      {/* ====== PORTRAIT UPLOAD (when portrait motif selected) ====== */}
-      {centralMotif === 'portrait' && (
-        <div className="card bg-base-100 shadow-sm">
-          <div className="card-body p-4">
-            <LogoUpload
-              label={t.portrait.title}
-              uploadLabel={t.portrait.upload}
-              dragDropLabel={t.portrait.dragDrop}
-              removeLabel={t.portrait.remove}
-              hintLabel={t.portrait.hint}
-              logoImage={portraitImage}
-              onLogoChange={setPortraitImage}
-            />
-          </div>
-        </div>
-      )}
+      {/* ====== UNIFIED IMAGE UPLOADS ====== */}
+      <ImageUploadsCard
+        cardTitle={t.uploads.title}
+        cardDescription={t.uploads.description}
+        // Portrait - only show when portrait motif is selected
+        showPortrait={centralMotif === 'portrait'}
+        portraitTitle={t.portrait.title}
+        portraitUploadLabel={t.portrait.upload}
+        portraitDragDropLabel={t.portrait.dragDrop}
+        portraitHintLabel={t.portrait.hint}
+        portraitImage={portraitImage}
+        onPortraitChange={setPortraitImage}
+        // Logo - only show for business context
+        showLogo={styleContext === 'business'}
+        logoTitle={t.logo.title}
+        logoUploadLabel={t.logo.upload}
+        logoDragDropLabel={t.logo.dragDrop}
+        logoHintLabel={t.logo.hint}
+        logoImage={logoImage}
+        onLogoChange={handleLogoChange}
+        // Motif images - always available
+        motifTitle={t.motifImages.title}
+        motifUploadLabel={t.motifImages.upload}
+        motifDragDropLabel={t.motifImages.dragDrop}
+        motifHintLabel={t.motifImages.hint}
+        motifAddMoreLabel={t.motifImages.addMore}
+        motifImages={motifImages}
+        onAddMotifImage={addMotifImage}
+        onRemoveMotifImage={removeMotifImage}
+      />
 
       {/* ====== 3. SPIRITUAL-SPECIFIC ====== */}
       {styleContext === 'spiritual' && (
@@ -1460,18 +1630,6 @@ export function PrintGenerator() {
               tooltips={t.businessValuesTooltip}
               selected={businessValues}
               onToggle={toggleBusinessValue}
-            />
-
-            <div className="divider my-0" />
-
-            <LogoUpload
-              label={t.logo.title}
-              uploadLabel={t.logo.upload}
-              dragDropLabel={t.logo.dragDrop}
-              removeLabel={t.logo.remove}
-              hintLabel={t.logo.hint}
-              logoImage={logoImage}
-              onLogoChange={handleLogoChange}
             />
           </div>
         </div>

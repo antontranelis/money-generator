@@ -66,6 +66,11 @@ interface PrintGeneratorState extends PrintGeneratorConfig {
   // Portrait
   setPortraitImage: (image: string | null) => void;
 
+  // Motif Images
+  setMotifImages: (images: string[]) => void;
+  addMotifImage: (image: string) => void;
+  removeMotifImage: (index: number) => void;
+
   // Value
   setValueDisplay: (display: ValueDisplay) => void;
   setValuePosition: (position: ValuePosition) => void;
@@ -152,6 +157,15 @@ export const usePrintGeneratorStore = create<PrintGeneratorState>()(
       // Portrait
       setPortraitImage: (portraitImage) => set({ portraitImage }),
 
+      // Motif Images
+      setMotifImages: (motifImages) => set({ motifImages }),
+      addMotifImage: (image) =>
+        set((state) => ({ motifImages: [...state.motifImages, image] })),
+      removeMotifImage: (index) =>
+        set((state) => ({
+          motifImages: state.motifImages.filter((_, i) => i !== index),
+        })),
+
       // Value
       setValueDisplay: (valueDisplay) => set({ valueDisplay }),
       setValuePosition: (valuePosition) => set({ valuePosition }),
@@ -197,6 +211,7 @@ export const usePrintGeneratorStore = create<PrintGeneratorState>()(
         logoImage: state.logoImage,
         logoColors: state.logoColors,
         portraitImage: state.portraitImage,
+        motifImages: state.motifImages,
         valueDisplay: state.valueDisplay,
         valuePosition: state.valuePosition,
         customValueText: state.customValueText,
