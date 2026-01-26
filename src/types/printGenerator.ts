@@ -33,7 +33,8 @@ export type BusinessColorScheme =
   | 'weiss-schwarz'   // Weiß & Schwarz - minimalistisch, elegant
   | 'gruen-weiss'     // Grün & Weiß - frisch, nachhaltig
   | 'bordeaux-gold'   // Bordeaux & Gold - luxuriös, exklusiv
-  | 'petrol-silber';  // Petrol & Silber - innovativ, tech
+  | 'petrol-silber'   // Petrol & Silber - innovativ, tech
+  | 'from-logo';      // Farben aus dem Logo extrahiert
 
 export type ColorScheme = SpiritualColorScheme | BusinessColorScheme;
 
@@ -116,6 +117,13 @@ export type BusinessValue =
   | 'innovation'
   | 'zuverlaessigkeit';
 
+// Business design style - controls overall visual aesthetic
+export type BusinessDesignStyle =
+  | 'klassisch'      // Traditional, bank-note inspired, guilloche patterns
+  | 'modern'         // Clean, dynamic, contemporary design language
+  | 'premium'        // Luxurious, high-end, exclusive feel
+  | 'kreativ';       // Bold, artistic, unconventional
+
 // ============================================
 // CONFIGURATION STATE
 // ============================================
@@ -144,8 +152,10 @@ export interface PrintGeneratorConfig {
   industry: Industry;
   tone: Tone;
   ctaStyle: CtaStyle;
+  businessDesignStyle: BusinessDesignStyle;
   businessValues: BusinessValue[];
   logoImage: string | null;
+  logoColors: string[]; // Extracted colors from logo (HEX values)
 
   // Portrait image (for portrait motif in both spiritual and business)
   portraitImage: string | null;
@@ -189,8 +199,10 @@ export const DEFAULT_CONFIG: PrintGeneratorConfig = {
   industry: 'service',
   tone: 'professional',
   ctaStyle: 'invitation',
+  businessDesignStyle: 'modern',
   businessValues: ['professionalitaet', 'qualitaet'],
   logoImage: null,
+  logoColors: [],
   portraitImage: null,
 
   // Value
@@ -214,7 +226,7 @@ export const DEFAULT_CONFIG: PrintGeneratorConfig = {
 
 export const VOUCHER_VALUE_PRESETS = [
   '1 Stunde',
-  '5 Brötchen',
+  '50 Euro',
   'Eine Massage',
   'Ein Abendessen',
   'Alles Gute zum Geburtstag',
@@ -244,6 +256,7 @@ export const BUSINESS_COLOR_SWATCHES: Record<BusinessColorScheme, string[]> = {
   'gruen-weiss': ['#2D5A27', '#FFFFFF', '#90EE90', '#F0FFF0'],
   'bordeaux-gold': ['#722F37', '#D4AF37', '#F5E6E8', '#8B4557'],
   'petrol-silber': ['#006D77', '#C0C0C0', '#83C5BE', '#EDF6F9'],
+  'from-logo': [], // Placeholder - actual colors come from logoColors in store
 };
 
 // Combined for backwards compatibility

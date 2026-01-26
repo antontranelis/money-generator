@@ -127,7 +127,7 @@ export const DEFAULT_SPIRITUAL_PROMPT_CONFIG: SpiritualPromptConfig = {
 
 export const VOUCHER_VALUE_PRESETS = [
   '1 Stunde',
-  '5 Brötchen',
+  '50 Euro',
   'Eine Massage',
   'Ein Abendessen',
   'Alles Gute zum Geburtstag',

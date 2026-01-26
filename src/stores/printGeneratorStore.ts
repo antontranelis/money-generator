@@ -17,6 +17,7 @@ import {
   type Industry,
   type Tone,
   type CtaStyle,
+  type BusinessDesignStyle,
   type BusinessValue,
   type ValueDisplay,
   type ValuePosition,
@@ -55,9 +56,11 @@ interface PrintGeneratorState extends PrintGeneratorConfig {
   setIndustry: (industry: Industry) => void;
   setTone: (tone: Tone) => void;
   setCtaStyle: (style: CtaStyle) => void;
+  setBusinessDesignStyle: (style: BusinessDesignStyle) => void;
   setBusinessValues: (values: BusinessValue[]) => void;
   toggleBusinessValue: (value: BusinessValue) => void;
   setLogoImage: (image: string | null) => void;
+  setLogoColors: (colors: string[]) => void;
 
   // Portrait
   setPortraitImage: (image: string | null) => void;
@@ -134,6 +137,7 @@ export const usePrintGeneratorStore = create<PrintGeneratorState>()(
       setIndustry: (industry) => set({ industry }),
       setTone: (tone) => set({ tone }),
       setCtaStyle: (ctaStyle) => set({ ctaStyle }),
+      setBusinessDesignStyle: (businessDesignStyle) => set({ businessDesignStyle }),
       setBusinessValues: (businessValues) => set({ businessValues }),
       toggleBusinessValue: (value) =>
         set((state) => ({
@@ -142,6 +146,7 @@ export const usePrintGeneratorStore = create<PrintGeneratorState>()(
             : [...state.businessValues, value],
         })),
       setLogoImage: (logoImage) => set({ logoImage }),
+      setLogoColors: (logoColors) => set({ logoColors }),
 
       // Portrait
       setPortraitImage: (portraitImage) => set({ portraitImage }),
@@ -186,8 +191,10 @@ export const usePrintGeneratorStore = create<PrintGeneratorState>()(
         industry: state.industry,
         tone: state.tone,
         ctaStyle: state.ctaStyle,
+        businessDesignStyle: state.businessDesignStyle,
         businessValues: state.businessValues,
         logoImage: state.logoImage,
+        logoColors: state.logoColors,
         portraitImage: state.portraitImage,
         valueDisplay: state.valueDisplay,
         valuePosition: state.valuePosition,

@@ -59,8 +59,10 @@ export function SpiritualPromptPreview() {
   const industry = usePrintGeneratorStore((state) => state.industry);
   const tone = usePrintGeneratorStore((state) => state.tone);
   const ctaStyle = usePrintGeneratorStore((state) => state.ctaStyle);
+  const businessDesignStyle = usePrintGeneratorStore((state) => state.businessDesignStyle);
   const businessValues = usePrintGeneratorStore((state) => state.businessValues);
   const logoImage = usePrintGeneratorStore((state) => state.logoImage);
+  const logoColors = usePrintGeneratorStore((state) => state.logoColors);
   const portraitImage = usePrintGeneratorStore((state) => state.portraitImage);
   const valueDisplay = usePrintGeneratorStore((state) => state.valueDisplay);
   const valuePosition = usePrintGeneratorStore((state) => state.valuePosition);
@@ -91,8 +93,10 @@ export function SpiritualPromptPreview() {
     industry,
     tone,
     ctaStyle,
+    businessDesignStyle,
     businessValues,
     logoImage,
+    logoColors,
     portraitImage,
     valueDisplay,
     valuePosition,
@@ -109,7 +113,7 @@ export function SpiritualPromptPreview() {
   }), [
     styleContext, promptLanguage, colorScheme, centralMotif,
     mood, energy, visualStyle, sources, textStyle, textClarity, feelings,
-    industry, tone, ctaStyle, businessValues, logoImage, portraitImage,
+    industry, tone, ctaStyle, businessDesignStyle, businessValues, logoImage, logoColors, portraitImage,
     valueDisplay, valuePosition, customValueText, voucherValue, backSideStyle, backSideText,
     personName, contactEmail, contactPhone, contactWebsite,
     qrCodeEnabled, qrCodeUrl

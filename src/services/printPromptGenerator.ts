@@ -48,15 +48,6 @@ const spiritualTranslations = {
       reduziert: 'sehr reduzierte Gestaltung, nur Form und Raum, minimalistisch und meditativ',
       portrait: 'ein Porträt der Person, spirituell interpretiert, mit Aura oder Lichtelementen, basierend auf dem beigefügten Referenzbild',
     },
-    textStyle: {
-      'sakral-poetisch': 'sakral-poetisch, ehrfürchtig, feierlich',
-      'neutral-meditativ': 'neutral-meditativ, ruhig, gelassen',
-      nuechtern: 'nüchtern, klar, sachlich',
-    },
-    textClarity: {
-      raetselhaft: 'leicht rätselhaft, offen für Interpretation',
-      klar: 'klar verständlich, eindeutig',
-    },
     feelings: {
       vertrauen: 'Vertrauen',
       dankbarkeit: 'Dankbarkeit',
@@ -102,15 +93,6 @@ const spiritualTranslations = {
       natur: 'an abstracted nature motif like tree of life, flowing water or celestial body',
       reduziert: 'very reduced design, only form and space, minimalist and meditative',
       portrait: 'a portrait of the person, spiritually interpreted, with aura or light elements, based on the attached reference image',
-    },
-    textStyle: {
-      'sakral-poetisch': 'sacred-poetic, reverent, ceremonial',
-      'neutral-meditativ': 'neutral-meditative, calm, serene',
-      nuechtern: 'sober, clear, matter-of-fact',
-    },
-    textClarity: {
-      raetselhaft: 'slightly enigmatic, open to interpretation',
-      klar: 'clearly understandable, unambiguous',
     },
     feelings: {
       vertrauen: 'trust',
@@ -178,12 +160,35 @@ const businessTranslations = {
       portrait: 'ein professionelles Portrait der Person basierend auf dem beigefügten Referenzbild, seriös und vertrauenswürdig in das Design integriert',
     },
     colorScheme: {
+      'from-logo': '', // Dynamic - will be built from logoColors
       'navy-gold': 'Tiefes Navy und warmes Gold: klassisch, vertrauenswürdig, traditionell',
       'grau-blau': 'Elegantes Grau mit Akzentblau: modern, professionell, zeitgemäß',
       'weiss-schwarz': 'Klares Weiß und tiefes Schwarz: minimalistisch, elegant, prägnant',
       'gruen-weiss': 'Naturgrün mit reinem Weiß: frisch, nachhaltig, vertrauenswürdig',
       'bordeaux-gold': 'Edles Bordeaux mit Gold: luxuriös, exklusiv, hochwertig',
       'petrol-silber': 'Modernes Petrol mit Silber: innovativ, technisch, zukunftsorientiert',
+    },
+    designStyle: {
+      klassisch: {
+        inspiration: 'Hochwertigen Geschäftsdrucksachen, eleganten Zertifikaten, klassischer Typografie',
+        features: 'Dezente Linienführung, symmetrische Balance, klassische Serifenschrift, zurückhaltende Eleganz',
+        atmosphere: 'Zeitlos, seriös, vertrauenswürdig',
+      },
+      modern: {
+        inspiration: 'Zeitgenössischem Editorial Design, Premium-Marken, Tech-Startups',
+        features: 'Klare Geometrie, dynamische Formen, asymmetrische Balance, moderne Sans-Serif-Typografie',
+        atmosphere: 'Frisch, dynamisch, zukunftsorientiert',
+      },
+      premium: {
+        inspiration: 'Luxusmarken, High-End Packaging, exklusiven Geschenkkarten',
+        features: 'Subtile Goldakzente, feine Linien, elegante Typografie, hochwertige Materialanmutung',
+        atmosphere: 'Exklusiv, edel, hochwertig',
+      },
+      kreativ: {
+        inspiration: 'Künstlerischen Drucken, Bold Design, experimenteller Grafik',
+        features: 'Unkonventionelle Layouts, expressive Formen, überraschende Farbakzente, mutige Typografie',
+        atmosphere: 'Einzigartig, ausdrucksstark, unvergesslich',
+      },
     },
   },
   en: {
@@ -228,6 +233,7 @@ const businessTranslations = {
       portrait: 'a professional portrait of the person based on the attached reference image, seriously and trustworthily integrated into the design',
     },
     colorScheme: {
+      'from-logo': '', // Dynamic - will be built from logoColors
       'navy-gold': 'Deep navy and warm gold: classic, trustworthy, traditional',
       'grau-blau': 'Elegant gray with accent blue: modern, professional, contemporary',
       'weiss-schwarz': 'Clear white and deep black: minimalist, elegant, striking',
@@ -235,29 +241,34 @@ const businessTranslations = {
       'bordeaux-gold': 'Noble bordeaux with gold: luxurious, exclusive, high-quality',
       'petrol-silber': 'Modern teal with silver: innovative, technical, future-oriented',
     },
+    designStyle: {
+      klassisch: {
+        inspiration: 'High-quality business stationery, elegant certificates, classic typography',
+        features: 'Subtle line work, symmetrical balance, classic serif fonts, understated elegance',
+        atmosphere: 'Timeless, serious, trustworthy',
+      },
+      modern: {
+        inspiration: 'Contemporary editorial design, premium brands, tech startups',
+        features: 'Clear geometry, dynamic shapes, asymmetric balance, modern sans-serif typography',
+        atmosphere: 'Fresh, dynamic, forward-looking',
+      },
+      premium: {
+        inspiration: 'Luxury brands, high-end packaging, exclusive gift cards',
+        features: 'Subtle gold accents, fine lines, elegant typography, high-quality material appearance',
+        atmosphere: 'Exclusive, refined, high-quality',
+      },
+      kreativ: {
+        inspiration: 'Artistic prints, bold design, experimental graphics',
+        features: 'Unconventional layouts, expressive shapes, surprising color accents, bold typography',
+        atmosphere: 'Unique, expressive, memorable',
+      },
+    },
   },
 };
 
 // ============================================
-// SHARED TRANSLATIONS
+// SHARED TRANSLATIONS (kept for backwards compatibility)
 // ============================================
-
-const sharedTranslations = {
-  de: {
-    backSideStyle: {
-      erklaerung: 'erklärend, beschreibend',
-      einladung: 'einladend, ein Versprechen',
-      mantra: 'wie ein Mantra, meditativ',
-    },
-  },
-  en: {
-    backSideStyle: {
-      erklaerung: 'explanatory, descriptive',
-      einladung: 'inviting, a promise',
-      mantra: 'like a mantra, meditative',
-    },
-  },
-};
 
 /**
  * Generate value display instructions based on config
@@ -270,29 +281,29 @@ function getValueDisplayInstructions(config: PrintGeneratorConfig, lang: PromptL
 
   if (lang === 'de') {
     const positionText = {
-      ecken: `In den Ecken steht nur die Zahl „${numericValue}" (wie bei echten Banknoten), elegant und klassisch`,
-      zentral: `Die Zahl „${numericValue}" erscheint zentral und prominent im Design`,
-      beides: `Die Zahl „${numericValue}" erscheint sowohl in den Ecken als auch zentral`,
+      ecken: `In den Ecken steht NUR die Zahl „${numericValue}" (wie bei echten Banknoten), elegant und klassisch`,
+      zentral: `Der vollständige Wert „${fullValue}" erscheint zentral und prominent im Design`,
+      beides: `In den Ecken steht NUR die Zahl „${numericValue}", in der Mitte darf der vollständige Wert „${fullValue}" stehen`,
     }[config.valuePosition];
 
     const displayText = {
-      explizit: `Der vollständige Wert „${fullValue}" wird dezent aber lesbar irgendwo auf der Vorderseite platziert (z.B. klein unter der zentralen Zahl oder am unteren Rand)`,
+      explizit: `Der vollständige Wert „${fullValue}" wird dezent aber lesbar irgendwo auf der Vorderseite platziert (z.B. klein unter dem zentralen Motiv oder am unteren Rand)`,
       symbolisch: `Der Wert wird nur durch die Zahl „${numericValue}" angedeutet - die Einheit „${valueUnit}" erscheint NICHT auf der Vorderseite`,
-      beides: `Die Zahl „${numericValue}" dominiert, der vollständige Wert „${fullValue}" wird erst auf der Rückseite erklärt`,
+      beides: `Die Zahl „${numericValue}" dominiert in den Ecken, der vollständige Wert „${fullValue}" darf zentral oder auf der Rückseite erscheinen`,
     }[config.valueDisplay];
 
     return `– ${positionText}\n– ${displayText}`;
   } else {
     const positionText = {
-      ecken: `In the corners only the number "${numericValue}" appears (like real banknotes), elegant and classic`,
-      zentral: `The number "${numericValue}" appears centrally and prominently in the design`,
-      beides: `The number "${numericValue}" appears both in the corners and centrally`,
+      ecken: `In the corners ONLY the number "${numericValue}" appears (like real banknotes), elegant and classic`,
+      zentral: `The full value "${fullValue}" appears centrally and prominently in the design`,
+      beides: `In the corners ONLY the number "${numericValue}", in the center the full value "${fullValue}" may appear`,
     }[config.valuePosition];
 
     const displayText = {
-      explizit: `The full value "${fullValue}" is placed subtly but readable somewhere on the front (e.g., small below the central number or at the bottom edge)`,
+      explizit: `The full value "${fullValue}" is placed subtly but readable somewhere on the front (e.g., small below the central motif or at the bottom edge)`,
       symbolisch: `The value is only hinted at by the number "${numericValue}" - the unit "${valueUnit}" does NOT appear on the front`,
-      beides: `The number "${numericValue}" dominates, the full value "${fullValue}" is only explained on the back`,
+      beides: `The number "${numericValue}" dominates in the corners, the full value "${fullValue}" may appear centrally or on the back`,
     }[config.valueDisplay];
 
     return `– ${positionText}\n– ${displayText}`;
@@ -364,57 +375,26 @@ function getBackSideText(config: PrintGeneratorConfig, lang: PromptLanguage): st
   const value = config.voucherValue || (lang === 'de' ? '1 Stunde' : '1 hour');
   const name = config.personName?.trim();
 
+  // Different format for spiritual vs business
   if (config.styleContext === 'spiritual') {
+    // Spiritual: personal, warm tone
     if (lang === 'de') {
-      switch (config.backSideStyle) {
-        case 'erklaerung':
-          return name
-            ? `Dieser Schein berechtigt zum Empfang von ${value}. Einzulösen bei ${name}.`
-            : `Dieser Schein berechtigt zum Empfang von ${value}.`;
-        case 'einladung':
-          return `Für diesen Schein erhältst du ${value} oder ein gleichwertiges Dankeschön.`;
-        case 'mantra':
-          return `${value}. In Verbundenheit. In Dankbarkeit.`;
-      }
+      return `Für diesen Gutschein erhältst du ${value} meiner Zeit oder ein vergleichbares Dankeschön.`;
     } else {
-      switch (config.backSideStyle) {
-        case 'erklaerung':
-          return name
-            ? `This voucher entitles you to receive ${value}. Redeemable with ${name}.`
-            : `This voucher entitles you to receive ${value}.`;
-        case 'einladung':
-          return `For this voucher you will receive ${value} or an equivalent token of gratitude.`;
-        case 'mantra':
-          return `${value}. In connection. In gratitude.`;
-      }
+      return `For this voucher you receive ${value} of my time or a comparable thank you.`;
     }
   } else {
-    // Business style
+    // Business: formal, professional tone
     if (lang === 'de') {
-      switch (config.backSideStyle) {
-        case 'erklaerung':
-          return name
-            ? `Dieser Gutschein berechtigt zum Erhalt von ${value}. Einzulösen bei ${name}.`
-            : `Dieser Gutschein berechtigt zum Erhalt von ${value}.`;
-        case 'einladung':
-          return `Wir freuen uns, Ihnen ${value} überreichen zu dürfen.`;
-        case 'mantra':
-          return `${value}. Für Sie. Mit Wertschätzung.`;
-      }
+      return name
+        ? `Dieser Gutschein berechtigt zum Erhalt von Leistungen im Wert von ${value}. Einzulösen bei ${name}.`
+        : `Dieser Gutschein berechtigt zum Erhalt von Leistungen im Wert von ${value}.`;
     } else {
-      switch (config.backSideStyle) {
-        case 'erklaerung':
-          return name
-            ? `This voucher entitles you to ${value}. Redeemable at ${name}.`
-            : `This voucher entitles you to ${value}.`;
-        case 'einladung':
-          return `We are pleased to present you with ${value}.`;
-        case 'mantra':
-          return `${value}. For you. With appreciation.`;
-      }
+      return name
+        ? `This voucher entitles you to services worth ${value}. Redeemable at ${name}.`
+        : `This voucher entitles you to services worth ${value}.`;
     }
   }
-  return '';
 }
 
 function buildContactInfoSection(config: PrintGeneratorConfig, lang: PromptLanguage): string {
@@ -454,7 +434,6 @@ function buildContactInfoSection(config: PrintGeneratorConfig, lang: PromptLangu
 function generateSpiritualPrompt(config: PrintGeneratorConfig): string {
   const lang = config.promptLanguage;
   const t = spiritualTranslations[lang];
-  const shared = sharedTranslations[lang];
 
   const sourcesText = config.sources.map((s) => t.sources[s]).join(', ');
   const feelingsText = config.feelings.map((f) => t.feelings[f]).join(', ');
@@ -476,9 +455,11 @@ function generateSpiritualPrompt(config: PrintGeneratorConfig): string {
     : '';
 
   if (lang === 'de') {
-    return `Erzeuge einen spirituellen, rahmenlosen Gutschein als zwei zusammengehörige Bilder übereinander, dargestellt als vollständige, professionelle Druckvorlage.${photoNote}
+    return `KRITISCH - HINTERGRUNDFARBE: Der Hintergrund des gesamten Bildes MUSS reines Schwarz sein (#000000, RGB 0,0,0). KEIN Grau, KEIN Dunkelgrau, KEINE Schattierungen - NUR reines Schwarz!
 
-Beide Bilder gehören eindeutig zum gleichen Gutschein und teilen Farbwelt, Typografie und grafische DNA. Der Gutschein soll beim Anfassen folgende Gefühle vermitteln: ${feelingsText}.
+Erzeuge einen spirituellen, rahmenlosen Gutschein als zwei zusammengehörige Bilder übereinander, dargestellt als vollständige, professionelle Druckvorlage.
+
+Beide Bilder gehören eindeutig zum gleichen Gutschein und teilen Farbwelt, Typografie und grafische DNA. Der Gutschein soll beim Anfassen folgende Gefühle vermitteln: ${feelingsText}.${photoNote}
 
 GRUNDHALTUNG & STIL:
 – ${t.mood[config.mood]}
@@ -504,11 +485,9 @@ ${getValueDisplayInstructions(config, lang)}
 
 Designmerkmale:
 – Feine Linien, organische Muster, spirituelle Geometrie
-– ${t.textStyle[config.textStyle]}
-– ${t.textClarity[config.textClarity]}
 – Seriennummer und Ausgabedatum optional
 
-UNTERES BILD (zeigt Kontaktdaten, ${shared.backSideStyle[config.backSideStyle]}):
+UNTERES BILD (zeigt Kontaktdaten):
 – Reduziertes Design im gleichen Stil wie das obere Bild
 – EXAKT GLEICHE Abmessungen und Randbreiten wie das obere Bild
 – SYMMETRISCHE RÄNDER: Gleiche Randbreite an allen vier Seiten
@@ -537,6 +516,7 @@ FARBWELT:
 
 FORMAT & DRUCK:
 – Vertikales Layout: Wert-Bild oben, Kontakt-Bild unten
+– KRITISCH - EXAKT GLEICHE GRÖSSE: Beide Gutschein-Hälften MÜSSEN PIXELGENAU die gleiche Höhe und Breite haben! Das obere und untere Bild müssen identische Abmessungen haben - keine Abweichung erlaubt!
 – Beide Bilder vollständig sichtbar und IDENTISCH in Größe und Form
 – KRITISCH - SYMMETRIE: Beide Gutscheine müssen PERFEKT ZENTRIERT sein mit EXAKT GLEICHEN Rändern an allen vier Seiten
 – Der Inhalt jedes Gutscheins ist mittig platziert - NICHT nach links, rechts, oben oder unten verschoben
@@ -557,11 +537,16 @@ QUALITÄT:
 – Sehr hohe Detailtiefe
 – Hochwertige, spirituelle Druckanmutung
 – Professionelles, vertrauenswürdiges Erscheinungsbild
-– 4K-Auflösung, gestochen scharf`;
-  } else {
-    return `Create a spiritual, frameless voucher as two connected images stacked vertically, displayed as a complete, professional print template.${photoNote}
+– 4K-Auflösung, gestochen scharf
 
-Both images clearly belong to the same voucher and share color palette, typography and graphic DNA. The voucher should convey the following feelings when held: ${feelingsText}.
+NOCHMALS KRITISCH - HINTERGRUND:
+Der Hintergrund AUSSERHALB der beiden Gutschein-Karten MUSS reines Schwarz sein (#000000). Überprüfe vor der Ausgabe: Ist der Hintergrund wirklich #000000? Kein Grau (#111, #222, #333 etc.), kein Dunkelblau, kein anderer Farbton - NUR reines Schwarz!`;
+  } else {
+    return `CRITICAL - BACKGROUND COLOR: The background of the entire image MUST be pure black (#000000, RGB 0,0,0). NO gray, NO dark gray, NO shades - ONLY pure black!
+
+Create a spiritual, frameless voucher as two connected images stacked vertically, displayed as a complete, professional print template.
+
+Both images clearly belong to the same voucher and share color palette, typography and graphic DNA. The voucher should convey the following feelings when held: ${feelingsText}.${photoNote}
 
 BASIC ATTITUDE & STYLE:
 – ${t.mood[config.mood]}
@@ -587,11 +572,9 @@ ${getValueDisplayInstructions(config, lang)}
 
 Design Features:
 – Fine lines, organic patterns, spiritual geometry
-– ${t.textStyle[config.textStyle]}
-– ${t.textClarity[config.textClarity]}
 – Serial number and issue date optional
 
-BOTTOM IMAGE (shows contact details, ${shared.backSideStyle[config.backSideStyle]}):
+BOTTOM IMAGE (shows contact details):
 – Reduced design in the same style as the top image
 – EXACTLY SAME dimensions and margin widths as the top image
 – SYMMETRICAL MARGINS: Same margin width on all four sides
@@ -620,6 +603,7 @@ COLOR PALETTE:
 
 FORMAT & PRINT:
 – Vertical layout: Value image on top, contact image on bottom
+– CRITICAL - EXACTLY SAME SIZE: Both voucher halves MUST have PIXEL-PERFECT identical height and width! The top and bottom image must have identical dimensions - no deviation allowed!
 – Both images fully visible and IDENTICAL in size and shape
 – CRITICAL - SYMMETRY: Both vouchers must be PERFECTLY CENTERED with EXACTLY EQUAL margins on all four sides
 – The content of each voucher is centered - NOT shifted to the left, right, top or bottom
@@ -640,7 +624,10 @@ QUALITY:
 – Very high level of detail
 – High-quality, spiritual print appearance
 – Professional, trustworthy look
-– 4K resolution, razor sharp`;
+– 4K resolution, razor sharp
+
+AGAIN CRITICAL - BACKGROUND:
+The background OUTSIDE both voucher cards MUST be pure black (#000000). Check before output: Is the background really #000000? No gray (#111, #222, #333 etc.), no dark blue, no other color tone - ONLY pure black!`;
   }
 }
 
@@ -651,9 +638,18 @@ QUALITY:
 function generateBusinessPrompt(config: PrintGeneratorConfig): string {
   const lang = config.promptLanguage;
   const t = businessTranslations[lang];
-  const shared = sharedTranslations[lang];
 
-  const colorPalette = t.colorScheme[config.colorScheme as BusinessColorScheme];
+  // Build color palette - use logoColors if "from-logo" is selected
+  let colorPalette: string;
+  if (config.colorScheme === 'from-logo' && config.logoColors && config.logoColors.length > 0) {
+    const colorList = config.logoColors.join(', ');
+    colorPalette = lang === 'de'
+      ? `Weiß als primäre Hintergrundfarbe, Akzentfarben aus dem Firmenlogo: ${colorList}. Nutze einen hellen, weißen Hintergrund mit den Logo-Farben als Akzente für Text, Ornamente und Details.`
+      : `White as primary background color, accent colors from company logo: ${colorList}. Use a light, white background with the logo colors as accents for text, ornaments and details.`;
+  } else {
+    colorPalette = t.colorScheme[config.colorScheme as BusinessColorScheme] || t.colorScheme['navy-gold'];
+  }
+
   const backSideText = getBackSideText(config, lang);
   const contactInfoSection = buildContactInfoSection(config, lang);
   const motif = t.motif[config.centralMotif as BusinessMotif];
@@ -683,20 +679,19 @@ function generateBusinessPrompt(config: PrintGeneratorConfig): string {
     : '';
 
   const businessValuesText = config.businessValues.map((v) => t.businessValues[v]).join(', ');
+  const designStyle = t.designStyle[config.businessDesignStyle] || t.designStyle.modern;
 
   if (lang === 'de') {
-    return `Erzeuge einen professionellen, rahmenlosen Business-Gutschein als zwei zusammengehörige Bilder übereinander, dargestellt als vollständige, hochwertige Druckvorlage.${photoNote}${logoNote}
+    return `KRITISCH - HINTERGRUNDFARBE: Der Hintergrund des gesamten Bildes MUSS reines Schwarz sein (#000000, RGB 0,0,0). KEIN Grau, KEIN Dunkelgrau, KEINE Schattierungen - NUR reines Schwarz!
 
-Beide Bilder gehören eindeutig zum gleichen Gutschein und teilen Farbwelt, Typografie und grafische DNA. Der Gutschein soll beim Anfassen folgende Werte vermitteln: ${businessValuesText}.
+Erzeuge einen ${designStyle.atmosphere.toLowerCase()}en, rahmenlosen Business-Gutschein als zwei zusammengehörige Bilder übereinander, dargestellt als vollständige, hochwertige Druckvorlage.
 
-BRANCHE & TONALITÄT:
-– Branche: ${t.industry[config.industry]}
-– Tonalität: ${t.tone[config.tone]}
-– Call-to-Action Stil: ${t.ctaStyle[config.ctaStyle]}
+Beide Bilder gehören eindeutig zum gleichen Gutschein und teilen Farbwelt, Typografie und grafische DNA. Der Gutschein soll beim Anfassen folgende Werte vermitteln: ${businessValuesText}.${photoNote}${logoNote}
 
-GESCHÄFTLICHE WERTE & AUSSTRAHLUNG:
-– Inspiriert von: Hochwertigen Wertpapieren, Premium-Geschenkgutscheinen, Banknotendesign
-– Diese Einflüsse sollen subtil in Guillochen, Linienmustern und Typografie spürbar sein
+DESIGN-STIL & AUSSTRAHLUNG:
+– Inspiriert von: ${designStyle.inspiration}
+– Designmerkmale: ${designStyle.features}
+– Gesamtwirkung: ${designStyle.atmosphere}
 
 OBERES BILD (zeigt den Wert):
 – Querformat im Seitenverhältnis moderner Banknoten (ca. 2.5:1)
@@ -712,12 +707,10 @@ Wertdarstellung (wie bei echten Banknoten):
 ${getValueDisplayInstructions(config, lang)}
 
 Designmerkmale:
-– Klare Linien, professionelle Typografie
-– ${t.tone[config.tone]}
-– Hochwertig und vertrauenswürdig
+– ${designStyle.features}
 – Seriennummer und Ausgabedatum optional
 
-UNTERES BILD (zeigt Kontaktdaten, ${shared.backSideStyle[config.backSideStyle]}):
+UNTERES BILD (zeigt Kontaktdaten):
 – Reduziertes Design im gleichen Stil wie das obere Bild
 – EXAKT GLEICHE Abmessungen und Randbreiten wie das obere Bild
 – SYMMETRISCHE RÄNDER: Gleiche Randbreite an allen vier Seiten
@@ -746,13 +739,13 @@ FARBWELT:
 
 FORMAT & DRUCK:
 – Vertikales Layout: Wert-Bild oben, Kontakt-Bild unten
+– KRITISCH - EXAKT GLEICHE GRÖSSE: Beide Gutschein-Hälften MÜSSEN PIXELGENAU die gleiche Höhe und Breite haben! Das obere und untere Bild müssen identische Abmessungen haben - keine Abweichung erlaubt!
 – Beide Bilder vollständig sichtbar und IDENTISCH in Größe und Form
 – KRITISCH - SYMMETRIE: Beide Gutscheine müssen PERFEKT ZENTRIERT sein mit EXAKT GLEICHEN Rändern an allen vier Seiten
 – Der Inhalt jedes Gutscheins ist mittig platziert - NICHT nach links, rechts, oben oder unten verschoben
 – Keine abgeschnittenen Ränder
 – Kein Rahmen
 – Gestaltungselemente enden gleichmäßig vor dem Rand (nicht näher an einer Seite als an der anderen)
-– WICHTIG: Der Hintergrund AUSSERHALB der Gutscheine muss rein schwarz sein (#000000) - kein Grau, kein Schatten, nur reines Schwarz
 – ABSOLUT KEINE Beschriftungen oder Labels im Bild! Keine Texte wie "Vorderseite", "Rückseite", "Front", "Back", "Nennwert-Seite", "Kontakt-Seite" oder ähnliche Bezeichnungen irgendwo im Bild!
 
 WICHTIG – AUSSCHLÜSSE:
@@ -765,20 +758,21 @@ QUALITÄT:
 – Sehr hohe Detailtiefe
 – Hochwertige, professionelle Druckanmutung
 – Professionelles, vertrauenswürdiges Erscheinungsbild
-– 4K-Auflösung, gestochen scharf`;
+– 4K-Auflösung, gestochen scharf
+
+NOCHMALS KRITISCH - HINTERGRUND:
+Der Hintergrund AUSSERHALB der beiden Gutschein-Karten MUSS reines Schwarz sein (#000000). Überprüfe vor der Ausgabe: Ist der Hintergrund wirklich #000000? Kein Grau (#111, #222, #333 etc.), kein Dunkelblau, kein anderer Farbton - NUR reines Schwarz!`;
   } else {
-    return `Create a professional, frameless business voucher as two connected images stacked vertically, displayed as a complete, high-quality print template.${photoNote}${logoNote}
+    return `CRITICAL - BACKGROUND COLOR: The background of the entire image MUST be pure black (#000000, RGB 0,0,0). NO gray, NO dark gray, NO shades - ONLY pure black!
 
-Both images clearly belong to the same voucher and share color palette, typography and graphic DNA. The voucher should convey the following values when held: ${businessValuesText}.
+Create a ${designStyle.atmosphere.toLowerCase()}, frameless business voucher as two connected images stacked vertically, displayed as a complete, high-quality print template.
 
-INDUSTRY & TONE:
-– Industry: ${t.industry[config.industry]}
-– Tone: ${t.tone[config.tone]}
-– Call-to-Action style: ${t.ctaStyle[config.ctaStyle]}
+Both images clearly belong to the same voucher and share color palette, typography and graphic DNA. The voucher should convey the following values when held: ${businessValuesText}.${photoNote}${logoNote}
 
-BUSINESS VALUES & IMPRESSION:
-– Inspired by: High-quality securities, premium gift vouchers, banknote design
-– These influences should be subtly perceptible in guilloches, line patterns and typography
+DESIGN STYLE & IMPRESSION:
+– Inspired by: ${designStyle.inspiration}
+– Design features: ${designStyle.features}
+– Overall effect: ${designStyle.atmosphere}
 
 TOP IMAGE (shows the value):
 – Landscape format in the aspect ratio of modern banknotes (approx. 2.5:1)
@@ -794,12 +788,10 @@ Value Display (like real banknotes):
 ${getValueDisplayInstructions(config, lang)}
 
 Design Features:
-– Clear lines, professional typography
-– ${t.tone[config.tone]}
-– High-quality and trustworthy
+– ${designStyle.features}
 – Serial number and issue date optional
 
-BOTTOM IMAGE (shows contact details, ${shared.backSideStyle[config.backSideStyle]}):
+BOTTOM IMAGE (shows contact details):
 – Reduced design in the same style as the top image
 – EXACTLY SAME dimensions and margin widths as the top image
 – SYMMETRICAL MARGINS: Same margin width on all four sides
@@ -828,13 +820,13 @@ COLOR PALETTE:
 
 FORMAT & PRINT:
 – Vertical layout: Value image on top, contact image on bottom
+– CRITICAL - EXACTLY SAME SIZE: Both voucher halves MUST have PIXEL-PERFECT identical height and width! The top and bottom image must have identical dimensions - no deviation allowed!
 – Both images fully visible and IDENTICAL in size and shape
 – CRITICAL - SYMMETRY: Both vouchers must be PERFECTLY CENTERED with EXACTLY EQUAL margins on all four sides
 – The content of each voucher is centered - NOT shifted to the left, right, top or bottom
 – No cropped edges
 – No frame
 – Design elements end evenly before the margin (not closer to one side than another)
-– IMPORTANT: The background OUTSIDE the vouchers must be pure black (#000000) - no gray, no shadows, only pure black
 – ABSOLUTELY NO labels or text annotations in the image! No text like "Front", "Back", "Vorderseite", "Rückseite", "Value Side", "Contact Side" or similar labels anywhere in the image!
 
 IMPORTANT – EXCLUSIONS:
@@ -847,7 +839,10 @@ QUALITY:
 – Very high level of detail
 – High-quality, professional print appearance
 – Professional, trustworthy look
-– 4K resolution, razor sharp`;
+– 4K resolution, razor sharp
+
+AGAIN CRITICAL - BACKGROUND:
+The background OUTSIDE both voucher cards MUST be pure black (#000000). Check before output: Is the background really #000000? No gray (#111, #222, #333 etc.), no dark blue, no other color tone - ONLY pure black!`;
   }
 }
 
@@ -873,56 +868,24 @@ export function generateDefaultBackSideText(config: PrintGeneratorConfig): strin
   const name = config.personName?.trim();
 
   if (config.styleContext === 'spiritual') {
+    // Spiritual: personal, warm tone
     if (lang === 'de') {
-      switch (config.backSideStyle) {
-        case 'erklaerung':
-          return name
-            ? `Dieser Schein berechtigt zum Empfang von ${value}. Einzulösen bei ${name}.`
-            : `Dieser Schein berechtigt zum Empfang von ${value}.`;
-        case 'einladung':
-          return `Für diesen Schein erhältst du ${value} oder ein gleichwertiges Dankeschön.`;
-        case 'mantra':
-          return `${value}. In Verbundenheit. In Dankbarkeit.`;
-      }
+      return `Für diesen Gutschein erhältst du ${value} meiner Zeit oder ein vergleichbares Dankeschön.`;
     } else {
-      switch (config.backSideStyle) {
-        case 'erklaerung':
-          return name
-            ? `This voucher entitles you to receive ${value}. Redeemable with ${name}.`
-            : `This voucher entitles you to receive ${value}.`;
-        case 'einladung':
-          return `For this voucher you will receive ${value} or an equivalent token of gratitude.`;
-        case 'mantra':
-          return `${value}. In connection. In gratitude.`;
-      }
+      return `For this voucher you receive ${value} of my time or a comparable thank you.`;
     }
   } else {
-    // Business style
+    // Business: formal, professional tone
     if (lang === 'de') {
-      switch (config.backSideStyle) {
-        case 'erklaerung':
-          return name
-            ? `Dieser Gutschein berechtigt zum Erhalt von ${value}. Einzulösen bei ${name}.`
-            : `Dieser Gutschein berechtigt zum Erhalt von ${value}.`;
-        case 'einladung':
-          return `Wir freuen uns, Ihnen ${value} überreichen zu dürfen.`;
-        case 'mantra':
-          return `${value}. Für Sie. Mit Wertschätzung.`;
-      }
+      return name
+        ? `Dieser Gutschein berechtigt zum Erhalt von Leistungen im Wert von ${value}. Einzulösen bei ${name}.`
+        : `Dieser Gutschein berechtigt zum Erhalt von Leistungen im Wert von ${value}.`;
     } else {
-      switch (config.backSideStyle) {
-        case 'erklaerung':
-          return name
-            ? `This voucher entitles you to ${value}. Redeemable at ${name}.`
-            : `This voucher entitles you to ${value}.`;
-        case 'einladung':
-          return `We are pleased to present you with ${value}.`;
-        case 'mantra':
-          return `${value}. For you. With appreciation.`;
-      }
+      return name
+        ? `This voucher entitles you to services worth ${value}. Redeemable at ${name}.`
+        : `This voucher entitles you to services worth ${value}.`;
     }
   }
-  return '';
 }
 
 export function generatePrintNegativePrompt(config: PrintGeneratorConfig): string {

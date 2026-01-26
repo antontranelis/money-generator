@@ -9,6 +9,7 @@ import { Fragment, useCallback, useMemo, useRef, useState } from 'react';
 import { usePrintGeneratorStore, useHasHydrated } from '../../stores/printGeneratorStore';
 import { useBillStore } from '../../stores/billStore';
 import { generateDefaultBackSideText } from '../../services/printPromptGenerator';
+import { extractColorsFromImage } from '../../services/colorExtractor';
 import {
   type StyleContext,
   type SpiritualColorScheme,
@@ -19,15 +20,10 @@ import {
   type Energy,
   type VisualStyle,
   type SpiritualSource,
-  type TextStyle,
-  type TextClarity,
   type Feeling,
-  type Industry,
-  type Tone,
-  type CtaStyle,
+  type BusinessDesignStyle,
   type BusinessValue,
   type ValuePosition,
-  type BackSideStyle,
   type PromptLanguage,
   SPIRITUAL_COLOR_SWATCHES,
   BUSINESS_COLOR_SWATCHES,
@@ -46,7 +42,6 @@ const labels = {
       motiv: 'Zentrales Motiv',
       grundhaltung: 'Grundhaltung & Wirkung',
       quellen: 'Spirituelle Quellen',
-      text: 'Sprache & Textgefühl',
       gefuehl: 'Gefühl beim Anfassen',
       business: 'Business-Einstellungen',
       wert: 'Gutschein-Konfiguration',
@@ -62,7 +57,6 @@ const labels = {
       grundhaltung: 'Bestimmt die emotionale Grundstimmung des Designs',
       quellen: 'Welche spirituellen Traditionen sollen das Design inspirieren?',
       wert: 'Wie soll der Wert des Gutscheins dargestellt werden?',
-      text: 'Wie soll die Sprache auf dem Schein wirken?',
       rueckseite: 'Der Stil des Textes auf der Rückseite',
       gefuehl: 'Welche Gefühle soll der Schein vermitteln?',
       business: 'Branche und Tonalität für professionelle Auftritte',
@@ -92,6 +86,7 @@ const labels = {
       'pastell': '→ Sanfte Pastelltöne: Zartes Rosa, Hellblau, Mintgrün, Pfirsich, Lavendel',
     },
     businessColorScheme: {
+      'from-logo': 'Aus Logo',
       'navy-gold': 'Navy & Gold',
       'grau-blau': 'Grau & Blau',
       'weiss-schwarz': 'Weiß & Schwarz',
@@ -100,6 +95,7 @@ const labels = {
       'petrol-silber': 'Petrol & Silber',
     },
     businessColorSchemeTooltip: {
+      'from-logo': '→ Farben automatisch aus dem hochgeladenen Logo extrahieren',
       'navy-gold': '→ Klassisch, vertrauenswürdig: Tiefes Navy, warmes Gold',
       'grau-blau': '→ Modern, professionell: Elegantes Grau mit Akzentblau',
       'weiss-schwarz': '→ Minimalistisch, elegant: Klares Weiß, tiefes Schwarz',
@@ -125,20 +121,10 @@ const labels = {
     },
     businessMotif: {
       'logo-zentral': 'Logo zentral',
-      geometrisch: 'Geometrisch',
-      linien: 'Linien & Muster',
-      emblem: 'Emblem / Wappen',
-      minimal: 'Minimalistisch',
-      rahmen: 'Dekorativer Rahmen',
       portrait: 'Portrait',
     },
     businessMotifTooltip: {
       'logo-zentral': '→ Das Firmenlogo prominent im Zentrum des Designs',
-      geometrisch: '→ Klare geometrische Formen, professionell und strukturiert',
-      linien: '→ Elegante Linien und Guilloche-Muster wie bei echten Banknoten',
-      emblem: '→ Wappenartiges Emblem, traditionell und vertrauenswürdig',
-      minimal: '→ Sehr reduziert, viel Weißraum, modern und elegant',
-      rahmen: '→ Dekorativer Rahmen um das Design, klassisch und wertig',
       portrait: '→ Ein professionelles Portrait, seriös und vertrauenswürdig gestaltet',
     },
     mood: {
@@ -181,24 +167,6 @@ const labels = {
       mystik: '→ Mystik, das Unsagbare, Geheimnis, ohne religiöse Zuordnung',
       verbundenheit: '→ menschliche Verbundenheit, Herzqualität, Beziehung, Mitgefühl',
     },
-    textStyle: {
-      'sakral-poetisch': 'Sakral-Poetisch',
-      'neutral-meditativ': 'Neutral-Meditativ',
-      'nuechtern': 'Nüchtern',
-    },
-    textStyleTooltip: {
-      'sakral-poetisch': '→ sakral-poetisch, ehrfürchtig, feierlich',
-      'neutral-meditativ': '→ neutral-meditativ, ruhig, gelassen',
-      'nuechtern': '→ nüchtern, klar, sachlich',
-    },
-    textClarity: {
-      raetselhaft: 'Rätselhaft',
-      klar: 'Klar',
-    },
-    textClarityTooltip: {
-      raetselhaft: '→ leicht rätselhaft, offen für Interpretation',
-      klar: '→ klar verständlich, eindeutig',
-    },
     feelings: {
       vertrauen: 'Vertrauen',
       dankbarkeit: 'Dankbarkeit',
@@ -215,51 +183,17 @@ const labels = {
       verbundenheit: '→ Verbundenheit',
       verantwortung: '→ Verantwortung',
     },
-    industry: {
-      consulting: 'Beratung',
-      tech: 'Technologie',
-      creative: 'Kreativ',
-      health: 'Gesundheit',
-      finance: 'Finanzen',
-      legal: 'Recht',
-      education: 'Bildung',
-      retail: 'Handel',
-      service: 'Dienstleistung',
-      other: 'Andere',
+    businessDesignStyle: {
+      klassisch: 'Klassisch',
+      modern: 'Modern',
+      premium: 'Premium',
+      kreativ: 'Kreativ',
     },
-    industryTooltip: {
-      consulting: '→ Strategie, Management, Unternehmensberatung',
-      tech: '→ IT, Software, Digital',
-      creative: '→ Design, Marketing, Medien',
-      health: '→ Medizin, Wellness, Pflege',
-      finance: '→ Banking, Versicherung, Investment',
-      legal: '→ Anwälte, Notare',
-      education: '→ Training, Coaching, Lehre',
-      retail: '→ Verkauf, E-Commerce',
-      service: '→ Allgemeine Dienstleistungen',
-      other: '→ Andere Branche',
-    },
-    tone: {
-      formal: 'Formal',
-      professional: 'Professionell',
-      friendly: 'Freundlich',
-      casual: 'Locker',
-    },
-    toneTooltip: {
-      formal: '→ Sehr professionell, traditionell',
-      professional: '→ Seriös aber zugänglich',
-      friendly: '→ Warm und einladend',
-      casual: '→ Entspannt, modern',
-    },
-    ctaStyle: {
-      action: 'Aktiv',
-      invitation: 'Einladend',
-      statement: 'Statement',
-    },
-    ctaStyleTooltip: {
-      action: '→ "Jetzt einlösen", "Termin buchen"',
-      invitation: '→ "Wir freuen uns auf Sie"',
-      statement: '→ "Ihr Gutschein", "Gültig für..."',
+    businessDesignStyleTooltip: {
+      klassisch: '→ Zeitlos, seriös: Dezente Linien, klassische Typografie, zurückhaltende Eleganz',
+      modern: '→ Frisch, dynamisch: Klare Geometrie, asymmetrische Balance, moderne Sans-Serif',
+      premium: '→ Edel, hochwertig: Subtile Goldakzente, feine Linien, elegante Typografie',
+      kreativ: '→ Einzigartig, mutig: Unkonventionelle Layouts, expressive Formen, überraschend',
     },
     businessValues: {
       professionalitaet: 'Professionalität',
@@ -296,16 +230,6 @@ const labels = {
       ecken: '→ Der Wert ist in den Ecken platziert, wie bei klassischen Banknoten',
       zentral: '→ Der Wert ist zentral und prominent im Design integriert',
       beides: '→ Der Wert erscheint sowohl in den Ecken als auch zentral',
-    },
-    backSideStyle: {
-      erklaerung: 'Erklärung',
-      einladung: 'Einladung',
-      mantra: 'Mantra',
-    },
-    backSideStyleTooltip: {
-      erklaerung: '→ erklärend, beschreibend, was dieser Schein bedeutet',
-      einladung: '→ einladend, ein Versprechen, eine Zusage an den Empfänger',
-      mantra: '→ wie ein Mantra, meditativ, ein Satz zum Verweilen',
     },
     promptLanguage: {
       de: 'Deutsch',
@@ -348,7 +272,6 @@ const labels = {
       motiv: 'Central Motif',
       grundhaltung: 'Attitude & Effect',
       quellen: 'Spiritual Sources',
-      text: 'Language & Text Feel',
       gefuehl: 'Feeling When Held',
       business: 'Business Settings',
       wert: 'Voucher Configuration',
@@ -364,7 +287,6 @@ const labels = {
       grundhaltung: 'Determines the emotional mood of the design',
       quellen: 'Which spiritual traditions should inspire the design?',
       wert: 'How should the voucher value be displayed?',
-      text: 'How should the language on the voucher feel?',
       rueckseite: 'The style of the text on the back',
       gefuehl: 'What feelings should the voucher convey?',
       business: 'Industry and tone for professional appearances',
@@ -394,6 +316,7 @@ const labels = {
       'pastell': '→ Soft pastel tones: delicate pink, light blue, mint green, peach, lavender',
     },
     businessColorScheme: {
+      'from-logo': 'From Logo',
       'navy-gold': 'Navy & Gold',
       'grau-blau': 'Gray & Blue',
       'weiss-schwarz': 'White & Black',
@@ -402,6 +325,7 @@ const labels = {
       'petrol-silber': 'Teal & Silver',
     },
     businessColorSchemeTooltip: {
+      'from-logo': '→ Automatically extract colors from the uploaded logo',
       'navy-gold': '→ Classic, trustworthy: Deep navy, warm gold',
       'grau-blau': '→ Modern, professional: Elegant gray with accent blue',
       'weiss-schwarz': '→ Minimalist, elegant: Clear white, deep black',
@@ -427,20 +351,10 @@ const labels = {
     },
     businessMotif: {
       'logo-zentral': 'Logo central',
-      geometrisch: 'Geometric',
-      linien: 'Lines & Patterns',
-      emblem: 'Emblem / Crest',
-      minimal: 'Minimalist',
-      rahmen: 'Decorative Frame',
       portrait: 'Portrait',
     },
     businessMotifTooltip: {
       'logo-zentral': '→ Company logo prominently in the center of the design',
-      geometrisch: '→ Clear geometric shapes, professional and structured',
-      linien: '→ Elegant lines and guilloche patterns like real banknotes',
-      emblem: '→ Crest-like emblem, traditional and trustworthy',
-      minimal: '→ Very reduced, lots of whitespace, modern and elegant',
-      rahmen: '→ Decorative frame around the design, classic and valuable',
       portrait: '→ A professional portrait, designed seriously and trustworthy',
     },
     mood: {
@@ -483,24 +397,6 @@ const labels = {
       mystik: '→ mysticism, the ineffable, mystery, without religious affiliation',
       verbundenheit: '→ human connection, heart quality, relationship, compassion',
     },
-    textStyle: {
-      'sakral-poetisch': 'Sacred-Poetic',
-      'neutral-meditativ': 'Neutral-Meditative',
-      'nuechtern': 'Sober',
-    },
-    textStyleTooltip: {
-      'sakral-poetisch': '→ sacred-poetic, reverent, ceremonial',
-      'neutral-meditativ': '→ neutral-meditative, calm, serene',
-      'nuechtern': '→ sober, clear, matter-of-fact',
-    },
-    textClarity: {
-      raetselhaft: 'Enigmatic',
-      klar: 'Clear',
-    },
-    textClarityTooltip: {
-      raetselhaft: '→ slightly enigmatic, open to interpretation',
-      klar: '→ clearly understandable, unambiguous',
-    },
     feelings: {
       vertrauen: 'Trust',
       dankbarkeit: 'Gratitude',
@@ -517,51 +413,17 @@ const labels = {
       verbundenheit: '→ connection',
       verantwortung: '→ responsibility',
     },
-    industry: {
-      consulting: 'Consulting',
-      tech: 'Technology',
-      creative: 'Creative',
-      health: 'Health',
-      finance: 'Finance',
-      legal: 'Legal',
-      education: 'Education',
-      retail: 'Retail',
-      service: 'Service',
-      other: 'Other',
+    businessDesignStyle: {
+      klassisch: 'Classic',
+      modern: 'Modern',
+      premium: 'Premium',
+      kreativ: 'Creative',
     },
-    industryTooltip: {
-      consulting: '→ Strategy, management, consulting',
-      tech: '→ IT, software, digital',
-      creative: '→ Design, marketing, media',
-      health: '→ Medicine, wellness, care',
-      finance: '→ Banking, insurance, investment',
-      legal: '→ Lawyers, notaries',
-      education: '→ Training, coaching, teaching',
-      retail: '→ Sales, e-commerce',
-      service: '→ General services',
-      other: '→ Other industry',
-    },
-    tone: {
-      formal: 'Formal',
-      professional: 'Professional',
-      friendly: 'Friendly',
-      casual: 'Casual',
-    },
-    toneTooltip: {
-      formal: '→ Very professional, traditional',
-      professional: '→ Serious but approachable',
-      friendly: '→ Warm and inviting',
-      casual: '→ Relaxed, modern',
-    },
-    ctaStyle: {
-      action: 'Action',
-      invitation: 'Invitation',
-      statement: 'Statement',
-    },
-    ctaStyleTooltip: {
-      action: '→ "Redeem now", "Book appointment"',
-      invitation: '→ "We look forward to seeing you"',
-      statement: '→ "Your voucher", "Valid for..."',
+    businessDesignStyleTooltip: {
+      klassisch: '→ Timeless, serious: Subtle lines, classic typography, understated elegance',
+      modern: '→ Fresh, dynamic: Clear geometry, asymmetric balance, modern sans-serif',
+      premium: '→ Refined, high-quality: Subtle gold accents, fine lines, elegant typography',
+      kreativ: '→ Unique, bold: Unconventional layouts, expressive shapes, surprising',
     },
     businessValues: {
       professionalitaet: 'Professionalism',
@@ -598,16 +460,6 @@ const labels = {
       ecken: '→ The value is placed in the corners, like classic banknotes',
       zentral: '→ The value is centrally and prominently integrated in the design',
       beides: '→ The value appears both in the corners and centrally',
-    },
-    backSideStyle: {
-      erklaerung: 'Explanation',
-      einladung: 'Invitation',
-      mantra: 'Mantra',
-    },
-    backSideStyleTooltip: {
-      erklaerung: '→ explanatory, descriptive, what this voucher means',
-      einladung: '→ inviting, a promise, a pledge to the recipient',
-      mantra: '→ like a mantra, meditative, a phrase to linger on',
     },
     promptLanguage: {
       de: 'Deutsch',
@@ -1010,12 +862,8 @@ export function PrintGenerator() {
   const energy = usePrintGeneratorStore((state) => state.energy);
   const visualStyle = usePrintGeneratorStore((state) => state.visualStyle);
   const sources = usePrintGeneratorStore((state) => state.sources);
-  const textStyle = usePrintGeneratorStore((state) => state.textStyle);
-  const textClarity = usePrintGeneratorStore((state) => state.textClarity);
   const feelings = usePrintGeneratorStore((state) => state.feelings);
-  const industry = usePrintGeneratorStore((state) => state.industry);
-  const tone = usePrintGeneratorStore((state) => state.tone);
-  const ctaStyle = usePrintGeneratorStore((state) => state.ctaStyle);
+  const businessDesignStyle = usePrintGeneratorStore((state) => state.businessDesignStyle);
   const businessValues = usePrintGeneratorStore((state) => state.businessValues);
   const logoImage = usePrintGeneratorStore((state) => state.logoImage);
   const portraitImage = usePrintGeneratorStore((state) => state.portraitImage);
@@ -1023,7 +871,6 @@ export function PrintGenerator() {
   const valuePosition = usePrintGeneratorStore((state) => state.valuePosition);
   const customValueText = usePrintGeneratorStore((state) => state.customValueText);
   const voucherValue = usePrintGeneratorStore((state) => state.voucherValue);
-  const backSideStyle = usePrintGeneratorStore((state) => state.backSideStyle);
   const backSideText = usePrintGeneratorStore((state) => state.backSideText);
   const personName = usePrintGeneratorStore((state) => state.personName);
   const contactEmail = usePrintGeneratorStore((state) => state.contactEmail);
@@ -1041,18 +888,15 @@ export function PrintGenerator() {
   const setEnergy = usePrintGeneratorStore((state) => state.setEnergy);
   const setVisualStyle = usePrintGeneratorStore((state) => state.setVisualStyle);
   const toggleSource = usePrintGeneratorStore((state) => state.toggleSource);
-  const setTextStyle = usePrintGeneratorStore((state) => state.setTextStyle);
-  const setTextClarity = usePrintGeneratorStore((state) => state.setTextClarity);
   const toggleFeeling = usePrintGeneratorStore((state) => state.toggleFeeling);
-  const setIndustry = usePrintGeneratorStore((state) => state.setIndustry);
-  const setTone = usePrintGeneratorStore((state) => state.setTone);
-  const setCtaStyle = usePrintGeneratorStore((state) => state.setCtaStyle);
+  const setBusinessDesignStyle = usePrintGeneratorStore((state) => state.setBusinessDesignStyle);
   const toggleBusinessValue = usePrintGeneratorStore((state) => state.toggleBusinessValue);
   const setLogoImage = usePrintGeneratorStore((state) => state.setLogoImage);
+  const setLogoColors = usePrintGeneratorStore((state) => state.setLogoColors);
+  const logoColors = usePrintGeneratorStore((state) => state.logoColors);
   const setPortraitImage = usePrintGeneratorStore((state) => state.setPortraitImage);
   const setValuePosition = usePrintGeneratorStore((state) => state.setValuePosition);
   const setVoucherValue = usePrintGeneratorStore((state) => state.setVoucherValue);
-  const setBackSideStyle = usePrintGeneratorStore((state) => state.setBackSideStyle);
   const setBackSideText = usePrintGeneratorStore((state) => state.setBackSideText);
   const setPersonName = usePrintGeneratorStore((state) => state.setPersonName);
   const setContactEmail = usePrintGeneratorStore((state) => state.setContactEmail);
@@ -1077,6 +921,39 @@ export function PrintGenerator() {
     }
   };
 
+  // Create dynamic business color swatches with logo colors (white as primary + extracted colors)
+  const businessColorSwatches = useMemo(() => ({
+    ...BUSINESS_COLOR_SWATCHES,
+    'from-logo': logoColors.length > 0 ? ['#FFFFFF', ...logoColors] : ['#FFFFFF', '#888888', '#AAAAAA', '#CCCCCC'],
+  }), [logoColors]);
+
+  // Handle logo change with color extraction
+  const handleLogoChange = useCallback(async (imageDataUrl: string | null) => {
+    setLogoImage(imageDataUrl);
+
+    if (imageDataUrl) {
+      try {
+        // Extract max 3 colors from logo (white will be added as primary in the palette)
+        const extractedColors = await extractColorsFromImage(imageDataUrl, 3, true);
+        setLogoColors(extractedColors);
+        // Auto-select "from-logo" color scheme when colors are extracted
+        if (extractedColors.length > 0 && styleContext === 'business') {
+          setColorScheme('from-logo');
+        }
+      } catch (error) {
+        console.error('Failed to extract colors from logo:', error);
+        setLogoColors([]);
+      }
+    } else {
+      // Clear logo colors when logo is removed
+      setLogoColors([]);
+      // Switch back to default color scheme if using from-logo
+      if (colorScheme === 'from-logo') {
+        setColorScheme('navy-gold');
+      }
+    }
+  }, [setLogoImage, setLogoColors, setColorScheme, styleContext, colorScheme]);
+
   // Generate default back side text based on current config
   const defaultBackSideText = useMemo(() => {
     return generateDefaultBackSideText({
@@ -1088,20 +965,22 @@ export function PrintGenerator() {
       energy,
       visualStyle,
       sources,
-      textStyle,
-      textClarity,
+      textStyle: 'neutral-meditativ', // Default value - not exposed in UI anymore
+      textClarity: 'klar', // Default value - not exposed in UI anymore
       feelings,
-      industry,
-      tone,
-      ctaStyle,
+      industry: 'other', // Default value - not exposed in UI anymore
+      tone: 'professional', // Default value - not exposed in UI anymore
+      ctaStyle: 'invitation', // Default value - not exposed in UI anymore
+      businessDesignStyle,
       businessValues,
       logoImage,
+      logoColors,
       portraitImage,
       valueDisplay,
       valuePosition,
       customValueText,
       voucherValue,
-      backSideStyle,
+      backSideStyle: 'einladung', // Default value - not exposed in UI anymore
       backSideText: '', // Ignore custom text to get default
       personName,
       contactEmail,
@@ -1112,9 +991,9 @@ export function PrintGenerator() {
     });
   }, [
     styleContext, promptLanguage, colorScheme, centralMotif, mood, energy,
-    visualStyle, sources, textStyle, textClarity, feelings, industry, tone,
-    ctaStyle, businessValues, logoImage, valueDisplay, valuePosition, customValueText,
-    voucherValue, backSideStyle, personName, contactEmail, contactPhone,
+    visualStyle, sources, feelings, businessDesignStyle,
+    businessValues, logoImage, logoColors, valueDisplay, valuePosition, customValueText,
+    voucherValue, personName, contactEmail, contactPhone,
     contactWebsite, qrCodeEnabled, qrCodeUrl, portraitImage,
   ]);
 
@@ -1173,7 +1052,7 @@ export function PrintGenerator() {
             <ColorSelect<BusinessColorScheme>
               options={toOptions(t.businessColorScheme)}
               tooltips={t.businessColorSchemeTooltip}
-              swatches={BUSINESS_COLOR_SWATCHES}
+              swatches={businessColorSwatches}
               currentValue={colorScheme as BusinessColorScheme}
               onChange={(v) => setColorScheme(v)}
             />
@@ -1269,33 +1148,9 @@ export function PrintGenerator() {
           </div>
 
           <div className="card bg-base-100 shadow-sm">
-            <div className="card-body p-4 space-y-1">
-              <div className="space-y-0.5 mb-1">
-                <h3 className="font-semibold text-sm">{t.sections.text}</h3>
-                <p className="text-xs text-base-content/60">{t.sectionInfo.text}</p>
-              </div>
-              <SingleSelect<TextStyle>
-                options={toOptions(t.textStyle)}
-                tooltips={t.textStyleTooltip}
-                currentValue={textStyle}
-                onChange={setTextStyle}
-                showSeparator
-              />
-              <div className="divider my-0" />
-              <SingleSelect<TextClarity>
-                options={toOptions(t.textClarity)}
-                tooltips={t.textClarityTooltip}
-                currentValue={textClarity}
-                onChange={setTextClarity}
-                showSeparator
-              />
-
-              <div className="divider my-0" />
-
-              <div className="space-y-0.5">
-                <h3 className="font-semibold text-sm">{t.sections.gefuehl}</h3>
-                <p className="text-xs text-base-content/60">{t.sectionInfo.gefuehl}</p>
-              </div>
+            <div className="card-body p-4 space-y-2">
+              <h3 className="font-semibold text-sm">{t.sections.gefuehl}</h3>
+              <p className="text-xs text-base-content/60">{t.sectionInfo.gefuehl}</p>
               <MultiSelect<Feeling>
                 options={toOptions(t.feelings)}
                 tooltips={t.feelingsTooltip}
@@ -1315,28 +1170,12 @@ export function PrintGenerator() {
               <h3 className="font-semibold text-sm">{t.sections.business}</h3>
               <p className="text-xs text-base-content/60">{t.sectionInfo.business}</p>
             </div>
-            <SingleSelect<Industry>
-              label={appLanguage === 'de' ? 'Branche' : 'Industry'}
-              options={toOptions(t.industry)}
-              tooltips={t.industryTooltip}
-              currentValue={industry}
-              onChange={setIndustry}
-            />
-            <div className="divider my-0" />
-            <SingleSelect<Tone>
-              label={appLanguage === 'de' ? 'Tonalität' : 'Tone'}
-              options={toOptions(t.tone)}
-              tooltips={t.toneTooltip}
-              currentValue={tone}
-              onChange={setTone}
-            />
-            <div className="divider my-0" />
-            <SingleSelect<CtaStyle>
-              label="Call-to-Action"
-              options={toOptions(t.ctaStyle)}
-              tooltips={t.ctaStyleTooltip}
-              currentValue={ctaStyle}
-              onChange={setCtaStyle}
+            <SingleSelect<BusinessDesignStyle>
+              label={appLanguage === 'de' ? 'Design-Stil' : 'Design Style'}
+              options={toOptions(t.businessDesignStyle)}
+              tooltips={t.businessDesignStyleTooltip}
+              currentValue={businessDesignStyle}
+              onChange={setBusinessDesignStyle}
             />
 
             <div className="divider my-0" />
@@ -1361,7 +1200,7 @@ export function PrintGenerator() {
               removeLabel={t.logo.remove}
               hintLabel={t.logo.hint}
               logoImage={logoImage}
-              onLogoChange={setLogoImage}
+              onLogoChange={handleLogoChange}
             />
           </div>
         </div>
@@ -1411,19 +1250,16 @@ export function PrintGenerator() {
 
           <div className="divider my-0" />
 
-          <SingleSelect<BackSideStyle>
-            label={t.sections.rueckseite}
-            options={toOptions(t.backSideStyle)}
-            tooltips={t.backSideStyleTooltip}
-            currentValue={backSideStyle}
-            onChange={setBackSideStyle}
-            showSeparator
-          />
+          <div className="space-y-0.5">
+            <h3 className="font-semibold text-sm">{t.sections.rueckseite}</h3>
+            <p className="text-xs text-base-content/60">
+              {appLanguage === 'de' ? 'Text auf der Rückseite des Gutscheins' : 'Text on the back of the voucher'}
+            </p>
+          </div>
           <textarea
             className="textarea textarea-bordered w-full text-sm"
             rows={3}
-            placeholder={defaultBackSideText}
-            value={backSideText}
+            value={backSideText || defaultBackSideText}
             onChange={(e) => setBackSideText(e.target.value)}
           />
         </div>

@@ -8,6 +8,8 @@ import {
   generateVoucherPdf,
   downloadBlob,
   downloadBase64Image,
+  validateVoucherImage,
+  type VoucherValidationResult,
 } from '../services/voucherImageProcessor';
 import type { PrintGeneratorConfig } from '../types/printGenerator';
 
@@ -21,6 +23,7 @@ const labels = {
     generate: 'Bild generieren',
     generating: 'Generiere...',
     processing: 'Verarbeite...',
+    validating: 'Validiere...',
     download: 'Herunterladen',
     downloadFront: 'Vorderseite',
     downloadBack: 'Rückseite',
@@ -37,6 +40,15 @@ const labels = {
     removeImage: 'Entfernen',
     frontSide: 'Vorderseite',
     backSide: 'Rückseite',
+    validationTitle: 'Validierungsergebnis',
+    validationPassed: 'Alle Prüfungen bestanden',
+    validationFailed: 'Einige Prüfungen fehlgeschlagen',
+    checkBlackBackground: 'Schwarzer Hintergrund',
+    checkEqualSize: 'Gleiche Größe (Vorder-/Rückseite)',
+    checkNoBlackBorders: 'Keine schwarzen Ränder',
+    sizeDifference: 'Größendifferenz',
+    frontHeight: 'Vorderseite Höhe',
+    backHeight: 'Rückseite Höhe',
   },
   en: {
     title: 'Generate Image',
@@ -47,6 +59,7 @@ const labels = {
     generate: 'Generate Image',
     generating: 'Generating...',
     processing: 'Processing...',
+    validating: 'Validating...',
     download: 'Download',
     downloadFront: 'Front Side',
     downloadBack: 'Back Side',
@@ -63,6 +76,15 @@ const labels = {
     removeImage: 'Remove',
     frontSide: 'Front Side',
     backSide: 'Back Side',
+    validationTitle: 'Validation Result',
+    validationPassed: 'All checks passed',
+    validationFailed: 'Some checks failed',
+    checkBlackBackground: 'Black background',
+    checkEqualSize: 'Equal size (front/back)',
+    checkNoBlackBorders: 'No black borders',
+    sizeDifference: 'Size difference',
+    frontHeight: 'Front height',
+    backHeight: 'Back height',
   },
 };
 
@@ -81,7 +103,9 @@ export function GeminiImageGenerator() {
   // Local UI state (doesn't need persistence)
   const [isGenerating, setIsGenerating] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [validationResult, setValidationResult] = useState<VoucherValidationResult | null>(null);
 
   // Get config from printGeneratorStore
   const styleContext = usePrintGeneratorStore((state) => state.styleContext);
@@ -98,8 +122,10 @@ export function GeminiImageGenerator() {
   const industry = usePrintGeneratorStore((state) => state.industry);
   const tone = usePrintGeneratorStore((state) => state.tone);
   const ctaStyle = usePrintGeneratorStore((state) => state.ctaStyle);
+  const businessDesignStyle = usePrintGeneratorStore((state) => state.businessDesignStyle);
   const businessValues = usePrintGeneratorStore((state) => state.businessValues);
   const logoImage = usePrintGeneratorStore((state) => state.logoImage);
+  const logoColors = usePrintGeneratorStore((state) => state.logoColors);
   const portraitImage = usePrintGeneratorStore((state) => state.portraitImage);
   const valueDisplay = usePrintGeneratorStore((state) => state.valueDisplay);
   const valuePosition = usePrintGeneratorStore((state) => state.valuePosition);
@@ -129,8 +155,10 @@ export function GeminiImageGenerator() {
     industry,
     tone,
     ctaStyle,
+    businessDesignStyle,
     businessValues,
     logoImage,
+    logoColors,
     portraitImage,
     valueDisplay,
     valuePosition,
@@ -147,7 +175,7 @@ export function GeminiImageGenerator() {
   }), [
     styleContext, promptLanguage, colorScheme, centralMotif,
     mood, energy, visualStyle, sources, textStyle, textClarity, feelings,
-    industry, tone, ctaStyle, businessValues, logoImage, portraitImage,
+    industry, tone, ctaStyle, businessDesignStyle, businessValues, logoImage, logoColors, portraitImage,
     valueDisplay, valuePosition, customValueText, voucherValue, backSideStyle, backSideText,
     personName, contactEmail, contactPhone, contactWebsite,
     qrCodeEnabled, qrCodeUrl
@@ -157,6 +185,10 @@ export function GeminiImageGenerator() {
   const isPortraitMode = centralMotif === 'portrait';
   // Check if logo-zentral mode is selected (business style with logo as central element)
   const isLogoCentralMode = styleContext === 'business' && centralMotif === 'logo-zentral';
+  // Check if from-logo color scheme is selected (requires logo for color extraction)
+  const isFromLogoColorMode = styleContext === 'business' && config.colorScheme === 'from-logo';
+  // Logo is required if either logo-zentral motif OR from-logo color scheme
+  const isLogoRequired = isLogoCentralMode || isFromLogoColorMode;
 
   const handleGenerate = useCallback(async () => {
     if (!apiKey) {
@@ -167,6 +199,7 @@ export function GeminiImageGenerator() {
     setIsGenerating(true);
     setResult(null);
     setProcessedImages(null);
+    setValidationResult(null);
 
     // Use portraitImage from printGeneratorStore for portrait mode
     const portraitImageBase64 = portraitImage
@@ -180,23 +213,35 @@ export function GeminiImageGenerator() {
       logoImage: logoImage || undefined,
     });
 
+    if (!generationResult.success || !generationResult.imageBase64) {
+      // Generation failed, show error and stop
+      setResult(generationResult);
+      setIsGenerating(false);
+      return;
+    }
+
     setResult(generationResult);
+
+    // Validate the generated image
+    setIsValidating(true);
+    const validation = await validateVoucherImage(generationResult.imageBase64);
+    setIsValidating(false);
+    setValidationResult(validation);
+
     setIsGenerating(false);
 
-    // Process the image to split front/back and add QR code
-    if (generationResult.success && generationResult.imageBase64) {
-      setIsProcessing(true);
-      try {
-        const processed = await processVoucherImage({
-          imageBase64: generationResult.imageBase64,
-          qrCodeUrl: qrCodeEnabled ? qrCodeUrl : undefined,
-        });
-        setProcessedImages(processed);
-      } catch (error) {
-        console.error('Failed to process voucher image:', error);
-      }
-      setIsProcessing(false);
+    // Process the image regardless of validation result
+    setIsProcessing(true);
+    try {
+      const processed = await processVoucherImage({
+        imageBase64: generationResult.imageBase64,
+        qrCodeUrl: qrCodeEnabled ? qrCodeUrl : undefined,
+      });
+      setProcessedImages(processed);
+    } catch (error) {
+      console.error('Failed to process voucher image:', error);
     }
+    setIsProcessing(false);
   }, [apiKey, config, portraitImage, t.noApiKey, qrCodeEnabled, qrCodeUrl, logoImage]);
 
   const handleDownloadFront = useCallback(() => {
@@ -304,13 +349,21 @@ export function GeminiImageGenerator() {
           </div>
         )}
 
-        {/* Logo-zentral mode hint - logo is required when logo is central motif */}
-        {isLogoCentralMode && !logoImage && (
+        {/* Logo required hint - shown when logo-zentral motif OR from-logo color scheme */}
+        {isLogoRequired && !logoImage && (
           <div className="alert alert-warning">
             <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
-            <span className="text-sm">{appLanguage === 'de' ? 'Bitte lade ein Firmenlogo hoch – es wird als zentrales Element verwendet.' : 'Please upload a company logo – it will be used as the central element.'}</span>
+            <span className="text-sm">
+              {appLanguage === 'de'
+                ? (isFromLogoColorMode
+                  ? 'Bitte lade ein Firmenlogo hoch – die Farben werden daraus extrahiert.'
+                  : 'Bitte lade ein Firmenlogo hoch – es wird als zentrales Element verwendet.')
+                : (isFromLogoColorMode
+                  ? 'Please upload a company logo – colors will be extracted from it.'
+                  : 'Please upload a company logo – it will be used as the central element.')}
+            </span>
           </div>
         )}
 
@@ -318,12 +371,12 @@ export function GeminiImageGenerator() {
         <button
           className="btn btn-primary w-full"
           onClick={handleGenerate}
-          disabled={isGenerating || !apiKey || (isPortraitMode && !portraitImage) || (isLogoCentralMode && !logoImage)}
+          disabled={isGenerating || !apiKey || (isPortraitMode && !portraitImage) || (isLogoRequired && !logoImage)}
         >
           {isGenerating ? (
             <>
               <span className="loading loading-spinner loading-sm"></span>
-              {t.generating}
+              {isValidating ? t.validating : t.generating}
             </>
           ) : result?.success ? (
             t.regenerate
@@ -331,6 +384,62 @@ export function GeminiImageGenerator() {
             t.generate
           )}
         </button>
+
+        {/* Validation Result Display */}
+        {validationResult && (
+          <div className={`alert ${validationResult.isValid ? 'alert-success' : 'alert-warning'}`}>
+            <div className="w-full">
+              <div className="flex items-center gap-2 mb-2">
+                {validationResult.isValid ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                )}
+                <span className="font-semibold">
+                  {t.validationTitle}: {validationResult.isValid ? t.validationPassed : t.validationFailed}
+                </span>
+              </div>
+              <div className="text-sm space-y-1 ml-8">
+                {/* Black Background Check */}
+                <div className="flex items-center gap-2">
+                  {validationResult.hasBlackBackground ? (
+                    <span className="text-success">✓</span>
+                  ) : (
+                    <span className="text-error">✗</span>
+                  )}
+                  <span>{t.checkBlackBackground}</span>
+                </div>
+                {/* Equal Size Check */}
+                <div className="flex items-center gap-2">
+                  {validationResult.sidesAreEqualSize ? (
+                    <span className="text-success">✓</span>
+                  ) : (
+                    <span className="text-error">✗</span>
+                  )}
+                  <span>{t.checkEqualSize}</span>
+                  {!validationResult.sidesAreEqualSize && (
+                    <span className="opacity-70">
+                      ({t.frontHeight}: {validationResult.frontDimensions.height}px, {t.backHeight}: {validationResult.backDimensions.height}px)
+                    </span>
+                  )}
+                </div>
+                {/* No Black Borders Check */}
+                <div className="flex items-center gap-2">
+                  {validationResult.hasNoBlackBorders ? (
+                    <span className="text-success">✓</span>
+                  ) : (
+                    <span className="text-error">✗</span>
+                  )}
+                  <span>{t.checkNoBlackBorders}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Error Display */}
         {result && !result.success && (
