@@ -2,7 +2,9 @@ import { useState, useCallback, useMemo } from 'react';
 import { usePrintGeneratorStore } from '../stores/printGeneratorStore';
 import { useGeminiStore } from '../stores/geminiStore';
 import { useBillStore } from '../stores/billStore';
+import { useVoucherGalleryStore } from '../stores/voucherGalleryStore';
 import { generateImageWithGemini, refineImageWithGemini } from '../services/geminiImageGenerator';
+import { generatePrintPrompt } from '../services/printPromptGenerator';
 import {
   processVoucherImage,
   generateVoucherPdf,
@@ -110,6 +112,11 @@ export function GeminiImageGenerator() {
   const processedImages = useGeminiStore((state) => state.processedImages);
   const setProcessedImages = useGeminiStore((state) => state.setProcessedImages);
 
+  // Gallery store for auto-save
+  const addVoucher = useVoucherGalleryStore((state) => state.addVoucher);
+  const addVersionToVoucher = useVoucherGalleryStore((state) => state.addVersionToVoucher);
+  const activeVoucherId = useVoucherGalleryStore((state) => state.activeVoucherId);
+
   // Local UI state (doesn't need persistence)
   const [isGenerating, setIsGenerating] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -213,6 +220,9 @@ export function GeminiImageGenerator() {
     setProcessedImages(null);
     setValidationResult(null);
 
+    // Generate the prompt text for saving
+    const generatedPrompt = generatePrintPrompt(config);
+
     // Use portraitImage from printGeneratorStore for portrait mode
     const portraitImageBase64 = portraitImage
       ? (portraitImage.includes(',') ? portraitImage.split(',')[1] : portraitImage)
@@ -250,11 +260,28 @@ export function GeminiImageGenerator() {
         qrCodeUrl: qrCodeEnabled ? qrCodeUrl : undefined,
       });
       setProcessedImages(processed);
+
+      // Auto-save to gallery with complete configuration (excluding binary data)
+      const { logoImage: _logo, portraitImage: _portrait, ...configWithoutImages } = config;
+      const voucherToSave = {
+        originalBase64: generationResult.imageBase64,
+        frontBase64: processed.frontBase64,
+        backBase64: processed.backBase64,
+        styleContext,
+        voucherValue: voucherValue || undefined,
+        personName: personName || undefined,
+        colorScheme: colorScheme || undefined,
+        originalPrompt: generatedPrompt,
+        refinementHistory: [],
+        generationConfig: configWithoutImages,
+      };
+      console.log('[GeminiImageGenerator] Saving voucher with originalPrompt:', !!voucherToSave.originalPrompt, 'length:', voucherToSave.originalPrompt?.length);
+      await addVoucher(voucherToSave);
     } catch (error) {
       console.error('Failed to process voucher image:', error);
     }
     setIsProcessing(false);
-  }, [apiKey, config, portraitImage, t.noApiKey, qrCodeEnabled, qrCodeUrl, logoImage]);
+  }, [apiKey, config, portraitImage, t.noApiKey, qrCodeEnabled, qrCodeUrl, logoImage, addVoucher, styleContext, voucherValue, personName, colorScheme]);
 
   const handleDownloadFront = useCallback(() => {
     if (processedImages?.frontBase64) {
@@ -287,15 +314,16 @@ export function GeminiImageGenerator() {
 
   // Refine the current image with a modification prompt
   const handleRefine = useCallback(async () => {
-    if (!apiKey || !result?.imageBase64 || !refinementPrompt.trim()) return;
+    if (!apiKey || !result?.imageBase64 || !refinementPrompt.trim() || !activeVoucherId) return;
 
+    const trimmedPrompt = refinementPrompt.trim();
     setIsRefining(true);
     setValidationResult(null);
 
     const refinementResult = await refineImageWithGemini({
       apiKey,
       currentImage: result.imageBase64,
-      refinementPrompt: refinementPrompt.trim(),
+      refinementPrompt: trimmedPrompt,
       promptLanguage,
     });
 
@@ -330,11 +358,19 @@ export function GeminiImageGenerator() {
         qrCodeUrl: qrCodeEnabled ? qrCodeUrl : undefined,
       });
       setProcessedImages(processed);
+
+      // Add as new version to existing voucher (instead of creating new gallery entry)
+      await addVersionToVoucher(activeVoucherId, {
+        prompt: trimmedPrompt,
+        originalBase64: refinementResult.imageBase64,
+        frontBase64: processed.frontBase64,
+        backBase64: processed.backBase64,
+      });
     } catch (error) {
       console.error('Failed to process refined voucher image:', error);
     }
     setIsProcessing(false);
-  }, [apiKey, result, refinementPrompt, promptLanguage, qrCodeEnabled, qrCodeUrl]);
+  }, [apiKey, result, refinementPrompt, promptLanguage, qrCodeEnabled, qrCodeUrl, addVersionToVoucher, activeVoucherId]);
 
   // Reprocess the original image without calling Gemini API again
   const handleReprocess = useCallback(async () => {

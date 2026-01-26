@@ -3,15 +3,19 @@ import { Header, type AppView } from './components/layout/Header';
 import { VoucherEditor } from './components/VoucherEditor';
 import { PrintGenerator } from './components/printGenerator';
 import { SpiritualPromptPreview } from './components/SpiritualPromptPreview';
+import { VoucherGallery } from './components/VoucherGallery';
 import { initializeBillStore } from './stores/billStore';
 import { initializeSpiritualPromptStore } from './stores/spiritualPromptStore';
 import { initializeGeminiStore } from './stores/geminiStore';
 import { initializePrintGeneratorStore } from './stores/printGeneratorStore';
+import { useVoucherGalleryStore } from './stores/voucherGalleryStore';
 
 function App() {
   const [currentView, setCurrentView] = useState<AppView>('voucher');
   // Track if prompt-generator was ever visited to avoid unmounting after first visit
   const [hasVisitedGenerator, setHasVisitedGenerator] = useState(false);
+  const [hasVisitedGallery, setHasVisitedGallery] = useState(false);
+  const loadVouchers = useVoucherGalleryStore((state) => state.loadVouchers);
 
   // Initialize store hydration from IndexedDB
   useEffect(() => {
@@ -19,14 +23,19 @@ function App() {
     initializeSpiritualPromptStore();
     initializeGeminiStore();
     initializePrintGeneratorStore();
-  }, []);
+    // Pre-load gallery vouchers
+    loadVouchers();
+  }, [loadVouchers]);
 
-  // Track when prompt-generator is first visited
+  // Track when views are first visited
   useEffect(() => {
     if (currentView === 'prompt-generator' && !hasVisitedGenerator) {
       setHasVisitedGenerator(true);
     }
-  }, [currentView, hasVisitedGenerator]);
+    if (currentView === 'gallery' && !hasVisitedGallery) {
+      setHasVisitedGallery(true);
+    }
+  }, [currentView, hasVisitedGenerator, hasVisitedGallery]);
 
   return (
     <div className="h-dvh flex flex-col bg-base-200">
@@ -54,6 +63,14 @@ function App() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+        {/* Gallery - mounted on first visit, then kept in DOM */}
+        {(currentView === 'gallery' || hasVisitedGallery) && (
+          <div className={currentView === 'gallery' ? '' : 'hidden'}>
+            <div className="container mx-auto p-4 max-w-5xl">
+              <VoucherGallery />
             </div>
           </div>
         )}
