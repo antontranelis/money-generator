@@ -154,6 +154,128 @@ export async function generateImageWithGemini(
   }
 }
 
+export interface GeminiRefinementOptions {
+  apiKey: string;
+  currentImage: string; // Base64 encoded current image
+  refinementPrompt: string; // User's modification request
+  promptLanguage: 'de' | 'en';
+}
+
+/**
+ * Refine an existing image using Google Gemini API with a modification prompt
+ */
+export async function refineImageWithGemini(
+  options: GeminiRefinementOptions
+): Promise<GeminiGenerationResult> {
+  const { apiKey, currentImage, refinementPrompt, promptLanguage } = options;
+
+  if (!apiKey) {
+    return { success: false, error: 'API Key is required' };
+  }
+
+  if (!currentImage) {
+    return { success: false, error: 'Current image is required' };
+  }
+
+  if (!refinementPrompt.trim()) {
+    return { success: false, error: 'Refinement prompt is required' };
+  }
+
+  // Build the refinement prompt with context
+  const contextPrefix = promptLanguage === 'de'
+    ? `Hier ist ein generiertes Gutschein-Bild. Bitte ändere es wie folgt ab und behalte den Rest unverändert bei:\n\n`
+    : `Here is a generated voucher image. Please modify it as follows while keeping the rest unchanged:\n\n`;
+
+  const formatReminder = promptLanguage === 'de'
+    ? `\n\nWICHTIG: Behalte das quadratische 1:1 Format bei. Das Bild zeigt einen Gutschein mit Vorder- und Rückseite nebeneinander auf schwarzem Hintergrund.`
+    : `\n\nIMPORTANT: Keep the square 1:1 format. The image shows a voucher with front and back side arranged side by side on a black background.`;
+
+  const fullPrompt = `${contextPrefix}${refinementPrompt}${formatReminder}`;
+
+  try {
+    // Extract pure base64 if it's a data URL
+    const imageBase64 = currentImage.includes(',') ? currentImage.split(',')[1] : currentImage;
+
+    const parts: Array<{ text: string } | { inline_data: { mime_type: string; data: string } }> = [
+      { text: fullPrompt },
+      {
+        inline_data: {
+          mime_type: 'image/png',
+          data: imageBase64
+        }
+      }
+    ];
+
+    const requestBody = {
+      contents: [{
+        parts
+      }],
+      generationConfig: {
+        responseModalities: ['TEXT', 'IMAGE'],
+        imageConfig: {
+          aspectRatio: '1:1',
+          imageSize: '4K'
+        }
+      }
+    };
+
+    const response = await fetch(
+      `${GEMINI_API_ENDPOINT}/${MODEL_ID}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`;
+      return { success: false, error: errorMessage };
+    }
+
+    const data = await response.json();
+
+    // Extract image and text from response
+    let resultImageBase64: string | undefined;
+    let mimeType: string | undefined;
+    let modelResponse: string | undefined;
+
+    if (data.candidates && data.candidates[0]?.content?.parts) {
+      for (const part of data.candidates[0].content.parts) {
+        if (part.inlineData) {
+          resultImageBase64 = part.inlineData.data;
+          mimeType = part.inlineData.mimeType || 'image/png';
+        }
+        if (part.text) {
+          modelResponse = part.text;
+        }
+      }
+    }
+
+    if (!resultImageBase64) {
+      return {
+        success: false,
+        error: 'No image was generated. The model may have declined due to content policy.',
+        modelResponse
+      };
+    }
+
+    return {
+      success: true,
+      imageBase64: resultImageBase64,
+      mimeType,
+      modelResponse
+    };
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    return { success: false, error: errorMessage };
+  }
+}
+
 /**
  * Check if an API key is valid by making a simple request
  */

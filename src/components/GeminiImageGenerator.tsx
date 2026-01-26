@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { usePrintGeneratorStore } from '../stores/printGeneratorStore';
 import { useGeminiStore } from '../stores/geminiStore';
 import { useBillStore } from '../stores/billStore';
-import { generateImageWithGemini } from '../services/geminiImageGenerator';
+import { generateImageWithGemini, refineImageWithGemini } from '../services/geminiImageGenerator';
 import {
   processVoucherImage,
   generateVoucherPdf,
@@ -49,6 +49,11 @@ const labels = {
     sizeDifference: 'Größendifferenz',
     frontHeight: 'Vorderseite Höhe',
     backHeight: 'Rückseite Höhe',
+    refinementTitle: 'Bild anpassen',
+    refinementPlaceholder: 'Beschreibe die gewünschte Änderung...',
+    refinementSend: 'Änderung anwenden',
+    refinementRefining: 'Ändere Bild...',
+    refinementHint: 'z.B. "Mache den Hintergrund blauer" oder "Ändere die Schriftfarbe zu Gold"',
   },
   en: {
     title: 'Generate Image',
@@ -85,6 +90,11 @@ const labels = {
     sizeDifference: 'Size difference',
     frontHeight: 'Front height',
     backHeight: 'Back height',
+    refinementTitle: 'Refine Image',
+    refinementPlaceholder: 'Describe the desired change...',
+    refinementSend: 'Apply Change',
+    refinementRefining: 'Refining image...',
+    refinementHint: 'e.g. "Make the background more blue" or "Change the text color to gold"',
   },
 };
 
@@ -106,6 +116,8 @@ export function GeminiImageGenerator() {
   const [isValidating, setIsValidating] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [validationResult, setValidationResult] = useState<VoucherValidationResult | null>(null);
+  const [refinementPrompt, setRefinementPrompt] = useState('');
+  const [isRefining, setIsRefining] = useState(false);
 
   // Get config from printGeneratorStore
   const styleContext = usePrintGeneratorStore((state) => state.styleContext);
@@ -272,6 +284,57 @@ export function GeminiImageGenerator() {
       downloadBase64Image(result.imageBase64, `voucher-original-${Date.now()}.png`);
     }
   }, [result]);
+
+  // Refine the current image with a modification prompt
+  const handleRefine = useCallback(async () => {
+    if (!apiKey || !result?.imageBase64 || !refinementPrompt.trim()) return;
+
+    setIsRefining(true);
+    setValidationResult(null);
+
+    const refinementResult = await refineImageWithGemini({
+      apiKey,
+      currentImage: result.imageBase64,
+      refinementPrompt: refinementPrompt.trim(),
+      promptLanguage,
+    });
+
+    if (!refinementResult.success || !refinementResult.imageBase64) {
+      setResult({ ...result, error: refinementResult.error, modelResponse: refinementResult.modelResponse });
+      setIsRefining(false);
+      return;
+    }
+
+    // Update the result with the new image
+    setResult({
+      success: true,
+      imageBase64: refinementResult.imageBase64,
+      mimeType: refinementResult.mimeType,
+      modelResponse: refinementResult.modelResponse,
+    });
+
+    // Validate the refined image
+    setIsValidating(true);
+    const validation = await validateVoucherImage(refinementResult.imageBase64);
+    setIsValidating(false);
+    setValidationResult(validation);
+
+    setIsRefining(false);
+    setRefinementPrompt(''); // Clear input after successful refinement
+
+    // Process the refined image
+    setIsProcessing(true);
+    try {
+      const processed = await processVoucherImage({
+        imageBase64: refinementResult.imageBase64,
+        qrCodeUrl: qrCodeEnabled ? qrCodeUrl : undefined,
+      });
+      setProcessedImages(processed);
+    } catch (error) {
+      console.error('Failed to process refined voucher image:', error);
+    }
+    setIsProcessing(false);
+  }, [apiKey, result, refinementPrompt, promptLanguage, qrCodeEnabled, qrCodeUrl]);
 
   // Reprocess the original image without calling Gemini API again
   const handleReprocess = useCallback(async () => {
@@ -548,6 +611,54 @@ export function GeminiImageGenerator() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
                 {t.reprocess}
+              </button>
+            </div>
+
+            {/* Refinement Chat Section */}
+            <div className="divider"></div>
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                {t.refinementTitle}
+              </h4>
+              <p className="text-xs text-base-content/60">{t.refinementHint}</p>
+              <div className="join w-full">
+                <textarea
+                  className="textarea textarea-bordered join-item flex-1 min-h-[60px]"
+                  placeholder={t.refinementPlaceholder}
+                  value={refinementPrompt}
+                  onChange={(e) => setRefinementPrompt(e.target.value)}
+                  disabled={isRefining}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (refinementPrompt.trim()) {
+                        handleRefine();
+                      }
+                    }
+                  }}
+                />
+              </div>
+              <button
+                className="btn btn-accent w-full"
+                onClick={handleRefine}
+                disabled={isRefining || !refinementPrompt.trim()}
+              >
+                {isRefining ? (
+                  <>
+                    <span className="loading loading-spinner loading-sm"></span>
+                    {t.refinementRefining}
+                  </>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    {t.refinementSend}
+                  </>
+                )}
               </button>
             </div>
           </div>
