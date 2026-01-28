@@ -3,10 +3,26 @@ import { generatePrintPrompt, generatePrintNegativePrompt } from './printPromptG
 
 const GEMINI_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-// Available models for image generation
-// - gemini-2.5-flash-image: Fast, supports up to 1024px
-// - gemini-3-pro-image-preview: Professional quality, supports up to 4K
-const MODEL_ID = 'gemini-3-pro-image-preview';
+// Available model options for user selection
+export const GEMINI_MODEL_OPTIONS = [
+  { id: 'gemini-3-pro-2k', label: 'Gemini 3 Pro (2K)', model: 'gemini-3-pro-image-preview', imageSize: '2K' },
+  { id: 'gemini-3-pro-4k', label: 'Gemini 3 Pro (4K)', model: 'gemini-3-pro-image-preview', imageSize: '4K' },
+  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', model: 'gemini-2.5-flash-image', imageSize: undefined },
+] as const;
+
+export type GeminiModelOptionId = typeof GEMINI_MODEL_OPTIONS[number]['id'];
+
+// Default model option
+export const DEFAULT_MODEL_OPTION: GeminiModelOptionId = 'gemini-3-pro-2k';
+
+// Get model config from option id
+export function getModelConfig(optionId: GeminiModelOptionId) {
+  const option = GEMINI_MODEL_OPTIONS.find(o => o.id === optionId) || GEMINI_MODEL_OPTIONS[0];
+  return {
+    modelId: option.model,
+    imageConfig: option.imageSize ? { imageSize: option.imageSize } : {}
+  };
+}
 
 export interface GeminiGenerationResult {
   success: boolean;
@@ -14,6 +30,8 @@ export interface GeminiGenerationResult {
   mimeType?: string;
   error?: string;
   modelResponse?: string;
+  usedModel?: string; // Which model was used
+  durationMs?: number; // How long the generation took
 }
 
 export interface GeminiGenerationOptions {
@@ -23,6 +41,7 @@ export interface GeminiGenerationOptions {
   logoImage?: string; // Base64 encoded logo for business mode
   motifImages?: string[]; // Additional reference/motif images for design inspiration
   customPrompt?: string; // Optional custom prompt (overrides generated prompt)
+  modelOptionId?: GeminiModelOptionId; // Selected model option
 }
 
 /**
@@ -31,11 +50,14 @@ export interface GeminiGenerationOptions {
 export async function generateImageWithGemini(
   options: GeminiGenerationOptions
 ): Promise<GeminiGenerationResult> {
-  const { apiKey, config, referenceImage, logoImage, motifImages, customPrompt } = options;
+  const { apiKey, config, referenceImage, logoImage, motifImages, customPrompt, modelOptionId } = options;
 
   if (!apiKey) {
     return { success: false, error: 'API Key is required' };
   }
+
+  // Get model configuration from selected option
+  const { modelId, imageConfig } = getModelConfig(modelOptionId || DEFAULT_MODEL_OPTION);
 
   // Use custom prompt if provided, otherwise generate from config
   const prompt = customPrompt || generatePrintPrompt(config);
@@ -125,6 +147,9 @@ export async function generateImageWithGemini(
     // Instead, we overlay the QR code onto the generated image afterwards.
     // The prompt instructs Gemini to leave a white area for the QR code.
 
+    const startTime = performance.now();
+    console.log(`[Gemini] Using model: ${modelId} with config:`, imageConfig);
+
     const requestBody = {
       contents: [{
         parts
@@ -133,13 +158,13 @@ export async function generateImageWithGemini(
         responseModalities: ['TEXT', 'IMAGE'],
         imageConfig: {
           aspectRatio: '1:1',
-          imageSize: '4K'
+          ...imageConfig
         }
       }
     };
 
     const response = await fetch(
-      `${GEMINI_API_ENDPOINT}/${MODEL_ID}:generateContent?key=${apiKey}`,
+      `${GEMINI_API_ENDPOINT}/${modelId}:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: {
@@ -149,10 +174,13 @@ export async function generateImageWithGemini(
       }
     );
 
+    const durationMs = Math.round(performance.now() - startTime);
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       const errorMessage = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`;
-      return { success: false, error: errorMessage };
+      console.log(`[Gemini] Model ${modelId} failed after ${durationMs}ms: ${errorMessage}`);
+      return { success: false, error: errorMessage, usedModel: modelId, durationMs };
     }
 
     const data = await response.json();
@@ -175,12 +203,17 @@ export async function generateImageWithGemini(
     }
 
     if (!imageBase64) {
+      console.log(`[Gemini] Model ${modelId} returned no image after ${durationMs}ms`);
       return {
         success: false,
         error: 'No image was generated. The model may have declined due to content policy.',
-        modelResponse
+        modelResponse,
+        usedModel: modelId,
+        durationMs
       };
     }
+
+    console.log(`[Gemini] Success with ${modelId} after ${durationMs}ms`);
 
     // Note: QR code overlay is now handled by voucherImageProcessor after splitting front/back
 
@@ -188,7 +221,9 @@ export async function generateImageWithGemini(
       success: true,
       imageBase64,
       mimeType,
-      modelResponse
+      modelResponse,
+      usedModel: modelId,
+      durationMs
     };
 
   } catch (error) {
@@ -202,6 +237,7 @@ export interface GeminiRefinementOptions {
   currentImage: string; // Base64 encoded current image
   refinementPrompt: string; // User's modification request
   promptLanguage: 'de' | 'en';
+  modelOptionId?: GeminiModelOptionId; // Selected model option
 }
 
 /**
@@ -210,7 +246,7 @@ export interface GeminiRefinementOptions {
 export async function refineImageWithGemini(
   options: GeminiRefinementOptions
 ): Promise<GeminiGenerationResult> {
-  const { apiKey, currentImage, refinementPrompt, promptLanguage } = options;
+  const { apiKey, currentImage, refinementPrompt, promptLanguage, modelOptionId } = options;
 
   if (!apiKey) {
     return { success: false, error: 'API Key is required' };
@@ -223,6 +259,9 @@ export async function refineImageWithGemini(
   if (!refinementPrompt.trim()) {
     return { success: false, error: 'Refinement prompt is required' };
   }
+
+  // Get model configuration from selected option
+  const { modelId, imageConfig } = getModelConfig(modelOptionId || DEFAULT_MODEL_OPTION);
 
   // Build the refinement prompt with context
   const contextPrefix = promptLanguage === 'de'
@@ -249,6 +288,9 @@ export async function refineImageWithGemini(
       }
     ];
 
+    const startTime = performance.now();
+    console.log(`[Gemini Refine] Using model: ${modelId} with config:`, imageConfig);
+
     const requestBody = {
       contents: [{
         parts
@@ -257,13 +299,13 @@ export async function refineImageWithGemini(
         responseModalities: ['TEXT', 'IMAGE'],
         imageConfig: {
           aspectRatio: '1:1',
-          imageSize: '4K'
+          ...imageConfig
         }
       }
     };
 
     const response = await fetch(
-      `${GEMINI_API_ENDPOINT}/${MODEL_ID}:generateContent?key=${apiKey}`,
+      `${GEMINI_API_ENDPOINT}/${modelId}:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: {
@@ -273,10 +315,13 @@ export async function refineImageWithGemini(
       }
     );
 
+    const durationMs = Math.round(performance.now() - startTime);
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       const errorMessage = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`;
-      return { success: false, error: errorMessage };
+      console.log(`[Gemini Refine] Model ${modelId} failed after ${durationMs}ms: ${errorMessage}`);
+      return { success: false, error: errorMessage, usedModel: modelId, durationMs };
     }
 
     const data = await response.json();
@@ -299,18 +344,25 @@ export async function refineImageWithGemini(
     }
 
     if (!resultImageBase64) {
+      console.log(`[Gemini Refine] Model ${modelId} returned no image after ${durationMs}ms`);
       return {
         success: false,
         error: 'No image was generated. The model may have declined due to content policy.',
-        modelResponse
+        modelResponse,
+        usedModel: modelId,
+        durationMs
       };
     }
+
+    console.log(`[Gemini Refine] Success with ${modelId} after ${durationMs}ms`);
 
     return {
       success: true,
       imageBase64: resultImageBase64,
       mimeType,
-      modelResponse
+      modelResponse,
+      usedModel: modelId,
+      durationMs
     };
 
   } catch (error) {
@@ -325,9 +377,11 @@ export async function refineImageWithGemini(
 export async function validateGeminiApiKey(apiKey: string): Promise<boolean> {
   if (!apiKey) return false;
 
+  const { modelId } = getModelConfig(DEFAULT_MODEL_OPTION);
+
   try {
     const response = await fetch(
-      `${GEMINI_API_ENDPOINT}/${MODEL_ID}?key=${apiKey}`,
+      `${GEMINI_API_ENDPOINT}/${modelId}?key=${apiKey}`,
       { method: 'GET' }
     );
     return response.ok;

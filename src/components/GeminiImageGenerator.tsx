@@ -4,7 +4,7 @@ import { useGeminiStore } from '../stores/geminiStore';
 import { useBillStore } from '../stores/billStore';
 import { useVoucherGalleryStore } from '../stores/voucherGalleryStore';
 import { useCustomColorStore } from '../stores/customColorStore';
-import { generateImageWithGemini, refineImageWithGemini } from '../services/geminiImageGenerator';
+import { generateImageWithGemini, refineImageWithGemini, GEMINI_MODEL_OPTIONS } from '../services/geminiImageGenerator';
 import { generatePrintPrompt } from '../services/printPromptGenerator';
 import {
   processVoucherImage,
@@ -117,6 +117,8 @@ export function GeminiImageGenerator() {
   // Get persisted state from store (survives view switches)
   const apiKey = useGeminiStore((state) => state.apiKey);
   const setApiKey = useGeminiStore((state) => state.setApiKey);
+  const selectedModelOption = useGeminiStore((state) => state.selectedModelOption);
+  const setSelectedModelOption = useGeminiStore((state) => state.setSelectedModelOption);
   const result = useGeminiStore((state) => state.generationResult);
   const setResult = useGeminiStore((state) => state.setGenerationResult);
   const processedImages = useGeminiStore((state) => state.processedImages);
@@ -280,6 +282,7 @@ export function GeminiImageGenerator() {
       logoImage: logoImage || undefined,
       motifImages: motifImages.length > 0 ? motifImages : undefined,
       customPrompt: editedPrompt || undefined, // Use edited prompt if available
+      modelOptionId: selectedModelOption,
     });
 
     if (!generationResult.success || !generationResult.imageBase64) {
@@ -332,7 +335,7 @@ export function GeminiImageGenerator() {
       console.error('Failed to process voucher image:', error);
       setIsProcessing(false);
     }
-  }, [apiKey, config, portraitImage, t.noApiKey, qrCodeEnabled, qrCodeUrl, logoImage, addVoucher, styleContext, voucherValue, personName, colorScheme, editedPrompt, setResult, setProcessedImages, setValidationResult]);
+  }, [apiKey, config, portraitImage, t.noApiKey, qrCodeEnabled, qrCodeUrl, logoImage, addVoucher, styleContext, voucherValue, personName, colorScheme, editedPrompt, selectedModelOption, setResult, setProcessedImages, setValidationResult]);
 
   const handleDownloadFront = useCallback(() => {
     if (processedImages?.frontBase64) {
@@ -376,6 +379,7 @@ export function GeminiImageGenerator() {
       currentImage: result.imageBase64,
       refinementPrompt: trimmedPrompt,
       promptLanguage,
+      modelOptionId: selectedModelOption,
     });
 
     if (!refinementResult.success || !refinementResult.imageBase64) {
@@ -424,7 +428,7 @@ export function GeminiImageGenerator() {
       console.error('Failed to process refined voucher image:', error);
       setIsProcessing(false);
     }
-  }, [apiKey, result, refinementPrompt, promptLanguage, qrCodeEnabled, qrCodeUrl, addVersionToVoucher, activeVoucherId, setResult, setProcessedImages, setValidationResult]);
+  }, [apiKey, result, refinementPrompt, promptLanguage, qrCodeEnabled, qrCodeUrl, addVersionToVoucher, activeVoucherId, selectedModelOption, setResult, setProcessedImages, setValidationResult]);
 
   // Reprocess the original image without calling Gemini API again
   const handleReprocess = useCallback(async () => {
@@ -520,6 +524,26 @@ export function GeminiImageGenerator() {
           </div>
         )}
 
+        {/* Model Selection */}
+        <div className="form-control w-full">
+          <label className="label">
+            <span className="label-text text-sm">
+              {appLanguage === 'de' ? 'Modell' : 'Model'}
+            </span>
+          </label>
+          <select
+            className="select select-bordered select-sm w-full"
+            value={selectedModelOption}
+            onChange={(e) => setSelectedModelOption(e.target.value as typeof selectedModelOption)}
+          >
+            {GEMINI_MODEL_OPTIONS.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Prompt Editor Toggle */}
         <div className="collapse collapse-arrow bg-base-200 rounded-lg">
           <input
@@ -583,6 +607,27 @@ export function GeminiImageGenerator() {
             <div>
               <h3 className="font-bold">{t.error}</h3>
               <div className="text-sm">{result.error}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Generation Log - dezent */}
+        {result && (result.usedModel || result.durationMs) && (
+          <div className="bg-base-200/50 rounded-lg p-2 text-xs text-base-content/60 font-mono">
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              {result.usedModel && (
+                <span>
+                  Model: <span className="text-base-content/80">{result.usedModel}</span>
+                </span>
+              )}
+              {result.durationMs && (
+                <span>
+                  Dauer: <span className="text-base-content/80">{(result.durationMs / 1000).toFixed(1)}s</span>
+                </span>
+              )}
+              {result.success && (
+                <span className="text-success">✓ OK</span>
+              )}
             </div>
           </div>
         )}
